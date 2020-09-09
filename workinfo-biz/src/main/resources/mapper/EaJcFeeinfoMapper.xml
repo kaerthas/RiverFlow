@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~
+  ~      Copyright (c) 2019-2025, jason All rights reserved.
+  ~
+  ~  Redistribution and use in source and binary forms, with or without
+  ~  modification, are permitted provided that the following conditions are met:
+  ~
+  ~ Redistributions of source code must retain the above copyright notice,
+  ~  this list of conditions and the following disclaimer.
+  ~  Redistributions in binary form must reproduce the above copyright
+  ~  notice, this list of conditions and the following disclaimer in the
+  ~  documentation and/or other materials provided with the distribution.
+  ~  Neither the name of the yunho.top developer nor the names of its
+  ~  contributors may be used to endorse or promote products derived from
+  ~  this software without specific prior written permission.
+  ~  Author: jason (jj@163.com)
+  ~
+  -->
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.inspur.workinfo.mapper.EaJcFeeinfoMapper">
+
+  <resultMap id="eaJcFeeinfoMap" type="com.inspur.workinfo.entity.EaJcFeeinfo">
+                  <id property="orgbusno" column="ORGBUSNO"/>
+                        <result property="busRegionId" column="BUS_REGION_ID"/>
+                        <result property="regionId" column="REGION_ID"/>
+                        <result property="projid" column="PROJID"/>
+                        <result property="dataver" column="DATAVER"/>
+                        <result property="sn" column="SN"/>
+                        <result property="feeorgid" column="FEEORGID"/>
+                        <result property="feeorgname" column="FEEORGNAME"/>
+                        <result property="billnum" column="BILLNUM"/>
+                        <result property="payperson" column="PAYPERSON"/>
+                        <result property="feetypename" column="FEETYPENAME"/>
+                        <result property="feestand" column="FEESTAND"/>
+                        <result property="feeamount" column="FEEAMOUNT"/>
+                        <result property="feenum" column="FEENUM"/>
+                        <result property="feestandamount" column="FEESTANDAMOUNT"/>
+                        <result property="feederate" column="FEEDERATE"/>
+                        <result property="feetotal" column="FEETOTAL"/>
+                        <result property="reducereason" column="REDUCEREASON"/>
+                        <result property="audiperson" column="AUDIPERSON"/>
+                        <result property="paytime" column="PAYTIME"/>
+                        <result property="state" column="STATE"/>
+                        <result property="maketime" column="MAKETIME"/>
+                        <result property="sysmark" column="SYSMARK"/>
+                        <result property="cdOperation" column="CD_OPERATION"/>
+            </resultMap>
+</mapper>
