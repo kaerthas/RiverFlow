@@ -54,7 +54,8 @@ public class EaJcStepBasicinfoController {
     @ApiOperation(value = "分页查询", notes = "分页查询")
     @GetMapping("/page" )
     public R getEaJcStepBasicinfoPage(Page page, EaJcStepBasicinfo eaJcStepBasicinfo) {
-        return R.ok(eaJcStepBasicinfoService.page(page, Wrappers.query(eaJcStepBasicinfo)));
+        R r = R.ok(eaJcStepBasicinfoService.page(page, Wrappers.query(eaJcStepBasicinfo)));
+        return r;
     }
 
 
