@@ -17,6 +17,9 @@
 
 package com.inspur.workinfo.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.inspur.workinfo.entity.PreApasinfo;
 
@@ -28,4 +31,5 @@ import com.inspur.workinfo.entity.PreApasinfo;
  */
 public interface PreApasinfoService extends IService<PreApasinfo> {
 
+    IPage<PreApasinfo> localpage(Page page, QueryWrapper<PreApasinfo> query);
 }

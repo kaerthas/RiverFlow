@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~
+  ~      Copyright (c) 2019-2025, jason All rights reserved.
+  ~
+  ~  Redistribution and use in source and binary forms, with or without
+  ~  modification, are permitted provided that the following conditions are met:
+  ~
+  ~ Redistributions of source code must retain the above copyright notice,
+  ~  this list of conditions and the following disclaimer.
+  ~  Redistributions in binary form must reproduce the above copyright
+  ~  notice, this list of conditions and the following disclaimer in the
+  ~  documentation and/or other materials provided with the distribution.
+  ~  Neither the name of the yunho.top developer nor the names of its
+  ~  contributors may be used to endorse or promote products derived from
+  ~  this software without specific prior written permission.
+  ~  Author: jason (jj@163.com)
+  ~
+  -->
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.inspur.workinfo.mapper.PreApasinfoVoMapper">
+
+  <resultMap id="preApasinfoVoMap" type="com.inspur.workinfo.vo.PreApasinfoVo">
+                  <id property="projid" column="PROJID"/>
+                        <result property="projpwd" column="PROJPWD"/>
+                        <result property="itemCode" column="ITEM_CODE"/>
+                        <result property="implementCode" column="IMPLEMENT_CODE"/>
+                        <result property="itemversion" column="ITEMVERSION"/>
+                        <result property="itemname" column="ITEMNAME"/>
+                        <result property="projectname" column="PROJECTNAME"/>
+                        <result property="projectstate" column="PROJECTSTATE"/>
+                        <result property="infotype" column="INFOTYPE"/>
+                        <result property="applyname" column="APPLYNAME"/>
+                        <result property="applyCardtypenumber" column="APPLY_CARDTYPENUMBER"/>
+                        <result property="contactman" column="CONTACTMAN"/>
+                        <result property="contactmanCardnumber" column="CONTACTMAN_CARDNUMBER"/>
+                        <result property="telphone" column="TELPHONE"/>
+                        <result property="postcode" column="POSTCODE"/>
+                        <result property="address" column="ADDRESS"/>
+                        <result property="legalman" column="LEGALMAN"/>
+                        <result property="deptid" column="DEPTID"/>
+                        <result property="deptname" column="DEPTNAME"/>
+                        <result property="receiveUseid" column="RECEIVE_USEID"/>
+                        <result property="receiveName" column="RECEIVE_NAME"/>
+                        <result property="receivetime" column="RECEIVETIME" jdbcType="DATE"/>
+                        <result property="approveType" column="APPROVE_TYPE"/>
+                        <result property="regionId" column="REGION_ID"/>
+                        <result property="datastate" column="DATASTATE"/>
+                        <result property="createTime" column="CREATE_TIME"/>
+                        <result property="dataver" column="DATAVER"/>
+                        <result property="maketime" column="MAKETIME" jdbcType="DATE"/>
+                        <result property="centerurl" column="CENTERURL"/>
+                        <result property="acceptlist" column="ACCEPTLIST"/>
+                        <result property="sysmark" column="SYSMARK"/>
+                        <result property="cdOperation" column="CD_OPERATION"/>
+                        <result property="applyCardtype" column="APPLY_CARDTYPE"/>
+                        <result property="applyfrom" column="APPLYFROM"/>
+                        <result property="contactmanCardtype" column="CONTACTMAN_CARDTYPE"/>
+                        <result property="sourceid" column="SOURCEID"/>
+            </resultMap>
+</mapper>

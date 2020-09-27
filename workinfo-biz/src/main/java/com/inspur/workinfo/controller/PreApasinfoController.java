@@ -17,10 +17,16 @@
 
 package com.inspur.workinfo.controller;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.inspur.workinfo.entity.EaJcStepDone;
 import com.inspur.workinfo.entity.EaJcStepSpecialnode;
+import com.inspur.workinfo.enums.ProjectLinkType;
+import com.inspur.workinfo.enums.ProjectStateType;
+import com.inspur.workinfo.service.PreApasinfoVoService;
+import com.inspur.workinfo.vo.PreApasinfoVo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import com.inspur.workinfo.entity.PreApasinfo;
@@ -44,17 +50,48 @@ import org.springframework.web.bind.annotation.*;
 public class PreApasinfoController {
 
     private final  PreApasinfoService preApasinfoService;
+    private final PreApasinfoVoService preApasinfoVoService;
+
+//    /**
+//     * 分页查询
+//     * @param page 分页对象
+//     * @param preApasinfo 登记（申报）信息
+//     * @return
+//     */
+//    @ApiOperation(value = "分页查询", notes = "分页查询")
+//    @GetMapping("/page" )
+//    public R getPreApasinfoPage(Page page, PreApasinfo preApasinfo) {
+//        return R.ok(preApasinfoService.page(page, Wrappers.query(preApasinfo)));
+//    }
 
     /**
      * 分页查询
      * @param page 分页对象
-     * @param preApasinfo 登记（申报）信息
+     * @param preApasinfo 登记（申报）信息,projectstateType
      * @return
      */
-    @ApiOperation(value = "分页查询", notes = "分页查询")
+    @ApiOperation(value = "分页查询", notes = "projectstateType 1-受理中，2-已办结，3-已撤销,null-所有")
     @GetMapping("/page" )
-    public R getPreApasinfoPage(Page page, PreApasinfo preApasinfo) {
-        return R.ok(preApasinfoService.page(page, Wrappers.query(preApasinfo)));
+    public R getPreApasinfoPage(Page page, PreApasinfoVo preApasinfo) {
+        if (preApasinfo == null || StrUtil.isBlank(preApasinfo.getProjectstateType())){
+           return R.ok(preApasinfoVoService.page(page, Wrappers.query(preApasinfo)));
+        }
+        QueryWrapper<PreApasinfoVo> wrapper = new QueryWrapper(preApasinfo);
+        if(ProjectLinkType.accepted.getValue().equals(preApasinfo.getProjectstateType())){
+            wrapper.in("PROJECTSTATE", ProjectStateType.accepted.getValue(),
+                    ProjectStateType.subcorrected.getValue(),
+                    ProjectStateType.unaccepted.getValue());
+        }else if(ProjectLinkType.done.getValue().equals(preApasinfo.getProjectstateType())){
+//            wrapper.in("PROJECTSTATE", ProjectStateType.doing.getValue(),
+//                    ProjectStateType.dospecilup.getValue());
+            wrapper.in("PROJECTSTATE", ProjectStateType.done.getValue(),
+                    ProjectStateType.turndone.getValue(),
+                    ProjectStateType.baddone.getValue(),
+                    ProjectStateType.backdone.getValue());
+        }else if(ProjectLinkType.canceled.getValue().equals(preApasinfo.getProjectstateType())){
+            wrapper.eq("DATASTATE", "0");
+        }
+        return R.ok(preApasinfoVoService.page(page, wrapper));
     }
 
 

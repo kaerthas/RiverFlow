@@ -15,14 +15,10 @@
  * Author: jason (jj@163.com)
  */
 package com.inspur.workinfo.service.impl;
-
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.inspur.workinfo.mapper.PreApasinfoMapper;
-import com.inspur.workinfo.service.PreApasinfoService;
-import com.inspur.workinfo.entity.PreApasinfo;
+import com.inspur.workinfo.mapper.PreApasinfoVoMapper;
+import com.inspur.workinfo.service.PreApasinfoVoService;
+import com.inspur.workinfo.vo.PreApasinfoVo;
 import org.springframework.stereotype.Service;
 
 /**
@@ -32,10 +28,5 @@ import org.springframework.stereotype.Service;
  * @date 2020-06-17 10:15:05
  */
 @Service
-public class PreApasinfoServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinfo> implements PreApasinfoService {
-
-    @Override
-    public IPage<PreApasinfo> localpage(Page page, QueryWrapper<PreApasinfo> query) {
-        return null;
-    }
+public class PreApasinfoVoServiceImpl extends ServiceImpl<PreApasinfoVoMapper, PreApasinfoVo> implements PreApasinfoVoService {
 }

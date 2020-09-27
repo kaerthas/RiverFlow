@@ -14,16 +14,11 @@
  * this software without specific prior written permission.
  * Author: jason (jj@163.com)
  */
-package com.inspur.workinfo.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.inspur.workinfo.mapper.PreApasinfoMapper;
-import com.inspur.workinfo.service.PreApasinfoService;
-import com.inspur.workinfo.entity.PreApasinfo;
-import org.springframework.stereotype.Service;
+package com.inspur.workinfo.service;
+
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.inspur.workinfo.vo.PreApasinfoVo;
 
 /**
  * 登记（申报）信息
@@ -31,11 +26,6 @@ import org.springframework.stereotype.Service;
  * @author Jason
  * @date 2020-06-17 10:15:05
  */
-@Service
-public class PreApasinfoServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinfo> implements PreApasinfoService {
+public interface PreApasinfoVoService extends IService<PreApasinfoVo> {
 
-    @Override
-    public IPage<PreApasinfo> localpage(Page page, QueryWrapper<PreApasinfo> query) {
-        return null;
-    }
 }
