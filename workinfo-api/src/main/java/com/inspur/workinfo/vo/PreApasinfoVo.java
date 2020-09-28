@@ -227,4 +227,9 @@ private static final long serialVersionUID = 1L;
     @ApiModelProperty(value = "当前阶段,projectstateType 1-受理中，2-已办结，3-已撤销,null-所有")
     @TableField(exist = false)
     private String projectstateType;
+    /**
+     * 办结时间 可为空
+     */
+    @ApiModelProperty(value = "办结时间 可为空")
+    private Date donetime;
     }
