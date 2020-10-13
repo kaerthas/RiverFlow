@@ -19,6 +19,7 @@ package com.inspur.workinfo.vo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.activerecord.Model;
 import io.swagger.annotations.ApiModel;
@@ -168,6 +169,7 @@ private static final long serialVersionUID = 1L;
      * 0-作废，1-有效。
      */
     @ApiModelProperty(value="0-作废，1-有效。")
+//    @TableLogic(value="1",delval = "0")
     private Integer datastate;
     /**
      * 由各业务系统产生，时间格式：YYYY-MM-DDHH24:MI:SS。

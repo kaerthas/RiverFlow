@@ -64,8 +64,8 @@ public class EaJcStepProcController {
      * @return R
      */
     @ApiOperation(value = "通过办件编号查询", notes = "通过办件编号查询")
-    @GetMapping("/{projid}" )
-    public R getById(@PathVariable("projid" ) String projid) {
+    @GetMapping("/getbyprojid" )
+    public R getById(String projid) {
         QueryWrapper<EaJcStepProc> wrapper = new QueryWrapper();
         wrapper.eq("PROJID",projid);
         return R.ok(eaJcStepProcService.list(wrapper));
