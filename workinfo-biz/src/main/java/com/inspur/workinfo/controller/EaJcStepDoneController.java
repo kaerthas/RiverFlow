@@ -67,7 +67,7 @@ public class EaJcStepDoneController {
     public R getById(String projid) {
         QueryWrapper<EaJcStepDone> wrapper = new QueryWrapper();
         wrapper.eq("PROJID",projid);
-        return R.ok(eaJcStepDoneService.list(wrapper));
+        return R.ok(eaJcStepDoneService.getOne(wrapper));
     }
 
     /**

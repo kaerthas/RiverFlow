@@ -105,7 +105,8 @@ public class PreApasinfoController {
     public R getById(String projid) {
         QueryWrapper<PreApasinfoVo> wrapper = new QueryWrapper();
         wrapper.eq("PROJID",projid);
-        return R.ok(preApasinfoVoService.list(wrapper));
+        wrapper.orderByDesc("LOCALTIME");
+        return R.ok(preApasinfoVoService.getOne(wrapper));
     }
 
     /**

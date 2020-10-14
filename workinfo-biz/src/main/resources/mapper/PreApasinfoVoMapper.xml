@@ -61,5 +61,6 @@
                         <result property="contactmanCardtype" column="CONTACTMAN_CARDTYPE"/>
                         <result property="sourceid" column="SOURCEID"/>
                         <result property="donetime" column="DONETIME" jdbcType="DATE"/>
+                        <result property="localtime" column="LOCALTIME" jdbcType="DATE"/>
             </resultMap>
 </mapper>

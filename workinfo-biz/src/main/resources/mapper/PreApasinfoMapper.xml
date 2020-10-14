@@ -46,6 +46,7 @@
                         <result property="receiveUseid" column="RECEIVE_USEID"/>
                         <result property="receiveName" column="RECEIVE_NAME"/>
                         <result property="receivetime" column="RECEIVETIME" jdbcType="DATE"/>
+                        <result property="localtime" column="LOCALTIME" jdbcType="DATE"/>
                         <result property="approveType" column="APPROVE_TYPE"/>
                         <result property="regionId" column="REGION_ID"/>
                         <result property="datastate" column="DATASTATE"/>

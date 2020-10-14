@@ -234,4 +234,10 @@ private static final long serialVersionUID = 1L;
      */
     @ApiModelProperty(value = "办结时间 可为空")
     private Date donetime;
+
+    /**
+     * 进入办件库的时间，时间格式：YYYY-MM-DDHH24:MI:SS。
+     */
+    @ApiModelProperty(value="进入办件库的时间，时间格式：YYYY-MM-DDHH24:MI:SS。")
+    private Date localtime;
     }
