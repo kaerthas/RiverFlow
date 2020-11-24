@@ -132,7 +132,7 @@ public class PreApasinfoController {
      */
     @ApiOperation(value = "修改登记（申报）信息", notes = "修改登记（申报）信息")
     @SysLog("修改登记（申报）信息" )
-    @PutMapping
+    @PostMapping("/updateById")
     public R updateById(@RequestBody PreApasinfo preApasinfo) {
         return R.ok(preApasinfoService.updateById(preApasinfo));
     }
