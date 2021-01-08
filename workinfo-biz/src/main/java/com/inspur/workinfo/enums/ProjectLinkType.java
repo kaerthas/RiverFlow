@@ -32,7 +32,8 @@ public enum ProjectLinkType {
 
 	accepted("1", "受理中"),
 	done("2", "已办结"),
-	canceled("3", "已撤销");
+	canceled("3", "已撤销"),
+	submited("4", "已提交");
 
 	private String value;
 	private String description;
