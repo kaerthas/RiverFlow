@@ -10,7 +10,7 @@ spring:
     type: com.alibaba.druid.pool.DruidDataSource
     druid:
       driver-class-name: oracle.jdbc.driver.OracleDriver
-      username: ${MYSQL-USER:workinfotest}
+      username: ${MYSQL-USER:workinfogj}
       password: ${MYSQL-PWD:123456}
       url: jdbc:oracle:thin:@172.18.10.205:1521/zwfwptgov1
 #      queryDsSql: 'select * from gen_datasource_conf'
@@ -29,6 +29,8 @@ spring:
           config:
             multi-statement-allow: true
 mybatis-plus:
+  #configuration:
+    #log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   tenant-enable: ture
   mapper-locations: classpath:/mapper/*Mapper.xml
   global-config:

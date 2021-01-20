@@ -95,7 +95,11 @@ public class PreApasinfoController {
             wrapper.in("PROJECTSTATE", ProjectStateType.unaccepted.getValue()
                     ,ProjectStateType.preacceptedback.getValue());
         } else if (ProjectLinkType.submited.getValue().equals(preApasinfo.getProjectstateType())){
-            wrapper.in("PROJECTSTATE", ProjectStateType.preaccepted.getValue());
+            wrapper.in("PROJECTSTATE", ProjectStateType.preaccepted.getValue(),
+                    ProjectStateType.accepted.getValue(),
+                    ProjectStateType.subcorrected.getValue(),
+                    ProjectStateType.doing.getValue(),
+                    ProjectStateType.dospecilup.getValue());
         }
         return R.ok(preApasinfoVoService.page(page, wrapper));
     }
