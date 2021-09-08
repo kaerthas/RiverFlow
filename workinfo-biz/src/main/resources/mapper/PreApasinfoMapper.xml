@@ -23,43 +23,174 @@
 
 <mapper namespace="com.inspur.workinfo.mapper.PreApasinfoMapper">
 
-  <resultMap id="preApasinfoMap" type="com.inspur.workinfo.entity.PreApasinfo">
-                  <id property="projid" column="PROJID"/>
-                        <result property="projpwd" column="PROJPWD"/>
-                        <result property="itemCode" column="ITEM_CODE"/>
-                        <result property="implementCode" column="IMPLEMENT_CODE"/>
-                        <result property="itemversion" column="ITEMVERSION"/>
-                        <result property="itemname" column="ITEMNAME"/>
-                        <result property="projectname" column="PROJECTNAME"/>
-                        <result property="projectstate" column="PROJECTSTATE"/>
-                        <result property="infotype" column="INFOTYPE"/>
-                        <result property="applyname" column="APPLYNAME"/>
-                        <result property="applyCardtypenumber" column="APPLY_CARDTYPENUMBER"/>
-                        <result property="contactman" column="CONTACTMAN"/>
-                        <result property="contactmanCardnumber" column="CONTACTMAN_CARDNUMBER"/>
-                        <result property="telphone" column="TELPHONE"/>
-                        <result property="postcode" column="POSTCODE"/>
-                        <result property="address" column="ADDRESS"/>
-                        <result property="legalman" column="LEGALMAN"/>
-                        <result property="deptid" column="DEPTID"/>
-                        <result property="deptname" column="DEPTNAME"/>
-                        <result property="receiveUseid" column="RECEIVE_USEID"/>
-                        <result property="receiveName" column="RECEIVE_NAME"/>
-                        <result property="receivetime" column="RECEIVETIME" jdbcType="DATE"/>
-                        <result property="localtime" column="LOCALTIME" jdbcType="DATE"/>
-                        <result property="approveType" column="APPROVE_TYPE"/>
-                        <result property="regionId" column="REGION_ID"/>
-                        <result property="datastate" column="DATASTATE"/>
-                        <result property="createTime" column="CREATE_TIME"/>
-                        <result property="dataver" column="DATAVER"/>
-                        <result property="maketime" column="MAKETIME" jdbcType="DATE"/>
-                        <result property="centerurl" column="CENTERURL"/>
-                        <result property="acceptlist" column="ACCEPTLIST"/>
-                        <result property="sysmark" column="SYSMARK"/>
-                        <result property="cdOperation" column="CD_OPERATION"/>
-                        <result property="applyCardtype" column="APPLY_CARDTYPE"/>
-                        <result property="applyfrom" column="APPLYFROM"/>
-                        <result property="contactmanCardtype" column="CONTACTMAN_CARDTYPE"/>
-                        <result property="sourceid" column="SOURCEID"/>
-            </resultMap>
+    <resultMap id="preApasinfoMap" type="com.inspur.workinfo.entity.PreApasinfo">
+        <id property="projid" column="PROJID"/>
+        <result property="projpwd" column="PROJPWD"/>
+        <result property="itemCode" column="ITEM_CODE"/>
+        <result property="implementCode" column="IMPLEMENT_CODE"/>
+        <result property="itemversion" column="ITEMVERSION"/>
+        <result property="itemname" column="ITEMNAME"/>
+        <result property="projectname" column="PROJECTNAME"/>
+        <result property="projectstate" column="PROJECTSTATE"/>
+        <result property="infotype" column="INFOTYPE"/>
+        <result property="applyname" column="APPLYNAME"/>
+        <result property="applyCardtypenumber" column="APPLY_CARDTYPENUMBER"/>
+        <result property="contactman" column="CONTACTMAN"/>
+        <result property="contactmanCardnumber" column="CONTACTMAN_CARDNUMBER"/>
+        <result property="telphone" column="TELPHONE"/>
+        <result property="postcode" column="POSTCODE"/>
+        <result property="address" column="ADDRESS"/>
+        <result property="legalman" column="LEGALMAN"/>
+        <result property="deptid" column="DEPTID"/>
+        <result property="deptname" column="DEPTNAME"/>
+        <result property="receiveUseid" column="RECEIVE_USEID"/>
+        <result property="receiveName" column="RECEIVE_NAME"/>
+        <result property="receivetime" column="RECEIVETIME" jdbcType="DATE"/>
+        <result property="localtime" column="LOCALTIME" jdbcType="DATE"/>
+        <result property="approveType" column="APPROVE_TYPE"/>
+        <result property="regionId" column="REGION_ID"/>
+        <result property="datastate" column="DATASTATE"/>
+        <result property="createTime" column="CREATE_TIME"/>
+        <result property="dataver" column="DATAVER"/>
+        <result property="maketime" column="MAKETIME" jdbcType="DATE"/>
+        <result property="centerurl" column="CENTERURL"/>
+        <result property="acceptlist" column="ACCEPTLIST"/>
+        <result property="sysmark" column="SYSMARK"/>
+        <result property="cdOperation" column="CD_OPERATION"/>
+        <result property="applyCardtype" column="APPLY_CARDTYPE"/>
+        <result property="applyfrom" column="APPLYFROM"/>
+        <result property="contactmanCardtype" column="CONTACTMAN_CARDTYPE"/>
+        <result property="sourceid" column="SOURCEID"/>
+        <result property="serviceChannel" column="SERVICE_CHANNEL"/>
+        <result property="itemType" column="ITEM_TYPE"/>
+    </resultMap>
+
+    <!--<select id="">-->
+    <!--select count(DISTINCT c.PROJID) num, b.REGION_ID_NAME,SUBSTR(c.REGION_ID,1,6)-->
+    <!--from EA_JC_STEP_BASICINFO c-->
+    <!--inner join EA_JC_STEP_DONE d on c.projid = d.projid-->
+    <!--LEFT JOIN REGION b on SUBSTR(c.REGION_ID,1,6)= SUBSTR(b.REGION_ID,1,6)-->
+    <!--where b.REGION_ID_NAME IS NOT null-->
+    <!--and c.cd_operation <> 'D' and c.orgbusno is not null-->
+    <!--and EXISTS(select 1 from PRE_APASINFO a where a.projid = c.projid and a.CD_OPERATION <> 'D' and a.APPLYFROM in ('1','3','2')-->
+    <!--and a.MAKETIME < TO_DATE('2021-05-12','YYYY-MM-DD'))-->
+    <!--group by b.REGION_ID_NAME,SUBSTR(c.REGION_ID,1,6) ORDER BY SUBSTR(c.REGION_ID,1,6);-->
+
+    <!--select count(DISTINCT c.PROJID) num, b.REGION_ID_NAME,SUBSTR(c.REGION_ID,1,6)-->
+    <!--from EA_JC_STEP_BASICINFO c-->
+    <!--LEFT JOIN REGION b on SUBSTR(c.REGION_ID,1,6)= SUBSTR(b.REGION_ID,1,6)-->
+    <!--where b.REGION_ID_NAME IS NOT null-->
+    <!--and c.cd_operation <> 'D' and c.orgbusno is not null-->
+    <!--and EXISTS(select 1 from PRE_APASINFO a where a.projid = c.projid and a.CD_OPERATION <> 'D' and a.APPLYFROM in ('1','3','2')-->
+    <!--and a.MAKETIME < TO_DATE('2021-05-12','YYYY-MM-DD'))-->
+    <!--group by b.REGION_ID_NAME,SUBSTR(c.REGION_ID,1,6) ORDER BY SUBSTR(c.REGION_ID,1,6);-->
+
+    <!--select count(DISTINCT c.PROJID) num, b.REGION_ID_NAME,SUBSTR(c.REGION_ID,1,6)-->
+    <!--from EA_JC_STEP_BASICINFO c-->
+    <!--LEFT JOIN REGION b on SUBSTR(c.REGION_ID,1,6)= SUBSTR(b.REGION_ID,1,6)-->
+    <!--where b.REGION_ID_NAME IS NOT null-->
+    <!--and c.cd_operation <> 'D' and c.orgbusno is not null-->
+    <!--and EXISTS(select 1 from PRE_APASINFO a where a.projid = c.projid and a.CD_OPERATION <> 'D' and a.APPLYFROM in ('2','3')-->
+    <!--and a.MAKETIME < TO_DATE('2021-05-12','YYYY-MM-DD'))-->
+    <!--group by b.REGION_ID_NAME,SUBSTR(c.REGION_ID,1,6) ORDER BY SUBSTR(c.REGION_ID,1,6);-->
+
+    <!--select count(DISTINCT c.PROJID) num, b.REGION_ID_NAME,SUBSTR(c.REGION_ID,1,6)-->
+    <!--from EA_JC_STEP_BASICINFO c-->
+    <!--LEFT JOIN REGION b on SUBSTR(c.REGION_ID,1,6)= SUBSTR(b.REGION_ID,1,6)-->
+    <!--where b.REGION_ID_NAME IS NOT null-->
+    <!--and c.cd_operation <> 'D' and c.orgbusno is not null-->
+    <!--and EXISTS(select 1 from PRE_APASINFO a where a.projid = c.projid and a.CD_OPERATION <> 'D' and a.APPLYFROM in ('1')-->
+    <!--and a.MAKETIME < TO_DATE('2021-05-12','YYYY-MM-DD'))-->
+    <!--group by b.REGION_ID_NAME,SUBSTR(c.REGION_ID,1,6) ORDER BY SUBSTR(c.REGION_ID,1,6);-->
+
+    <!--</select>-->
+
+    <!--<select id="">-->
+        <!--select count(DISTINCT a.PROJID) num, b.REGION,SUBSTR(a.REGION_ID,1,4)-->
+        <!--from PRE_APASINFO a-->
+        <!--LEFT JOIN REGION b on a.region_id = b.region_id-->
+        <!--where a.CD_OPERATION <> 'D' and region is not null-->
+        <!--and a.APPLYFROM in ('1','2','3')-->
+        <!--and a.MAKETIME < TO_DATE('2021-04-15','YYYY-MM-DD')-->
+        <!--group by b.REGION,SUBSTR(a.REGION_ID,1,4) ORDER BY SUBSTR(a.REGION_ID,1,4);-->
+
+        <!--select count(DISTINCT a.PROJID) num, b.REGION,SUBSTR(a.REGION_ID,1,4)-->
+        <!--from PRE_APASINFO a-->
+        <!--LEFT JOIN REGION b on a.region_id = b.region_id-->
+        <!--inner join EA_JC_STEP_BASICINFO c on a.projid = c.projid-->
+        <!--where a.CD_OPERATION <> 'D' and region is not null-->
+        <!--and c.cd_operation <> 'D' and c.orgbusno is not null-->
+        <!--and a.APPLYFROM in ('1','2','3')-->
+        <!--and a.MAKETIME < TO_DATE('2021-04-15','YYYY-MM-DD')-->
+        <!--group by b.REGION,SUBSTR(a.REGION_ID,1,4) ORDER BY SUBSTR(a.REGION_ID,1,4);-->
+
+        <!--select count(DISTINCT a.PROJID) num, b.REGION,SUBSTR(a.REGION_ID,1,4)-->
+        <!--from PRE_APASINFO a-->
+        <!--LEFT JOIN REGION b on a.region_id = b.region_id-->
+        <!--inner join EA_JC_STEP_DONE c on a.projid = c.projid-->
+        <!--inner join EA_JC_STEP_BASICINFO d on a.projid = d.projid-->
+        <!--where a.CD_OPERATION <> 'D' and region is not null-->
+        <!--and c.cd_operation <> 'D' and c.orgbusno is not null-->
+        <!--and a.APPLYFROM in ('1','2','3')-->
+        <!--and a.MAKETIME < TO_DATE('2021-04-15','YYYY-MM-DD')-->
+        <!--group by b.REGION,SUBSTR(a.REGION_ID,1,4) ORDER BY SUBSTR(a.REGION_ID,1,4);-->
+    <!--</select>-->
+
+    <!--<select id="">-->
+        <!--select count(a.PROJID) num, b.REGION,SUBSTR(a.REGION_ID,1,4)-->
+        <!--from PRE_APASINFO a-->
+        <!--LEFT JOIN REGION b on a.region_id = b.region_id-->
+        <!--where a.CD_OPERATION <![CDATA[ <> ]]> 'D' and region is not null-->
+        <!--and a.APPLYFROM in ('1')-->
+        <!--group by b.REGION,SUBSTR(a.REGION_ID,1,4) ORDER BY SUBSTR(a.REGION_ID,1,4);-->
+    <!--</select>-->
+    <!--<select id="">-->
+        <!--select count(DISTINCT a.PROJID) num, b.REGIN_NAME,SUBSTR(a.REGION_ID,1,4)-->
+        <!--from PRE_APASINFO a-->
+        <!--LEFT JOIN REGININFO b on SUBSTR(a.REGION_ID,1,4)= SUBSTR(b.REGIN_ID,1,4)-->
+        <!--inner join EA_JC_STEP_BASICINFO c on a.projid = c.projid-->
+        <!--where a.CD_OPERATION <> 'D' and B.REGIN_NAME IS NOT null-->
+        <!--and c.cd_operation <> 'D' and c.orgbusno is not null-->
+        <!--and a.APPLYFROM in ('1','2','3')-->
+        <!--and a.MAKETIME < TO_DATE('2021-04-15','YYYY-MM-DD')-->
+        <!--group by b.REGIN_NAME,SUBSTR(a.REGION_ID,1,4) ORDER BY SUBSTR(a.REGION_ID,1,4);-->
+
+        <!--select count(DISTINCT a.PROJID) num, b.REGIN_NAME,SUBSTR(a.REGION_ID,1,4)-->
+        <!--from PRE_APASINFO a-->
+        <!--LEFT JOIN REGININFO b on SUBSTR(a.REGION_ID,1,4)= SUBSTR(b.REGIN_ID,1,4)-->
+        <!--inner join EA_JC_STEP_BASICINFO c on a.projid = c.projid-->
+        <!--where a.CD_OPERATION <> 'D' and B.REGIN_NAME IS NOT null-->
+        <!--and c.cd_operation <> 'D' and c.orgbusno is not null-->
+        <!--and a.APPLYFROM in ('1','2','3')-->
+        <!--and a.MAKETIME < TO_DATE('2021-04-15','YYYY-MM-DD')-->
+        <!--group by b.REGIN_NAME,SUBSTR(a.REGION_ID,1,4) ORDER BY SUBSTR(a.REGION_ID,1,4);-->
+
+        <!--select count(DISTINCT a.PROJID) num, b.REGIN_NAME,SUBSTR(a.REGION_ID,1,4)-->
+        <!--from PRE_APASINFO a-->
+        <!--LEFT JOIN REGININFO b on SUBSTR(a.REGION_ID,1,4)= SUBSTR(b.REGIN_ID,1,4)-->
+        <!--where a.CD_OPERATION <> 'D' and B.REGIN_NAME IS NOT null-->
+        <!--and a.APPLYFROM in ('1','2','3')-->
+        <!--and a.MAKETIME < TO_DATE('2021-04-15','YYYY-MM-DD')-->
+        <!--group by b.REGIN_NAME,SUBSTR(a.REGION_ID,1,4) ORDER BY SUBSTR(a.REGION_ID,1,4);-->
+
+        <!--select count(DISTINCT a.PROJID) num, b.REGIN_NAME,SUBSTR(a.REGION_ID,1,4)-->
+        <!--from PRE_APASINFO a-->
+        <!--LEFT JOIN REGININFO b on SUBSTR(a.REGION_ID,1,4)= SUBSTR(b.REGIN_ID,1,4)-->
+        <!--inner join EA_JC_STEP_BASICINFO c on a.projid = c.projid-->
+        <!--where a.CD_OPERATION <> 'D' and B.REGIN_NAME IS NOT null-->
+        <!--and c.cd_operation <> 'D' and c.orgbusno is not null-->
+        <!--and a.APPLYFROM in ('2','3')-->
+        <!--and a.MAKETIME < TO_DATE('2021-04-15','YYYY-MM-DD')-->
+        <!--group by b.REGIN_NAME,SUBSTR(a.REGION_ID,1,4) ORDER BY SUBSTR(a.REGION_ID,1,4);-->
+
+        <!--select count(DISTINCT a.PROJID) num, b.REGIN_NAME,SUBSTR(a.REGION_ID,1,4)-->
+        <!--from PRE_APASINFO a-->
+        <!--LEFT JOIN REGININFO b on SUBSTR(a.REGION_ID,1,4)= SUBSTR(b.REGIN_ID,1,4)-->
+        <!--inner join EA_JC_STEP_BASICINFO c on a.projid = c.projid-->
+        <!--where a.CD_OPERATION <> 'D' and B.REGIN_NAME IS NOT null-->
+        <!--and c.cd_operation <> 'D' and c.orgbusno is not null-->
+        <!--and a.APPLYFROM in ('1')-->
+        <!--and a.MAKETIME < TO_DATE('2021-04-15','YYYY-MM-DD')-->
+        <!--group by b.REGIN_NAME,SUBSTR(a.REGION_ID,1,4) ORDER BY SUBSTR(a.REGION_ID,1,4);-->
+    <!--</select>-->
 </mapper>

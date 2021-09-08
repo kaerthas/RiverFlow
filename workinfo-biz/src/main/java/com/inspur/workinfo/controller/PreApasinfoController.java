@@ -104,6 +104,51 @@ public class PreApasinfoController {
         return R.ok(preApasinfoVoService.page(page, wrapper));
     }
 
+    /**
+     * 分页查询
+     * @param page 分页对象
+     * @param preApasinfo 登记（申报）信息,projectstateType
+     * @return
+     */
+    @ApiOperation(value = "分页查询", notes = "projectstateType 1-受理中，2-已办结，3-已撤销,null-所有")
+    @PostMapping("/page2")
+    public R getPreApasinfoPage2(@RequestParam(value = "current") String current,
+                                @RequestParam(value = "size") String size,
+                                @RequestBody PreApasinfoVo preApasinfo) {
+        Page page = new Page();
+        page.setCurrent(Long.parseLong(current));
+        page.setSize(Long.parseLong(size));
+        if (preApasinfo == null || StrUtil.isBlank(preApasinfo.getProjectstateType())){
+            return R.ok(preApasinfoVoService.page(page, Wrappers.query(preApasinfo)));
+        }
+        QueryWrapper<PreApasinfoVo> wrapper = new QueryWrapper(preApasinfo);
+        if(ProjectLinkType.accepted.getValue().equals(preApasinfo.getProjectstateType())){
+            wrapper.in("PROJECTSTATE", ProjectStateType.accepted.getValue(),
+                    ProjectStateType.subcorrected.getValue(),
+//                    ProjectStateType.unaccepted.getValue(),
+                    ProjectStateType.doing.getValue(),
+                    ProjectStateType.dospecilup.getValue());
+        }else if(ProjectLinkType.done.getValue().equals(preApasinfo.getProjectstateType())){
+//            wrapper.in("PROJECTSTATE", ProjectStateType.doing.getValue(),
+//                    ProjectStateType.dospecilup.getValue());
+            wrapper.in("PROJECTSTATE", ProjectStateType.done.getValue(),
+                    ProjectStateType.turndone.getValue(),
+                    ProjectStateType.baddone.getValue(),
+                    ProjectStateType.backdone.getValue());
+        }else if(ProjectLinkType.canceled.getValue().equals(preApasinfo.getProjectstateType())){
+//            wrapper.eq("DATASTATE", "0");
+            wrapper.in("PROJECTSTATE", ProjectStateType.unaccepted.getValue()
+                    ,ProjectStateType.preacceptedback.getValue());
+        } else if (ProjectLinkType.submited.getValue().equals(preApasinfo.getProjectstateType())){
+            wrapper.in("PROJECTSTATE", ProjectStateType.preaccepted.getValue(),
+                    ProjectStateType.accepted.getValue(),
+                    ProjectStateType.subcorrected.getValue(),
+                    ProjectStateType.doing.getValue(),
+                    ProjectStateType.dospecilup.getValue());
+        }
+        return R.ok(preApasinfoVoService.page(page, wrapper));
+    }
+
 
     /**
      * 通过办件编号查询登记（申报）信息

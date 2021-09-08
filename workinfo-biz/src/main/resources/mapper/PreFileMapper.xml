@@ -23,28 +23,30 @@
 
 <mapper namespace="com.inspur.workinfo.mapper.PreFileMapper">
 
-  <resultMap id="preFileMap" type="com.inspur.workinfo.entity.PreFile">
-                  <id property="unid" column="UNID"/>
-                        <result property="projid" column="PROJID"/>
-                        <result property="attrname" column="ATTRNAME"/>
-                        <result property="deptid" column="DEPTID"/>
-                        <result property="attrid" column="ATTRID"/>
-                        <result property="sortid" column="SORTID"/>
-                        <result property="taketype" column="TAKETYPE"/>
-                        <result property="istake" column="ISTAKE"/>
-                        <result property="amount" column="AMOUNT"/>
-                        <result property="taketime" column="TAKETIME"/>
-                        <result property="filename" column="FILENAME"/>
-                        <result property="memo" column="MEMO"/>
-                        <result property="createTime" column="CREATE_TIME"/>
-                        <result property="dataver" column="DATAVER"/>
-                        <result property="maketime" column="MAKETIME"/>
-                        <result property="sn" column="SN"/>
-                        <result property="regionId" column="REGION_ID"/>
-                        <result property="itemregionid" column="ITEMREGIONID"/>
-                        <result property="entityurlZ" column="ENTITYURL_Z"/>
-                        <result property="entityurlH" column="ENTITYURL_H"/>
-                        <result property="sysmark" column="SYSMARK"/>
-                        <result property="cdOperation" column="CD_OPERATION"/>
-            </resultMap>
+    <resultMap id="preFileMap" type="com.inspur.workinfo.entity.PreFile">
+        <id property="unid" column="UNID"/>
+        <result property="projid" column="PROJID"/>
+        <result property="attrname" column="ATTRNAME"/>
+        <result property="deptid" column="DEPTID"/>
+        <result property="attrid" column="ATTRID"/>
+        <result property="sortid" column="SORTID"/>
+        <result property="taketype" column="TAKETYPE"/>
+        <result property="istake" column="ISTAKE"/>
+        <result property="amount" column="AMOUNT"/>
+        <result property="taketime" column="TAKETIME"/>
+        <result property="filename" column="FILENAME"/>
+        <result property="memo" column="MEMO"/>
+        <result property="createTime" column="CREATE_TIME"/>
+        <result property="dataver" column="DATAVER"/>
+        <result property="maketime" column="MAKETIME"/>
+        <result property="sn" column="SN"/>
+        <result property="regionId" column="REGION_ID"/>
+        <result property="itemregionid" column="ITEMREGIONID"/>
+        <result property="entityurlZ" column="ENTITYURL_Z"/>
+        <result property="entityurlH" column="ENTITYURL_H"/>
+        <result property="sysmark" column="SYSMARK"/>
+        <result property="cdOperation" column="CD_OPERATION"/>
+        <result property="code" column="CODE"/>
+        <result property="onlyCode" column="ONLY_CODE"/>
+    </resultMap>
 </mapper>

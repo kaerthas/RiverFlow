@@ -155,6 +155,11 @@ private static final long serialVersionUID = 1L;
     @ApiModelProperty(value="GB/T 19488.2-2008中时间。")
     private Date receivetime;
     /**
+     * GB/T 19488.2-2008中时间。
+     */
+    @ApiModelProperty(value="入库时间")
+    private Date localtime;
+    /**
      * 详见附录2.8
      */
     @ApiModelProperty(value="详见附录2.8")
@@ -224,5 +229,15 @@ private static final long serialVersionUID = 1L;
      */
     @ApiModelProperty(value="事项ID")
     private String sourceid;
+    /**
+     * 服务渠道
+     */
+    @ApiModelProperty(value="服务渠道")
+    private String serviceChannel;
+    /**
+     * 事项类型
+     */
+    @ApiModelProperty(value="事项类型")
+    private String itemType;
 
     }

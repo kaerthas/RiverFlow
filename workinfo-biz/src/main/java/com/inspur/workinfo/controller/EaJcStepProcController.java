@@ -54,7 +54,9 @@ public class EaJcStepProcController {
     @ApiOperation(value = "分页查询", notes = "分页查询")
     @GetMapping("/page" )
     public R getEaJcStepProcPage(Page page, EaJcStepProc eaJcStepProc) {
-        return R.ok(eaJcStepProcService.page(page, Wrappers.query(eaJcStepProc)));
+        QueryWrapper<EaJcStepProc> wrapper = new QueryWrapper(eaJcStepProc);
+        wrapper.orderByAsc("occurtime");
+        return R.ok(eaJcStepProcService.page(page, wrapper));
     }
 
 
@@ -67,7 +69,7 @@ public class EaJcStepProcController {
     @GetMapping("/getbyprojid" )
     public R getById(String projid) {
         QueryWrapper<EaJcStepProc> wrapper = new QueryWrapper();
-        wrapper.eq("PROJID",projid);
+        wrapper.like("PROJID",projid);
         return R.ok(eaJcStepProcService.list(wrapper));
     }
 
