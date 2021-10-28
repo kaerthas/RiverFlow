@@ -73,6 +73,19 @@ public class EaJcStepBasicinfoController {
     }
 
     /**
+     * 通过办件编号查询基本信息2
+     * @param projid projid
+     * @return R
+     */
+    @ApiOperation(value = "通过办件编号查询2", notes = "通过办件编号查询2")
+    @GetMapping("/getbyprojid2" )
+    public R getById2(String projid) {
+        QueryWrapper<EaJcStepBasicinfo> wrapper = new QueryWrapper();
+        wrapper.eq("PROJID",projid);
+        return R.ok(eaJcStepBasicinfoService.getOne(wrapper));
+    }
+
+    /**
      * 新增基本信息
      * @param eaJcStepBasicinfo 基本信息
      * @return R
