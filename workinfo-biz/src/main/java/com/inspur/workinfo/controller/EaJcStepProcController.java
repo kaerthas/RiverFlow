@@ -74,6 +74,19 @@ public class EaJcStepProcController {
     }
 
     /**
+     * 通过办件编号查询审批过程信息2
+     * @param projid projid
+     * @return R
+     */
+    @ApiOperation(value = "通过办件编号查询2", notes = "通过办件编号查询2")
+    @GetMapping("/getbyprojid2" )
+    public R getById2(String projid) {
+        QueryWrapper<EaJcStepProc> wrapper = new QueryWrapper();
+        wrapper.eq("PROJID",projid);
+        return R.ok(eaJcStepProcService.list(wrapper));
+    }
+
+    /**
      * 新增审批过程信息
      * @param eaJcStepProc 审批过程信息
      * @return R
