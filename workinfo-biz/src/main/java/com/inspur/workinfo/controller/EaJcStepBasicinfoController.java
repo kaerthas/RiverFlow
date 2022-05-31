@@ -68,7 +68,7 @@ public class EaJcStepBasicinfoController {
     @GetMapping("/getbyprojid" )
     public R getById(String projid) {
         QueryWrapper<EaJcStepBasicinfo> wrapper = new QueryWrapper();
-        wrapper.like("PROJID",projid);
+        wrapper.likeRight("PROJID",projid);
         return R.ok(eaJcStepBasicinfoService.getOne(wrapper));
     }
 

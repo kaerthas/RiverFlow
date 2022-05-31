@@ -18,6 +18,7 @@
 package com.inspur.workinfo.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.enums.SqlLike;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.inspur.workinfo.entity.EaJcStepBasicinfo;
@@ -69,7 +70,7 @@ public class EaJcStepProcController {
     @GetMapping("/getbyprojid" )
     public R getById(String projid) {
         QueryWrapper<EaJcStepProc> wrapper = new QueryWrapper();
-        wrapper.like("PROJID",projid);
+        wrapper.likeRight("PROJID",projid);
         return R.ok(eaJcStepProcService.list(wrapper));
     }
 
