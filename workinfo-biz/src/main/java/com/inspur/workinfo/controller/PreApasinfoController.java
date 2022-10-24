@@ -18,6 +18,9 @@
 package com.inspur.workinfo.controller;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -35,6 +38,9 @@ import com.inspur.workinfo.util.R;
 import com.inspur.workinfo.annotation.SysLog;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import springfox.documentation.spring.web.json.Json;
+
+import java.util.List;
 
 
 /**
@@ -106,7 +112,7 @@ public class PreApasinfoController {
 
     /**
      * 分页查询
-     * @param page 分页对象
+     * @param current 分页对象
      * @param preApasinfo 登记（申报）信息,projectstateType
      * @return
      */
@@ -199,5 +205,60 @@ public class PreApasinfoController {
 //    public R removeById(@PathVariable String projid) {
 //        return R.ok(preApasinfoService.removeById(projid));
 //    }
+
+
+    /*
+    * 第五种：以JSON对象接收
+    * {"username": "zhangsan","id":"2","role":{"rolename":"admin"}}
+    * */
+    @RequestMapping(value = "/dataNotDone",method=RequestMethod.POST)
+    public R dataNotDone(@RequestBody JSONObject json) throws Exception{
+        System.out.println("certificateSno:"+json.getStr("certificateSno"));//统一社会信用代码
+        System.out.println("certNoList:"+json.getStr("certNoList"));
+        //查询是否有办结数据
+        String certificateSno  =  json.getStr("certificateSno");
+        String certNoList  = json.getStr("certNoList");
+
+
+        if (certificateSno==null||"".equals(certificateSno)){
+            return R.failed("缺少重要参数【统一社会信用代码】");
+        }
+
+        if (certNoList==null||"".equals(certNoList)){
+            return R.failed("缺少重要参数【经办人身份证号】");
+        }
+
+        String[] certNos  =  certNoList.split(",");
+
+        if (certNos==null&&certNos.length<=0){
+            return R.failed("缺少重要参数【经办人身份证号】");
+        }
+
+        JSONArray   jsonArray   = new JSONArray();
+        JSONObject  jsonObject  = new JSONObject();
+
+
+        for (String certNo:certNos
+             ) {
+
+            List<PreApasinfo> preApasinfoList =  preApasinfoService.list(new QueryWrapper<PreApasinfo>()
+                    .like("CONTACTMAN_CARDNUMBER",certNo)
+                    .eq("APPLY_CARDTYPENUMBER",certificateSno).notExists("select 1 from EA_JC_STEP_DONE B WHERE PRE_APASINFO.projid= B.projid"));
+
+            if (preApasinfoList!=null&&preApasinfoList.size()>0){
+                jsonObject.put("certNo",certNo);
+                jsonObject.put("status","1");
+                jsonArray.add(jsonObject);
+            }else{
+                jsonObject.put("certNo",certNo);
+                jsonObject.put("status","0");
+                jsonArray.add(jsonObject);
+            }
+
+        }
+        return R.ok(jsonArray,"查询成功");
+
+    }
+
 
 }
