@@ -22,6 +22,7 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.inspur.workinfo.entity.EaJcStepDone;
@@ -40,6 +41,9 @@ import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.spring.web.json.Json;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 
@@ -124,10 +128,24 @@ public class PreApasinfoController {
         Page page = new Page();
         page.setCurrent(Long.parseLong(current));
         page.setSize(Long.parseLong(size));
-        if (preApasinfo == null || StrUtil.isBlank(preApasinfo.getProjectstateType())){
-            return R.ok(preApasinfoVoService.page(page, Wrappers.query(preApasinfo)));
-        }
         QueryWrapper<PreApasinfoVo> wrapper = new QueryWrapper(preApasinfo);
+        if (StringUtils.isNotBlank(preApasinfo.getReceive_time())){
+            Date dateStart = null;
+            Date dateEnd  = null;
+            try {
+                dateStart = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(preApasinfo.getReceive_time()+" 00:00:00");
+                dateEnd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(preApasinfo.getReceive_time()+" 23:59:59");
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+            wrapper.between("RECEIVETIME",dateStart,dateEnd);
+
+        }
+
+        if (preApasinfo == null || StrUtil.isBlank(preApasinfo.getProjectstateType())){
+            return R.ok(preApasinfoVoService.page(page,wrapper));
+        }
+
         if(ProjectLinkType.accepted.getValue().equals(preApasinfo.getProjectstateType())){
             wrapper.in("PROJECTSTATE", ProjectStateType.accepted.getValue(),
                     ProjectStateType.subcorrected.getValue(),
@@ -152,6 +170,7 @@ public class PreApasinfoController {
                     ProjectStateType.doing.getValue(),
                     ProjectStateType.dospecilup.getValue());
         }
+
         return R.ok(preApasinfoVoService.page(page, wrapper));
     }
 
@@ -235,14 +254,14 @@ public class PreApasinfoController {
         }
 
         JSONArray   jsonArray   = new JSONArray();
-        JSONObject  jsonObject  = new JSONObject();
+
 
 
         for (String certNo:certNos
              ) {
-
+            JSONObject  jsonObject  = new JSONObject();
             List<PreApasinfo> preApasinfoList =  preApasinfoService.list(new QueryWrapper<PreApasinfo>()
-                    .like("CONTACTMAN_CARDNUMBER",certNo)
+                    .eq("CONTACTMAN_CARDNUMBER",certNo)
                     .eq("APPLY_CARDTYPENUMBER",certificateSno).notExists("select 1 from EA_JC_STEP_DONE B WHERE PRE_APASINFO.projid= B.projid"));
 
             if (preApasinfoList!=null&&preApasinfoList.size()>0){
