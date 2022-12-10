@@ -20,26 +20,23 @@ package com.inspur.workinfo.controller;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.inspur.workinfo.entity.EaJcStepDone;
-import com.inspur.workinfo.entity.EaJcStepSpecialnode;
+import com.inspur.workinfo.annotation.SysLog;
+import com.inspur.workinfo.entity.PreApasinfo;
 import com.inspur.workinfo.enums.ProjectLinkType;
 import com.inspur.workinfo.enums.ProjectStateType;
+import com.inspur.workinfo.service.PreApasinfoService;
 import com.inspur.workinfo.service.PreApasinfoVoService;
+import com.inspur.workinfo.util.R;
 import com.inspur.workinfo.vo.PreApasinfoVo;
+import com.inspur.workinfo.vo.PreApasinfoVoPageTwo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import com.inspur.workinfo.entity.PreApasinfo;
-import com.inspur.workinfo.service.PreApasinfoService;
-import com.inspur.workinfo.util.R;
-import com.inspur.workinfo.annotation.SysLog;
 import lombok.AllArgsConstructor;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
-import springfox.documentation.spring.web.json.Json;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -124,24 +121,11 @@ public class PreApasinfoController {
     @PostMapping("/page2")
     public R getPreApasinfoPage2(@RequestParam(value = "current") String current,
                                 @RequestParam(value = "size") String size,
-                                @RequestBody PreApasinfoVo preApasinfo) {
+                                @RequestBody PreApasinfoVoPageTwo preApasinfo) {
         Page page = new Page();
         page.setCurrent(Long.parseLong(current));
         page.setSize(Long.parseLong(size));
-        QueryWrapper<PreApasinfoVo> wrapper = new QueryWrapper(preApasinfo);
-        if (StringUtils.isNotBlank(preApasinfo.getReceive_time())){
-            Date dateStart = null;
-            Date dateEnd  = null;
-            try {
-                dateStart = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(preApasinfo.getReceive_time()+" 00:00:00");
-                dateEnd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(preApasinfo.getReceive_time()+" 23:59:59");
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-            wrapper.between("RECEIVETIME",dateStart,dateEnd);
-
-        }
-
+        QueryWrapper<PreApasinfoVo> wrapper = buildWrapper(preApasinfo);
         if (preApasinfo == null || StrUtil.isBlank(preApasinfo.getProjectstateType())){
             return R.ok(preApasinfoVoService.page(page,wrapper));
         }
@@ -279,5 +263,60 @@ public class PreApasinfoController {
 
     }
 
+    private QueryWrapper<PreApasinfoVo> buildWrapper(PreApasinfoVoPageTwo preApasPageTwo){
+        QueryWrapper<PreApasinfoVo> wrapper = new QueryWrapper<>();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat dateFormat1 = new SimpleDateFormat("yyyy-MM-dd");
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getProjectstateType()),"PROJECTSTATE", preApasPageTwo.getProjectstateType());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getApplyCardtype()),"APPLY_CARDTYPE",preApasPageTwo.getApplyCardtype());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getApplyfrom()),"APPLYFROM",preApasPageTwo.getApplyfrom());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getApplyname()),"APPLYNAME",preApasPageTwo.getApplyname());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getContactman()),"CONTACTMAN",preApasPageTwo.getContactman());
+        wrapper.eq(preApasPageTwo.getProjectstate()!=null,"PROJECTSTATE",preApasPageTwo.getProjectstate());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getApplyCardtypenumber()),"APPLY_CARDTYPENUMBER",preApasPageTwo.getApplyCardtypenumber());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getContactmanCardtype()),"CONTACTMAN_CARDTYPE",preApasPageTwo.getContactmanCardtype());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getDeptid()),"DEPTID",preApasPageTwo.getDeptid());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getDeptname()),"DEPTNAME",preApasPageTwo.getDeptname());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getImplementCode()),"IMPLEMENT_CODE",preApasPageTwo.getImplementCode());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getItemCode()),"ITEM_CODE",preApasPageTwo.getItemCode());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getItemname()),"ITEMNAME",preApasPageTwo.getItemname());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getItemType()),"ITEM_TYPE",preApasPageTwo.getItemType());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getItemversion()),"ITEMVERSION",preApasPageTwo.getItemversion());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getLegalman()),"LEGALMAN",preApasPageTwo.getLegalman());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getProjectname()),"PROJECTNAME",preApasPageTwo.getProjectname());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getProjid()),"PROJID",preApasPageTwo.getProjid());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getReceiveName()),"RECEIVE_NAME",preApasPageTwo.getReceiveName());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getRegionId()),"REGION_ID",preApasPageTwo.getRegionId());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getSourceid()),"SOURCEID",preApasPageTwo.getSourceid());
+        wrapper.eq(StringUtils.hasText(preApasPageTwo.getSysmark()),"SYSMARK",preApasPageTwo.getSysmark());
+        wrapper.eq(preApasPageTwo.getDatastate()!=null,"DATASTATE",preApasPageTwo.getDatastate());
+        wrapper.eq(preApasPageTwo.getInfotype()!=null,"INFOTYPE",preApasPageTwo.getInfotype());
+        if(preApasPageTwo.getCreateTime() != null){
+            String createtime = dateFormat1.format(preApasPageTwo.getCreateTime());
+            Date dateStart = null;
+            Date dateEnd  = null;
+            try {
+                dateStart = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(createtime+" 00:00:00");
+                dateEnd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(createtime+" 23:59:59");
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+            wrapper.between("CREATE_TIME",dateStart,dateEnd);
+        }
+        if(preApasPageTwo.getReceivetime() != null){
+            String receivetime = dateFormat1.format(preApasPageTwo.getReceivetime());
+            Date dateStart = null;
+            Date dateEnd  = null;
+            try {
+                dateStart = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(receivetime+" 00:00:00");
+                dateEnd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(receivetime+" 23:59:59");
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+            wrapper.between("RECEIVETIME",dateStart,dateEnd);
+        }
+        wrapper.orderByDesc("RECEIVETIME");
+        return wrapper;
+    }
 
 }
