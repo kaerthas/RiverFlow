@@ -21,7 +21,7 @@
         <maven.complier.target>1.8</maven.complier.target>
         <junit.version>4.12</junit.version>
         <log4j.version>1.2.17</log4j.version>
-        <lombok.version>1.16.18</lombok.version>
+        <lombok.version>1.18.6</lombok.version>
         <mysql.version>5.1.47</mysql.version>
         <oracle.connector.version>11.2.0.4</oracle.connector.version>
         <druid.version>1.1.21</druid.version>

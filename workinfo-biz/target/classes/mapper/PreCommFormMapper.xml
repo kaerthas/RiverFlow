@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~
+  ~      Copyright (c) 2019-2025, jason All rights reserved.
+  ~
+  ~  Redistribution and use in source and binary forms, with or without
+  ~  modification, are permitted provided that the following conditions are met:
+  ~
+  ~ Redistributions of source code must retain the above copyright notice,
+  ~  this list of conditions and the following disclaimer.
+  ~  Redistributions in binary form must reproduce the above copyright
+  ~  notice, this list of conditions and the following disclaimer in the
+  ~  documentation and/or other materials provided with the distribution.
+  ~  Neither the name of the yunho.top developer nor the names of its
+  ~  contributors may be used to endorse or promote products derived from
+  ~  this software without specific prior written permission.
+  ~  Author: jason (jj@163.com)
+  ~
+  -->
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.inspur.workinfo.mapper.PreCommFormMapper">
+
+  <resultMap id="preCommFormMap" type="com.inspur.workinfo.entity.PreCommForm">
+                  <id property="unid" column="UNID"/>
+                        <result property="projid" column="PROJID"/>
+                        <result property="deptid" column="DEPTID"/>
+                        <result property="formName" column="FORM_NAME"/>
+                        <result property="formUnid" column="FORM_UNID"/>
+                        <result property="formSort" column="FORM_SORT"/>
+                        <result property="useUnid" column="USE_UNID"/>
+                        <result property="regionId" column="REGION_ID"/>
+                        <result property="itemregionid" column="ITEMREGIONID"/>
+                        <result property="useType" column="USE_TYPE"/>
+                        <result property="itemValues" column="ITEM_VALUES"/>
+                        <result property="remark" column="REMARK"/>
+                        <result property="createTime" column="CREATE_TIME"/>
+                        <result property="dataver" column="DATAVER"/>
+                        <result property="maketime" column="MAKETIME"/>
+                        <result property="sysmark" column="SYSMARK"/>
+                        <result property="cdOperation" column="CD_OPERATION"/>
+            </resultMap>
+</mapper>

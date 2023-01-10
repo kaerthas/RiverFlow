@@ -1,0 +1,61 @@
+2023-01-10 10:49:01,059 [restartedMain] INFO  [com.inspur.workinfo.App] StartupInfoLogger.java:55 - Starting App on chengxuejie00 with PID 20564 (D:\K\Project\inspur-workinfo-cremation\workinfo-biz\target\classes started by chengxuejie in D:\K\Project\inspur-workinfo-cremation)
+2023-01-10 10:49:01,069 [restartedMain] INFO  [com.inspur.workinfo.App] SpringApplication.java:651 - No active profile set, falling back to default profiles: default
+2023-01-10 10:49:01,311 [restartedMain] INFO  [o.s.b.d.env.DevToolsPropertyDefaultsPostProcessor] DeferredLog.java:225 - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2023-01-10 10:49:01,311 [restartedMain] INFO  [o.s.b.d.env.DevToolsPropertyDefaultsPostProcessor] DeferredLog.java:225 - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2023-01-10 10:49:09,227 [restartedMain] WARN  [io.undertow.websockets.jsr] Bootstrap.java:68 - UT026010: Buffer pool was not set on WebSocketDeploymentInfo, the default pool will be used
+2023-01-10 10:49:09,257 [restartedMain] INFO  [io.undertow.servlet] ServletContextImpl.java:364 - Initializing Spring embedded WebApplicationContext
+2023-01-10 10:49:09,258 [restartedMain] INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] ServletWebServerApplicationContext.java:285 - Root WebApplicationContext: initialization completed in 7945 ms
+2023-01-10 10:49:09,757 [restartedMain] INFO  [c.a.d.s.b.a.DruidDataSourceAutoConfigure] DruidDataSourceAutoConfigure.java:56 - Init DruidDataSource
+2023-01-10 10:49:09,952 [restartedMain] WARN  [com.alibaba.druid.pool.DruidAbstractDataSource] DruidAbstractDataSource.java:1216 - oracle.jdbc.driver.OracleDriver is deprecated.Having use oracle.jdbc.OracleDriver.
+2023-01-10 10:49:10,001 [restartedMain] INFO  [com.alibaba.druid.pool.DruidDataSource] DruidDataSource.java:1010 - {dataSource-1} inited
+2023-01-10 10:49:12,738 [restartedMain] INFO  [o.s.b.actuate.endpoint.web.EndpointLinksResolver] EndpointLinksResolver.java:58 - Exposing 2 endpoint(s) beneath base path '/actuator'
+2023-01-10 10:49:12,814 [restartedMain] INFO  [s.d.s.w.PropertySourcedRequestMappingHandlerMapping] PropertySourcedRequestMappingHandlerMapping.java:69 - Mapped URL path [/v2/api-docs] onto method [springfox.documentation.swagger2.web.Swagger2Controller#getDocumentation(String, HttpServletRequest)]
+2023-01-10 10:49:12,951 [restartedMain] INFO  [o.s.scheduling.concurrent.ThreadPoolTaskExecutor] ExecutorConfigurationSupport.java:181 - Initializing ExecutorService 'applicationTaskExecutor'
+2023-01-10 10:49:13,001 [restartedMain] WARN  [o.s.b.d.autoconfigure.OptionalLiveReloadServer] OptionalLiveReloadServer.java:61 - Unable to start LiveReload server
+2023-01-10 10:49:13,281 [restartedMain] INFO  [io.undertow] Undertow.java:117 - starting server: Undertow - 2.1.3.Final
+2023-01-10 10:49:13,288 [restartedMain] INFO  [org.xnio] Xnio.java:95 - XNIO version 3.8.0.Final
+2023-01-10 10:49:13,297 [restartedMain] INFO  [org.xnio.nio] NioXnio.java:59 - XNIO NIO Implementation Version 3.8.0.Final
+2023-01-10 10:49:13,843 [restartedMain] INFO  [org.jboss.threads] Version.java:52 - JBoss Threads version 3.1.0.Final
+2023-01-10 10:49:13,884 [restartedMain] INFO  [o.s.boot.web.embedded.undertow.UndertowWebServer] UndertowWebServer.java:133 - Undertow started on port(s) 4001 (http)
+2023-01-10 10:49:13,886 [restartedMain] INFO  [s.d.s.web.plugins.DocumentationPluginsBootstrapper] DocumentationPluginsBootstrapper.java:160 - Context refreshed
+2023-01-10 10:49:13,904 [restartedMain] INFO  [s.d.s.web.plugins.DocumentationPluginsBootstrapper] DocumentationPluginsBootstrapper.java:163 - Found 1 custom documentation plugin(s)
+2023-01-10 10:49:13,967 [restartedMain] INFO  [s.d.spring.web.scanners.ApiListingReferenceScanner] ApiListingReferenceScanner.java:41 - Scanning for api listing references
+2023-01-10 10:49:14,128 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: getByIdUsingGET_1
+2023-01-10 10:49:14,142 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: saveUsingPOST_1
+2023-01-10 10:49:14,144 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: updateByIdUsingPUT_1
+2023-01-10 10:49:14,147 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: getByIdUsingGET_2
+2023-01-10 10:49:14,174 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: saveUsingPOST_2
+2023-01-10 10:49:14,176 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: updateByIdUsingPUT_2
+2023-01-10 10:49:14,177 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: getByIdUsingGET_3
+2023-01-10 10:49:14,195 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: saveUsingPOST_3
+2023-01-10 10:49:14,197 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: updateByIdUsingPUT_3
+2023-01-10 10:49:14,199 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: getByIdUsingGET_4
+2023-01-10 10:49:14,200 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: getById2UsingGET_1
+2023-01-10 10:49:14,218 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: saveUsingPOST_4
+2023-01-10 10:49:14,219 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: updateByIdUsingPUT_4
+2023-01-10 10:49:14,222 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: getByIdUsingGET_5
+2023-01-10 10:49:14,238 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: saveUsingPOST_5
+2023-01-10 10:49:14,239 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: updateByIdUsingPUT_5
+2023-01-10 10:49:14,255 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: getByIdUsingGET_6
+2023-01-10 10:49:14,291 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: saveUsingPOST_6
+2023-01-10 10:49:14,295 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: getByIdUsingGET_7
+2023-01-10 10:49:14,307 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: saveUsingPOST_7
+2023-01-10 10:49:14,308 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: updateByIdUsingPUT_6
+2023-01-10 10:49:14,311 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: getByIdUsingGET_8
+2023-01-10 10:49:14,323 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: saveUsingPOST_8
+2023-01-10 10:49:14,325 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: updateByIdUsingPUT_7
+2023-01-10 10:49:14,327 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: getByIdUsingGET_9
+2023-01-10 10:49:14,338 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: saveUsingPOST_9
+2023-01-10 10:49:14,339 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: updateByIdUsingPUT_8
+2023-01-10 10:49:14,341 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: getByIdUsingGET_10
+2023-01-10 10:49:14,356 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: saveUsingPOST_10
+2023-01-10 10:49:14,358 [restartedMain] INFO  [s.d.s.w.r.operation.CachingOperationNameGenerator] CachingOperationNameGenerator.java:40 - Generating unique operation named: updateByIdUsingPUT_9
+2023-01-10 10:49:14,389 [restartedMain] INFO  [com.inspur.workinfo.App] StartupInfoLogger.java:61 - Started App in 15.887 seconds (JVM running for 26.712)
+2023-01-10 10:49:50,484 [XNIO-1 task-1] INFO  [io.undertow.servlet] ServletContextImpl.java:364 - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2023-01-10 10:49:50,485 [XNIO-1 task-1] INFO  [org.springframework.web.servlet.DispatcherServlet] FrameworkServlet.java:525 - Initializing Servlet 'dispatcherServlet'
+2023-01-10 10:49:50,502 [XNIO-1 task-1] INFO  [org.springframework.web.servlet.DispatcherServlet] FrameworkServlet.java:547 - Completed initialization in 17 ms
+2023-01-10 10:57:17,614 [SpringContextShutdownHook] INFO  [io.undertow] Undertow.java:252 - stopping server: Undertow - 2.1.3.Final
+2023-01-10 10:57:17,618 [SpringContextShutdownHook] INFO  [io.undertow.servlet] ServletContextImpl.java:364 - Destroying Spring FrameworkServlet 'dispatcherServlet'
+2023-01-10 10:57:17,624 [SpringContextShutdownHook] INFO  [o.s.scheduling.concurrent.ThreadPoolTaskExecutor] ExecutorConfigurationSupport.java:218 - Shutting down ExecutorService 'applicationTaskExecutor'
+2023-01-10 10:57:17,626 [SpringContextShutdownHook] INFO  [com.alibaba.druid.pool.DruidDataSource] DruidDataSource.java:2003 - {dataSource-1} closing ...
+2023-01-10 10:57:17,630 [SpringContextShutdownHook] INFO  [com.alibaba.druid.pool.DruidDataSource] DruidDataSource.java:2075 - {dataSource-1} closed
