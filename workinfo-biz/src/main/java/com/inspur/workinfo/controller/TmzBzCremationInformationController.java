@@ -114,7 +114,13 @@ public class TmzBzCremationInformationController {
     public R getInfoByIdAndName(@RequestParam(value = "cardCode") String cardCode,
                            @RequestParam(value = "name") String name) {
         JSONObject info = tmzBzCremationInformationService.getInfoByIdAndName(cardCode,name);
-        return R.ok(info);
+        Boolean flag = info.getBoolean("flag");
+        String message = info.getString("message");
+        if(flag) {
+            return R.ok(info);
+        }else {
+            return R.failed(message);
+        }
     }
 
 }

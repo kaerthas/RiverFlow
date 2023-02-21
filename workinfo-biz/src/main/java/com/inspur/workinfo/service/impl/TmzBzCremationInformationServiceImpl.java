@@ -44,7 +44,9 @@ public class TmzBzCremationInformationServiceImpl extends ServiceImpl<TmzBzCrema
         QueryWrapper<TmzBzCremationInformation> queryWrapper=
                 new QueryWrapper<TmzBzCremationInformation>()
                         .eq("NAME",name);
+        JSONObject info = new JSONObject();
         JSONObject result = new JSONObject();
+        Boolean flag = false;
         try {
             List<TmzBzCremationInformation> list = baseMapper.selectList(queryWrapper);
             for (TmzBzCremationInformation a : list) {
@@ -64,11 +66,21 @@ public class TmzBzCremationInformationServiceImpl extends ServiceImpl<TmzBzCrema
                     result.put("updateAt",sf.format(a.getUpdateAt()));
                     result.put("code",a.getCode());
                     result.put("checkinPlacle",a.getCheckinPlacle());
+                    flag = true;
+                    info.put("result",result);
                 }
             }
         }catch (Exception e){
             log.error(e.getMessage(),e);
+            info.fluentPut("message",e.getMessage())
+                    .fluentPut("flag",false);
         }
-        return result;
+        info.put("flag",flag);
+        if(flag){
+            info.put("message","");
+        }else {
+            info.put("message","未查询到对应数据");
+        }
+        return info;
     }
 }
