@@ -56,15 +56,15 @@ public class IDToolController {
                    return R.failed("参数错误，请重新配置");
                }else{
                    switch (isDown){
-                       case "1" :
+                       case "2" :
                            list = regionalInstitutionService.list(new QueryWrapper<RegionalInstitution>().eq("RID",rid.substring(0,6)));
 
                            break; //
-                       case "2" :
+                       case "3" :
                            list =  regionalInstitutionService.list(new QueryWrapper<RegionalInstitution>().eq("RID",rid.substring(0,9)));
 
                            break; //
-                       case "3" :
+                       case "4" :
                            list =  regionalInstitutionService.list(new QueryWrapper<RegionalInstitution>().eq("RID",rid));
                            break; //
                    }
