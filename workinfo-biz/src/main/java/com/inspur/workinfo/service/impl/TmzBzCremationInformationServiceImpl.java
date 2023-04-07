@@ -66,6 +66,7 @@ public class TmzBzCremationInformationServiceImpl extends ServiceImpl<TmzBzCrema
                     result.put("areaNumber",a.getAreaNumber());
                     result.put("updateAt",sf.format(a.getUpdateAt()));
                     result.put("code",a.getCode());
+                    result.put("name",a.getName());
                     result.put("checkinPlacle",a.getCheckinPlacle());
                     flag = true;
                     info.put("result",result);
