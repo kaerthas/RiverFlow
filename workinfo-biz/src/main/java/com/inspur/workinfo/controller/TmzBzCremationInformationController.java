@@ -112,7 +112,7 @@ public class TmzBzCremationInformationController {
     @SysLog("殡仪信息获取" )
     @PostMapping("/getInfoByIdAndName")
     public R getInfoByIdAndName(@RequestParam(value = "cardCode") String cardCode,
-                           @RequestParam(value = "name") String name) {
+                           @RequestParam(value = "name",required = false) String name) {
         JSONObject info = tmzBzCremationInformationService.getInfoByIdAndName(cardCode,name);
         Boolean flag = info.getBoolean("flag");
         String message = info.getString("message");

@@ -25,6 +25,7 @@ import com.inspur.workinfo.service.TmzBzCremationInformationService;
 import com.inspur.workinfo.util.SM4Util;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.List;
@@ -41,18 +42,18 @@ public class TmzBzCremationInformationServiceImpl extends ServiceImpl<TmzBzCrema
     public JSONObject getInfoByIdAndName(String cardCode,String name){
         String key = "K0xwRysrbGNwMVIBMWYrVj==";
         SimpleDateFormat sf =  new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        QueryWrapper<TmzBzCremationInformation> queryWrapper=
-                new QueryWrapper<TmzBzCremationInformation>()
-                        .eq("NAME",name);
         JSONObject info = new JSONObject();
         JSONObject result = new JSONObject();
         Boolean flag = false;
         try {
+            String enCardCode = SM4Util.encrypt(key,cardCode);
+            QueryWrapper<TmzBzCremationInformation> queryWrapper=
+                    new QueryWrapper<TmzBzCremationInformation>()
+                            .eq(StringUtils.hasText(name),"NAME",name)
+                            .eq("CARD_CODE",enCardCode);
             List<TmzBzCremationInformation> list = baseMapper.selectList(queryWrapper);
-            for (TmzBzCremationInformation a : list) {
-                String id = a.getCardCode();
-                id = SM4Util.decrypt(key, id);
-                if(cardCode.equals(id)){
+            if (list!= null&&list.size()>0) {
+                    TmzBzCremationInformation a = list.get(0);
                     result.put("birthDate",sf.format(a.getBirthDate()));
                     result.put("home",a.getHome());
                     result.put("deathCertNo",a.getDeathCertNo());
@@ -68,7 +69,6 @@ public class TmzBzCremationInformationServiceImpl extends ServiceImpl<TmzBzCrema
                     result.put("checkinPlacle",a.getCheckinPlacle());
                     flag = true;
                     info.put("result",result);
-                }
             }
         }catch (Exception e){
             log.error(e.getMessage(),e);
