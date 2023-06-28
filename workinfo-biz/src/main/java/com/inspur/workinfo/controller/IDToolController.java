@@ -6,6 +6,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.inspur.workinfo.entity.RegionalInstitution;
 
 import com.inspur.workinfo.service.RegionalInstitutionService;
@@ -50,11 +51,12 @@ public class IDToolController {
     private static final String requrl004zs = "http://59.218.251.20:33507/sxbus/api/application/api/sxzwfw/YJSYCB004";
     private static final String requrl005zs = "http://59.218.251.20:33507/sxbus/api/application/api/sxzwfw/YJSYCB005";
 
-//    private static final String reqAddressUrlcs = "http://61.185.238.218:8043/svcreg/mbs/api/publicTransferInApplyRe/queryAddressForOnline";
-    private static final String reqAddressUrlcs = "http://59.218.251.18:33521/mbs/api/publicTransferInApplyRe/queryAddressForOnline";
+    private static final String reqAddressUrlcs = "http://61.185.238.218:8043/svcreg/mbs/api/publicTransferInApplyRe/queryAddressForOnline";
+//    private static final String reqAddressUrlcs = "http://59.218.251.18:33521/mbs/api/publicTransferInApplyRe/queryAddressForOnline";
     private static final String reqAddressUrlzs = "http://59.218.251.20:33507/mbs/api/publicTransferInApplyRe/queryAddressForOnline";
 
-    private static final Map<String, JSONObject> jlData = new HashMap<>();
+    // 级联数据
+    private static JSONArray jlData = null;
 
     @ApiOperation(value = "通过区域编码,下拉状态查询信息", notes = "通过区域编码,下拉状态查询信息")
     @PostMapping("/getRegInsInfo" )
@@ -267,6 +269,12 @@ public class IDToolController {
         ResponseEntity<String> responseEntity = restTemplate.postForEntity(requrl, httpEntity, String.class);
         JSONObject jsonObject = JSONObject.parseObject(responseEntity.getBody());
         JSONArray jsonArray = jsonObject.getJSONArray("data");
+
+//        jlData = new JSONArray();
+//        jsonArray.stream().map(e->(JSONObject) e).filter(e -> "陕西省".equals(e.getString("label"))).forEach(e->createJLData(e,"#"));
+//        jsonArray.stream().map(e->(JSONObject) e).filter(e -> e.getBoolean("disabled") == false && !"陕西省".equals(e.getString("label"))).forEach(e->createJLData(e,"#"));
+//        return jlData;
+
         List<JSONObject> shanxi = jsonArray.stream().filter(e -> "陕西省".equals(((JSONObject) e).getString("label"))).map(e -> (JSONObject) e).collect(Collectors.toList());
         List<JSONObject> provices = jsonArray.stream().filter(e -> ((JSONObject) e).getBoolean("disabled") == false && !"陕西省".equals(((JSONObject) e).getString("label"))).map(e -> (JSONObject) e).collect(Collectors.toList());
         JSONArray resp = createJLData(shanxi);
@@ -337,5 +345,24 @@ public class IDToolController {
             }
         }
         return resp;
+    }
+
+
+    private static void createJLData(JSONObject jsonObject, String parentId) {
+        JSONObject data = new JSONObject();
+        String id = jsonObject.getString("value");
+        String uniqueId = "#".equals(parentId) ? id : parentId.concat(id);
+        data.put("id", uniqueId);
+        data.put("value", id);
+        data.put("label", jsonObject.getString("label"));
+        data.put("rootid", "#");
+        data.put("parent", parentId);
+        jlData.add(data);
+        if (jsonObject.getJSONArray("children")!=null && jsonObject.getJSONArray("children").size()!=0) {
+            JSONArray children = jsonObject.getJSONArray("children");
+            for (int i = 0; i < children.size(); i++) {
+                createJLData(children.getJSONObject(i), uniqueId);
+            }
+        }
     }
 }
