@@ -1,0 +1,79 @@
+/*
+ *    Copyright (c) 2018-2025, yunho All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * Neither the name of the yunho.io developer nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * Author: yunho
+ */
+
+package com.inspur.workinfo.entity;
+
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.util.Date;
+
+/**
+ * 接口调用结果信息
+ *
+ * @author yunho code generator
+ * @date 2023-07-07 17:04:52
+ */
+@Data
+@TableName("APPROVE_CALL_RESULT")
+@EqualsAndHashCode(callSuper = true)
+@ApiModel(value = "接口调用结果信息")
+public class ApproveCallResult extends Model<ApproveCallResult> {
+private static final long serialVersionUID = 1L;
+
+    /**
+     * 主键
+     */
+    @TableId
+    @ApiModelProperty(value="主键")
+    private String seqId;
+    /**
+     * 调用ID
+     */
+    @ApiModelProperty(value="调用ID")
+    private String callId;
+    /**
+     * 调用时间
+     */
+    @ApiModelProperty(value="调用时间")
+    private Date callTime;
+    /**
+     * 调用结果
+     */
+    @ApiModelProperty(value="调用结果")
+    private String resultValue;
+    /**
+     * 调用状态
+     */
+    @ApiModelProperty(value="调用状态")
+    private String callState;
+    /**
+     * 被调用系统名称
+     */
+    @ApiModelProperty(value="被调用系统名称")
+    private String calledSystemName;
+    /**
+     * 被调用系统地址
+     */
+    @ApiModelProperty(value="被调用系统地址")
+    private String calledSystemAddr;
+    }
