@@ -1,5 +1,7 @@
 package com.inspur.workinfo.util;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,6 +28,31 @@ public class DateUtils {
 
     public static LocalDateTime asLocalDateTime(Date date) {
         return Instant.ofEpochMilli(date.getTime()).atZone(ZoneId.systemDefault()).toLocalDateTime();
+    }
+
+    /**
+     * @description:根据格式化字符串化格式化日期
+     * @param formatStr
+     *            格式化字符串 date 要格式化的时间
+     * @return 经过格式化的date
+     * @throws ParseException
+     */
+    public static Date formatDate(String formatStr, Date date) throws ParseException {
+        SimpleDateFormat format = new SimpleDateFormat(formatStr);
+        return format.parse(format.format(date));
+
+    }
+    /**
+     * @description:根据格式化字符串化将字符串转换为日期
+     * @param formatStr
+     *            格式化字符串 date 要格式化的时间
+     * @return date
+     * @throws ParseException
+     */
+    public static Date formatDate(String formatStr, String date) throws ParseException {
+        SimpleDateFormat format = new SimpleDateFormat(formatStr);
+        return format.parse(date);
+
     }
 }
 
