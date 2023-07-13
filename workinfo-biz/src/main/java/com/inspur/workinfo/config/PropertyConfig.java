@@ -20,6 +20,9 @@ public class PropertyConfig {
     /**
      * 两残相关配置
      */
+
+    private String NODE_ENV = "dev";
+
     private String disabilityAllowanceAppId;
     private String disabilityAllowanceAppKey;
     private String disabilityAllowanceUrl;
@@ -30,5 +33,6 @@ public class PropertyConfig {
     private String dispatchAppId;
     private String dispatchTenancyId;
     private String dispatchUrl;
+
 
 }
