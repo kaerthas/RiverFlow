@@ -85,6 +85,24 @@ public interface CommonConstants {
 	 */
 	Integer SUCCESS = 0;
 
+	/***
+	 * 请求成功标识
+	 * **/
+	String  API_SUCCESS  = "200";
+
+	/***
+	 * 请求成功标识
+	 * **/
+	String  API_FAIL  = "300";
+
+	/**
+	 * 执行状态 ：成功
+	 */
+	public static final String APPROVAL_SUCCESS = "1";
+	/**
+	 * 执行失败
+	 */
+	public static final String APPROVAL_ERROR = "0";
 	/**
 	 * 失败标记
 	 */
@@ -101,5 +119,22 @@ public interface CommonConstants {
 	String IMAGE_CODE_TYPE = "blockPuzzle";
 
 	String XSS_EXCLUDES = ",/role/getRoleList,/route/*,/apimanage/*";
+
+
+	/*******
+	 * 增加接口redis锁
+	 * */
+	String XT_BUSINESS_INFO_REDIS = "xt:businessinfo";
+	String XT_BUSINESS_ASSIGN_REDIS = "xt:businessassign";
+	String XT_BUSINESS_SEND_ACCEPT_REDIS = "xt:businesssendaccept";
+	String XT_BUSINESS_SEND_DONE_REDIS = "xt:businesssenddone";
+
+	String XT_BUSINESS_APPROVE = "APPROVE";
+	String XT_BUSINESS_ASSIGN  = "ASSIGN";
+
+	String XT_BUSINESS_DONE    = "DONE";
+
+	String XT_BUSINESS_SEND_DONE    = "SENDDONE";
+	String XT_BUSINESS_SEND_ACCEPT = "SENDACCEPT";
 
 }
