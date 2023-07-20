@@ -8,11 +8,13 @@ import com.inspur.workinfo.constant.CommonConstants;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -560,6 +562,116 @@ public class HttpClientUtils {
 		}
 		return responseInfo;
 	}
+
+
+	public static String sendGetWithHeader(String url,Map<String, Object> params,Map<String, Object> headers){
+		String responseInfo = "";
+		try {
+			CloseableHttpClient httpClient = HttpClients.createDefault();
+			if (MapUtil.isNotEmpty(params)) {
+				url = url + "?" + JoiningTogetherParams(params);
+			}
+			HttpGet httpGet = new HttpGet(url);
+			if (MapUtil.isNotEmpty(headers)) {
+				headers.forEach((k, v) -> httpGet.addHeader(k, (String)v));
+			}
+			CloseableHttpResponse response = httpClient.execute(httpGet);
+			int statusCode = response.getStatusLine().getStatusCode();
+			if (statusCode == HttpStatus.SC_OK) {
+				responseInfo = EntityUtils.toString(response.getEntity(), "UTF-8");
+			}
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+		}
+		return responseInfo;
+	}
+
+
+	public static String sendPostWithHeader(String url,String params,Map<String, Object> headers){
+		HttpPost httpPost = new HttpPost(url);
+		/** 添加请求头 */
+		if (MapUtil.isNotEmpty(headers)){
+			headers.forEach((k,v) -> httpPost.addHeader(k,(String)v));
+		}
+		httpPost.addHeader("Content-Type", "application/json;charset=UTF-8");
+		ContentType contentType = null;
+		String responseInfo="";
+		try {
+			contentType = ContentType.create("application/json", CharsetUtils.get("UTF-8"));
+			CloseableHttpClient httpclient = HttpClients.createDefault();
+			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(Integer.parseInt("300") * 1000)
+					.setConnectTimeout(Integer.parseInt("300") * 1000).build();//设置请求和传输超时时间
+			httpPost.setConfig(requestConfig);
+			httpPost.setEntity(new StringEntity(params, contentType));
+			CloseableHttpResponse response = null;
+
+			response = httpclient.execute(httpPost);
+			HttpEntity entity = response.getEntity();
+			int status = response.getStatusLine().getStatusCode();
+			if (status >= 200 && status < 300) {
+				if (null != entity) {
+					responseInfo = EntityUtils.toString(entity,"utf-8");
+				}
+			}
+		} catch (Exception e) {
+			logger.error(e.getMessage(),e);
+		}
+		return responseInfo;
+	}
+
+	/**
+	 * post请求,form请求参数
+	 *
+	 */
+	public static String sendFormPostWithHeader(String url, Map<String, Object> params,Map<String, Object> headers) {
+		CloseableHttpClient httpclient = HttpClients.createDefault();
+		String responseContent = null;
+		try {
+			HttpPost httpPost = new HttpPost(url);
+			if (MapUtil.isNotEmpty(headers)){
+				headers.forEach((k,v) -> httpPost.addHeader(k,(String)v));
+			}
+			List<NameValuePair> pairs = covertParams(params);
+			httpPost.setEntity(new UrlEncodedFormEntity(pairs, "UTF-8"));
+			CloseableHttpResponse response = httpclient.execute(httpPost);
+			HttpEntity entity = response.getEntity();
+			int status = response.getStatusLine().getStatusCode();
+			if (status >= 200 && status < 300) {
+				if (null != entity) {
+					responseContent = EntityUtils.toString(response.getEntity(), "UTF-8");
+				}
+			}
+
+		} catch (Exception e) {
+			logger.error(e.getMessage(),e);
+		}
+		return responseContent;
+	}
+
+	public static String postXmlRequest(String url, String xml , Map<String, Object> headers) {
+		CloseableHttpClient client = HttpClients.createDefault();
+		String responseContent = null;
+		try {
+			HttpPost post = new HttpPost(url);
+			if (MapUtil.isNotEmpty(headers)){
+				headers.forEach((k,v) -> post.addHeader(k,(String)v));
+			}
+			post.setHeader("Content-type", "text/xml");
+			post.setEntity(new StringEntity(xml, "UTF-8"));
+			CloseableHttpResponse response = client.execute(post);
+			HttpEntity entity = response.getEntity();
+			int status = response.getStatusLine().getStatusCode();
+			if (status >= 200 && status < 300) {
+				if (null != entity) {
+					responseContent = EntityUtils.toString(response.getEntity(), "UTF-8");
+				}
+			}
+		}catch (Exception e){
+			logger.error(e.getMessage(),e);
+		}
+		return responseContent;
+	}
+
 }
 
 

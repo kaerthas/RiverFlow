@@ -116,8 +116,11 @@
             <artifactId>dom4j</artifactId>
             <version>1.6.1</version>
         </dependency>
-
-
+        <dependency>
+            <artifactId>groovy-all</artifactId>
+            <groupId>org.codehaus.groovy</groupId>
+            <version>2.1.9</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

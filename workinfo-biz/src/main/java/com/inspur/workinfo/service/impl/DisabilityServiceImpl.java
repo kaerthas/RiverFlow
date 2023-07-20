@@ -21,6 +21,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.inspur.workinfo.config.PropertyConfig;
 import com.inspur.workinfo.entity.PreApasinfo;
 import com.inspur.workinfo.mapper.PreApasinfoMapper;
+import com.inspur.workinfo.service.ApiInputInfoService;
 import com.inspur.workinfo.service.DisabilityService;
 import com.inspur.workinfo.util.HttpUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +31,6 @@ import org.springframework.stereotype.Service;
 import java.net.HttpURLConnection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -42,13 +42,14 @@ public class DisabilityServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApa
 
     @Autowired
     PropertyConfig propertyConfig;
+    @Autowired
+    ApiInputInfoService apiInputInfoService;
 
     public JSONObject getCities(String provinceid){
-        SimpleDateFormat sf =  new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         JSONObject info = new JSONObject();
         try {
             String url = propertyConfig.getDisabilityAllowanceUrl() +"/v1/getCities";
-            Map<String, String> params = new HashMap<String, String>();
+            Map<String, Object> params = new HashMap<String, Object>();
             params.put("provinceid", provinceid);
             JSONObject json= getResult(params,url);
             Boolean success = json.getBoolean("success");
@@ -71,11 +72,10 @@ public class DisabilityServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApa
 
 
     public JSONObject getCounty(String cityid){
-        SimpleDateFormat sf =  new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         JSONObject info = new JSONObject();
         try {
             String url = propertyConfig.getDisabilityAllowanceUrl() +"/v1/getCounty";
-            Map<String, String> params = new HashMap<String, String>();
+            Map<String, Object> params = new HashMap<String, Object>();
             params.put("cityid", cityid);
             JSONObject json= getResult(params,url);
             Boolean success = json.getBoolean("success");
@@ -96,8 +96,246 @@ public class DisabilityServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApa
     }
 
 
+    public JSONObject getTown(String countyid){
+        JSONObject info = new JSONObject();
+        try {
+            String url = propertyConfig.getDisabilityAllowanceUrl() +"/v1/getTown";
+            Map<String, Object> params = new HashMap<String, Object>();
+            params.put("countyid", countyid);
+            JSONObject json= getResult(params,url);
+            Boolean success = json.getBoolean("success");
+            if(true == success){
+                info.put("state","200");
+                info.put("townList",json.getJSONArray("townList"));
+                info.put("message","查询成功");
+            }else{
+                info.put("state","300");
+                info.put("message",json.getString("message"));
+            }
+        }catch (Exception e){
+            log.error(e.getMessage(),e);
+            info.put("state","300");
+            info.put("message","查询出错");
+        }
+        return info;
+    }
 
-    public JSONObject getResult(Map<String, String> params,String url) throws Exception{
+
+    public JSONObject applyCheck(String name,String idcard,String mobile,String provinceid,String cityid, String countyid,String townid){
+        JSONObject info = new JSONObject();
+        try {
+            String url = propertyConfig.getDisabilityAllowanceUrl() +"/v1/applyCheck";
+            Map<String, Object> params = new HashMap<String, Object>();
+            params.put("name", name);
+            params.put("idcard", idcard);
+            params.put("mobile", mobile);
+            params.put("provinceid", provinceid);
+            params.put("cityid", cityid);
+            params.put("countyid", countyid);
+            params.put("townid", townid);
+
+            JSONObject json= getResult(params,url);
+            Boolean success = json.getBoolean("success");
+            if(true == success){
+                info.put("state","200");
+                info.put("message","校验成功");
+            }else{
+                info.put("state","300");
+                info.put("message",json.getString("message"));
+            }
+        }catch (Exception e){
+            log.error(e.getMessage(),e);
+            info.put("state","300");
+            info.put("message","校验出错");
+        }
+        return info;
+    }
+
+
+    public JSONObject upLoadImg(String base64,String type,String idCard){
+        JSONObject info = new JSONObject();
+        try {
+            String url = propertyConfig.getDisabilityAllowanceUrl() +"/v1/upLoadImg";
+            String downloadUrl = propertyConfig.getDownloadUrl();
+            String webDiskAppCode = propertyConfig.getWebDiskAppCode();
+            String webDiskDecryptKey = propertyConfig.getWebDiskDecryptKey();
+
+            Map<String, Object> params = new HashMap<String, Object>();
+            params.put("base64", base64);
+            params.put("idCard", idCard);
+            params.put("type", type);
+
+            JSONObject json= getResult(params,url);
+            Boolean success = json.getBoolean("success");
+            if(true == success){
+                info.put("state","200");
+                info.put("fileName",json.getString("fileName"));
+                info.put("imgId",json.getString("imgId"));
+                info.put("fileUrl",json.getString("fileUrl"));
+                info.put("message","上传成功");
+            }else{
+                info.put("state","300");
+                info.put("message",json.getString("message"));
+            }
+        }catch (Exception e){
+            log.error(e.getMessage(),e);
+            info.put("state","300");
+            info.put("message","上传出错");
+        }
+        return info;
+    }
+
+
+    public JSONObject deleteImg(String imgType,String idCard,String imgId){
+        JSONObject info = new JSONObject();
+        try {
+            String url = propertyConfig.getDisabilityAllowanceUrl() +"/v1/deleteImg";
+            Map<String, Object> params = new HashMap<String, Object>();
+            params.put("imgType", imgType);
+            params.put("idCard", idCard);
+            params.put("imgId", imgId);
+
+            JSONObject json= getResult(params,url);
+            Boolean success = json.getBoolean("success");
+            if(true == success){
+                info.put("state","200");
+                info.put("message","删除成功");
+            }else{
+                info.put("state","300");
+                info.put("message",json.getString("message"));
+            }
+        }catch (Exception e){
+            log.error(e.getMessage(),e);
+            info.put("state","300");
+            info.put("message","删除出错");
+        }
+        return info;
+    }
+
+
+    public JSONObject submitApply(String name,String idcard,String mobile,String provinceid,String cityid, String countyid,String townid,String clientType){
+        JSONObject info = new JSONObject();
+        try {
+            String url = propertyConfig.getDisabilityAllowanceUrl() +"/v1/submitApply";
+            Map<String, Object> params = new HashMap<String, Object>();
+            params.put("name", name);
+            params.put("idcard", idcard);
+            params.put("mobile", mobile);
+            params.put("provinceid", provinceid);
+            params.put("cityid", cityid);
+            params.put("countyid", countyid);
+            params.put("townid", townid);
+            params.put("clientType", clientType);//pc/app
+
+            JSONObject json= getResult(params,url);
+            Boolean success = json.getBoolean("success");
+            if(true == success){
+                info.put("state","200");
+                info.put("onlineApplyId",json.getString("onlineApplyId"));
+                info.put("message","申请提交成功");
+            }else{
+                info.put("state","300");
+                info.put("message",json.getString("message"));
+            }
+        }catch (Exception e){
+            log.error(e.getMessage(),e);
+            info.put("state","300");
+            info.put("message","申请提交出错");
+        }
+        return info;
+    }
+
+    public JSONObject cancelSubmit(String idcard,String onlineApplyId){
+        JSONObject info = new JSONObject();
+        try {
+
+            String url = propertyConfig.getDisabilityAllowanceUrl() +"/v1/cancelSubmit";
+            Map<String, Object> params = new HashMap<String, Object>();
+            params.put("idcard", idcard);
+            params.put("onlineApplyId", onlineApplyId);
+
+            JSONObject json= getResult(params,url);
+            Boolean success = json.getBoolean("success");
+            if(true == success){
+                info.put("state","200");
+                info.put("message","撤回成功");
+            }else{
+                info.put("state","300");
+                info.put("message",json.getString("message"));
+            }
+        }catch (Exception e){
+            log.error(e.getMessage(),e);
+            info.put("state","300");
+            info.put("message","撤回出错");
+        }
+        return info;
+    }
+
+
+    public JSONObject modifyApply(String mobile,String onlineApplyId,String cityid,String countyid,String townid){
+        JSONObject info = new JSONObject();
+        try {
+
+            String url = propertyConfig.getDisabilityAllowanceUrl() +"/v1/modifyApply";
+            Map<String, Object> params = new HashMap<String, Object>();
+            params.put("id", onlineApplyId);
+            params.put("mobile", mobile);
+            params.put("cityid", cityid);
+            params.put("countyid", countyid);
+            params.put("townid", townid);
+
+            JSONObject json= getResult(params,url);
+            Boolean success = json.getBoolean("success");
+            if(true == success){
+                info.put("state","200");
+                info.put("message","修改成功");
+            }else{
+                info.put("state","300");
+                info.put("message",json.getString("message"));
+            }
+        }catch (Exception e){
+            log.error(e.getMessage(),e);
+            info.put("state","300");
+            info.put("message","修改出错");
+        }
+        return info;
+    }
+
+
+    public JSONObject getApplyProcess(String userName,String idCard,String provinceid){
+        JSONObject info = new JSONObject();
+        try {
+
+            String url = propertyConfig.getDisabilityAllowanceUrl() +"/v1/getApplyProcess";
+            Map<String, Object> params = new HashMap<String, Object>();
+            params.put("userName", userName);
+            params.put("idCard", idCard);
+            params.put("provinceid", provinceid);
+
+            JSONObject json= getResult(params,url);
+            Boolean success = json.getBoolean("success");
+            if(true == success){
+                info.put("state","200");
+                info.put("message","查询成功");
+                info.put("ProcessState",json.getString("state"));
+            }else{
+                info.put("state","300");
+                info.put("message",json.getString("message"));
+            }
+        }catch (Exception e){
+            log.error(e.getMessage(),e);
+            info.put("state","300");
+            info.put("message","查询出错");
+        }
+        return info;
+    }
+
+
+
+
+
+
+    public JSONObject getResult(Map<String, Object> params,String url) throws Exception{
         String appid = propertyConfig.getDisabilityAllowanceAppId();
         String appkey = propertyConfig.getDisabilityAllowanceAppKey();
         String nonce = UUID.randomUUID().toString().replaceAll("-", "");

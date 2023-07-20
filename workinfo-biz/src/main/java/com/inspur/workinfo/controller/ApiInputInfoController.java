@@ -22,6 +22,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import com.inspur.workinfo.entity.ApiInputInfo;
 import com.inspur.workinfo.service.ApiInputInfoService;
+import com.inspur.workinfo.service.DisabilityService;
 import com.inspur.workinfo.util.R;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -37,11 +38,13 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @AllArgsConstructor
-@RequestMapping("/apiinputinfo" )
-@Api(value = "apiinputinfo", tags = "${comments}管理")
+@RequestMapping("/apiInputInfo" )
+@Api(value = "apiInputInfo", tags = "${comments}管理")
 public class ApiInputInfoController {
 
     private final ApiInputInfoService apiInputInfoService;
+
+    private final DisabilityService disabilityService;
 
     /**
      * 分页查询
@@ -98,6 +101,17 @@ public class ApiInputInfoController {
     @DeleteMapping("/{id}" )
     public R removeById(@PathVariable String id) {
         return R.ok(apiInputInfoService.removeById(id));
+    }
+
+    /**
+     * 通过appId和参数调用接口
+     * @return R
+     */
+    @ApiOperation(value = "调用统一入口", notes = "调用统一入口")
+    @PostMapping("/{appId}" )
+    public R visitById(@PathVariable String appId,@RequestBody String body) {
+        disabilityService.getCities("610000");
+        return R.ok(apiInputInfoService.getServiceByString(appId,body));
     }
 
 }

@@ -155,4 +155,17 @@ private static final long serialVersionUID = 1L;
      */
     @ApiModelProperty(value="入参方式，1表示无，2表示格式化数据")
     private String requestMode;
+
+    /**
+     * 是否已经生成出参物化表，1是，0否
+     */
+    @ApiModelProperty(value="是否已经生成出参物化表，1是，0否")
+    private String  isWh;
+
+    /**
+     * 是否需要生成出参物化表，1是，0否
+     */
+    @ApiModelProperty(value="是否已经生成出参物化表，1是，0否")
+    private String  isNeedWh;
+
     }

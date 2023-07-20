@@ -35,4 +35,10 @@ public class PropertyConfig {
     private String dispatchUrl;
 
 
+    /**
+     * 网盘相关配置
+     */
+    private String downloadUrl;
+    private String webDiskAppCode;
+    private String webDiskDecryptKey;
 }

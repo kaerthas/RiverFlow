@@ -90,4 +90,9 @@ private static final long serialVersionUID = 1L;
      */
     @ApiModelProperty(value="是否必填1是0否")
     private String isMust;
+
+
+    @ApiModelProperty(value="默认值")
+    private String value;
     }
+

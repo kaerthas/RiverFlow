@@ -27,24 +27,8 @@ import com.inspur.workinfo.entity.PreApasinfo;
  * @author Jason
  * @date 2020-06-17 10:15:05
  */
-public interface DisabilityService extends IService<PreApasinfo> {
+public interface GroovyService extends IService<PreApasinfo> {
 
-    JSONObject getCities(String provinceid);
-
-    JSONObject getCounty(String cityid);
-
-    JSONObject getTown(String countyid);
-
-    JSONObject applyCheck(String name,String idcard,String mobile,String provinceid,String cityid, String countyid,String townid);
-
-    JSONObject upLoadImg(String base64,String type,String idCard);
-
-    JSONObject submitApply(String name,String idcard,String mobile,String provinceid,String cityid, String countyid,String townid,String clientType);
-
-    JSONObject cancelSubmit(String idcard,String onlineApplyId);
-
-    JSONObject modifyApply(String mobile,String onlineApplyId,String cityid,String countyid,String townid);
-
-    JSONObject getApplyProcess(String userName,String idCard,String provinceid);
+    String invokeScript(String scriptString,String args);
 
 }

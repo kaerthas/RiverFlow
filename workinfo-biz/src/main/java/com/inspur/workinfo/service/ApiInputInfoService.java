@@ -17,8 +17,11 @@
 
 package com.inspur.workinfo.service;
 
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.inspur.workinfo.entity.ApiInputInfo;
+
+import java.util.Map;
 
 
 /**
@@ -28,5 +31,7 @@ import com.inspur.workinfo.entity.ApiInputInfo;
  * @date 2023-07-13 09:23:20
  */
 public interface ApiInputInfoService extends IService<ApiInputInfo> {
+    JSONObject getServiceByString(String appId, String body);
 
+    JSONObject getServiceByMap(String appId, Map<String,Object> params, Map<String,Object> headers);
 }
