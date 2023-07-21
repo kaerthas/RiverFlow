@@ -34,4 +34,6 @@ public interface ApiInputInfoService extends IService<ApiInputInfo> {
     JSONObject getServiceByString(String appId, String body);
 
     JSONObject getServiceByMap(String appId, Map<String,Object> params, Map<String,Object> headers);
+
+    JSONObject getServiceByMap(String appId, Map<String,Object> params);
 }

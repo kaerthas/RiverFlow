@@ -36,6 +36,8 @@ public class GroovyServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinf
         String result = "";
         try {
             scriptString = "package groovy\n" +
+                    "import groovy.json.JsonSlurper  \n"+
+                    "import com.alibaba.fastjson.JSONObject \n"+
                     "def GroovyScript(String args){" +
                         scriptString +
                     "}";
@@ -43,7 +45,7 @@ public class GroovyServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinf
             GroovyShell groovyShell = new GroovyShell();
             //装载解析脚本代码
             Script script = groovyShell.parse(scriptString);
-            result = (String)script.invokeMethod("GroovyScript", null);
+            result = (String)script.invokeMethod("GroovyScript",new Object[]{args});
         }catch (Exception e){
             log.error(e.getMessage(),e);
         }

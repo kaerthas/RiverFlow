@@ -17,6 +17,7 @@
 
 package com.inspur.workinfo.service;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.inspur.workinfo.entity.PreApasinfo;
@@ -28,7 +29,6 @@ import com.inspur.workinfo.entity.PreApasinfo;
  * @date 2020-06-17 10:15:05
  */
 public interface GroovyService extends IService<PreApasinfo> {
-
-    String invokeScript(String scriptString,String args);
+     String invokeScript(String scriptString,String args);
 
 }

@@ -23,11 +23,15 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import com.inspur.workinfo.entity.ApiInputInfo;
+import com.inspur.workinfo.entity.ApiScriptInfo;
 import com.inspur.workinfo.entity.ApiServiceCatalog;
 import com.inspur.workinfo.mapper.ApiInputInfoMapper;
 import com.inspur.workinfo.service.ApiInputInfoService;
+import com.inspur.workinfo.service.ApiScriptInfoService;
 import com.inspur.workinfo.service.ApiServiceCatalogService;
+import com.inspur.workinfo.service.GroovyService;
 import com.inspur.workinfo.util.HttpClientUtils;
+import com.inspur.workinfo.util.RedisCache;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -35,6 +39,8 @@ import org.springframework.util.StringUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static com.inspur.workinfo.constant.CommonConstants.BACK_END_PROJECT;
 
 /**
  * ${comments}
@@ -49,6 +55,12 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
     ApiServiceCatalogService apiServiceCatalogService;
     @Autowired
     ApiInputInfoService apiInputInfoService;
+    @Autowired
+    ApiScriptInfoService apiScriptInfoService;
+    @Autowired
+    GroovyService groovyService;
+    @Autowired
+    RedisCache redisCache;
 
     public JSONObject serviceHandle(String appId, String param,Map<String,Object> header){
         JSONObject result = new JSONObject();
@@ -78,6 +90,14 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                 result.put("msg","未找到对应请求类型");
             }
             if(!StringUtils.isEmpty(info)){
+                //查询结果处理脚本,如果有则对返回值进行处理
+                QueryWrapper<ApiScriptInfo> queryWrapperAll = new QueryWrapper<ApiScriptInfo>()
+                        .eq("API_ID", appId)
+                        .eq("RULE_CLASSIFY","RESULT");
+                List<ApiScriptInfo> apiScriptInfoList = apiScriptInfoService.list(queryWrapperAll);
+                if(apiScriptInfoList.size()>0){
+                    info = groovyService.invokeScript(apiScriptInfoList.get(0).getRuleScript(),info);
+                }
                 result.put("state", "200");
                 result.put("info", info);
             }else {
@@ -184,6 +204,59 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
             return layerParams;
         }
 
+    }
+
+
+    public JSONObject getServiceByMap(String appId, Map<String,Object> params){
+        ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(appId);
+        String requestType = apiServiceCatalog.getRequestType();
+
+        //查询所有脚本
+        QueryWrapper<ApiScriptInfo> queryWrapperAll = new QueryWrapper<ApiScriptInfo>()
+                .eq("API_ID", appId);
+        //FORMAT/HEADER/RESULT三类
+        List<ApiScriptInfo> apiScriptInfoList = apiScriptInfoService.list(queryWrapperAll);
+
+        //header顶层参数
+        QueryWrapper<ApiInputInfo> queryWrapperHeader = new QueryWrapper<ApiInputInfo>()
+                .eq("API_ID", appId)
+                .eq("TYPE","HEADER");
+        List<ApiInputInfo> apiInputInfoListHeader = apiInputInfoService.list(queryWrapperHeader);
+        Map<String,Object> headerParam = new HashMap<>();
+        for(int i = 0;i<apiInputInfoListHeader.size();i++){
+            String value = apiInputInfoListHeader.get(i).getValue();
+            String key = apiInputInfoListHeader.get(i).getKey();
+            String apiID = apiInputInfoListHeader.get(i).getApiId();
+            headerParam.put(key,value);
+            if(!StringUtils.isEmpty(apiID)){
+                String cacheValue = redisCache.getCacheObject(BACK_END_PROJECT+"_"+apiID);
+                if(!StringUtils.isEmpty(cacheValue)) {
+                    headerParam.put(key, cacheValue);
+                }
+            }
+        }
+
+        //参数转换
+        String param = new JSONObject(params).toString();
+        String header = new JSONObject(headerParam).toString();
+        for(int i = 0;i<apiScriptInfoList.size();i++){
+            String scriptType = apiScriptInfoList.get(i).getRuleClassify();
+            String scriptContent = apiScriptInfoList.get(i).getRuleScript();
+            if("FORMAT".equals(scriptType)){
+                param = groovyService.invokeScript(scriptContent,param);
+            }else if("HEADER".equals(scriptType)){
+                header = groovyService.invokeScript(scriptContent,header);
+            }
+        }
+        headerParam = JSONObject.parseObject(header);
+
+        if("JSON".equals(requestType)) {
+            return serviceHandle(appId,param,headerParam);
+        }else if("XML".equals(requestType)){
+            return serviceHandle(appId,param,headerParam);
+        }else {
+            return new JSONObject().fluentPut("state","300").fluentPut("msg","不支持的请求类型");
+        }
     }
 
 
