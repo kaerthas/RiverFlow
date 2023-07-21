@@ -26,4 +26,15 @@ public class BaseDbHelper {
 
 
         }
+        public String selectXmlDataByKeyWord(Map<String, Object> params) {
+            return new SQL(){{
+                SELECT((String[]) params.get("columns"));
+                FROM(params.get("tableName").toString());
+                WHERE(params.get("keyword")+" = "+ params.get("keywordValue"));
+            }
+            }.toString();
+
+
+        }
+
 }
