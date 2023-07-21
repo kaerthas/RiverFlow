@@ -1,8 +1,10 @@
 package com.inspur.workinfo;
 
+import com.inspur.workinfo.annotation.EnableDynamicDataSource;
 import com.inspur.workinfo.annotation.EnableYunhoSwagger2;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 /**
@@ -10,6 +12,8 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
  * @date : 2020/6/17 8:37
  * @description :
  */
+@EnableScheduling
+@EnableDynamicDataSource
 @EnableYunhoSwagger2
 @SpringBootApplication
 public class App {
