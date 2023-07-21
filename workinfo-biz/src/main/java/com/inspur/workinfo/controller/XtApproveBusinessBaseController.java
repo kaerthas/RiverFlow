@@ -1,0 +1,103 @@
+/*
+ *    Copyright (c) 2018-2025, yunho All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * Neither the name of the yunho.io developer nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * Author: yunho
+ */
+
+package com.inspur.workinfo.controller;
+
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+
+import com.inspur.workinfo.entity.XtApproveBusinessBase;
+import com.inspur.workinfo.service.XtApproveBusinessBaseService;
+import com.inspur.workinfo.util.R;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import lombok.AllArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+
+/**
+ * 协同调用中心基本数据表
+ *
+ * @author yunho code generator
+ * @date 2023-07-11 14:16:19
+ */
+@RestController
+@AllArgsConstructor
+@RequestMapping("/xtapprovebusinessbase" )
+@Api(value = "xtapprovebusinessbase", tags = "协同调用中心基本数据表管理")
+public class XtApproveBusinessBaseController {
+
+    private final XtApproveBusinessBaseService xtApproveBusinessBaseService;
+
+    /**
+     * 分页查询
+     * @param page 分页对象
+     * @param xtApproveBusinessBase 协同调用中心基本数据表
+     * @return
+     */
+    @ApiOperation(value = "分页查询", notes = "分页查询")
+    @GetMapping("/page" )
+    public R getXtApproveBusinessBasePage(Page page, XtApproveBusinessBase xtApproveBusinessBase) {
+        return R.ok(xtApproveBusinessBaseService.page(page, Wrappers.query(xtApproveBusinessBase)));
+    }
+
+
+    /**
+     * 通过id查询协同调用中心基本数据表
+     * @param seqId id
+     * @return R
+     */
+    @ApiOperation(value = "通过id查询", notes = "通过id查询")
+    @GetMapping("/{seqId}" )
+    public R getById(@PathVariable("seqId" ) String seqId) {
+        return R.ok(xtApproveBusinessBaseService.getById(seqId));
+    }
+
+    /**
+     * 新增协同调用中心基本数据表
+     * @param xtApproveBusinessBase 协同调用中心基本数据表
+     * @return R
+     */
+    @ApiOperation(value = "新增协同调用中心基本数据表", notes = "新增协同调用中心基本数据表")
+    @PostMapping
+    public R save(@RequestBody XtApproveBusinessBase xtApproveBusinessBase) {
+        return R.ok(xtApproveBusinessBaseService.save(xtApproveBusinessBase));
+    }
+
+    /**
+     * 修改协同调用中心基本数据表
+     * @param xtApproveBusinessBase 协同调用中心基本数据表
+     * @return R
+     */
+    @ApiOperation(value = "修改协同调用中心基本数据表", notes = "修改协同调用中心基本数据表")
+    @PutMapping
+    public R updateById(@RequestBody XtApproveBusinessBase xtApproveBusinessBase) {
+        return R.ok(xtApproveBusinessBaseService.updateById(xtApproveBusinessBase));
+    }
+
+    /**
+     * 通过id删除协同调用中心基本数据表
+     * @param seqId id
+     * @return R
+     */
+    @ApiOperation(value = "通过id删除协同调用中心基本数据表", notes = "通过id删除协同调用中心基本数据表")
+    @DeleteMapping("/{seqId}" )
+    public R removeById(@PathVariable String seqId) {
+        return R.ok(xtApproveBusinessBaseService.removeById(seqId));
+    }
+
+}
