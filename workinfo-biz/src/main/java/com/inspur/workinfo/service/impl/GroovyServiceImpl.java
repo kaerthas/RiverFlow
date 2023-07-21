@@ -40,6 +40,7 @@ public class GroovyServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinf
             scriptString = "package groovy\n" +
                     "import groovy.json.JsonSlurper  \n"+
                     "import com.alibaba.fastjson.JSONObject \n"+
+                    "import com.alibaba.fastjson.JSONArray \n"+
                     "def GroovyScript(String args){" +
                         scriptString +
                     "}";

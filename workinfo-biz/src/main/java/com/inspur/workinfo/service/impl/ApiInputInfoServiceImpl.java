@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.inspur.workinfo.constant.CommonConstants.API_TOKEN;
 import static com.inspur.workinfo.constant.CommonConstants.BACK_END_PROJECT;
 
 /**
@@ -67,10 +68,11 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
         JSONObject result = new JSONObject();
         ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(apiId);
         String url = apiServiceCatalog.getUrl();
+        String requestType = apiServiceCatalog.getRequestType();//GET/POST/FORM
+        String method = apiServiceCatalog.getMethod();
+        String info = "";
         if("proxy".equals(apiServiceCatalog.getType())){
-            String requestType = apiServiceCatalog.getRequestType();//GET/POST/FORM
-            String method = apiServiceCatalog.getMethod();
-            String info = "";
+
             if("JSON".equals(requestType)) {
                 if ("POST".equals(method)) {
                     info = HttpClientUtils.sendPostWithHeader(url,param,header);
@@ -88,21 +90,34 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
             }else {
                 return R.failed("未找到对应请求类型");
             }
-            if(!StringUtils.isEmpty(info)){
-                //查询结果处理脚本,如果有则对返回值进行处理
-                QueryWrapper<ApiScriptInfo> queryWrapperAll = new QueryWrapper<ApiScriptInfo>()
-                        .eq("API_ID", apiId)
-                        .eq("RULE_CLASSIFY","RESULT");
-                List<ApiScriptInfo> apiScriptInfoList = apiScriptInfoService.list(queryWrapperAll);
-                if(apiScriptInfoList.size()>0){
-                    result = groovyService.invokeScript(apiScriptInfoList.get(0).getRuleScript(),info);
+
+        }else if(API_TOKEN.equals(apiServiceCatalog.getType())){
+            if("JSON".equals(requestType)) {
+                if ("FORM".equals(method)) {
+                    info = HttpClientUtils.sendFormPostWithHeader(url,JSON.parseObject(param),header);
+
+                } else {
+                    return R.failed("未识别的接口类型");
                 }
-                return R.ok(result);
-            }else {
-                return R.failed("请求出错");
             }
-        }else{
+
+
+        } else{
             return R.failed("未找到对应代理服务");
+        }
+
+        if(!StringUtils.isEmpty(info)){
+            //查询结果处理脚本,如果有则对返回值进行处理
+            QueryWrapper<ApiScriptInfo> queryWrapperAll = new QueryWrapper<ApiScriptInfo>()
+                    .eq("API_ID", apiId)
+                    .eq("RULE_CLASSIFY","RESULT");
+            List<ApiScriptInfo> apiScriptInfoList = apiScriptInfoService.list(queryWrapperAll);
+            if(apiScriptInfoList.size()>0){
+                result = groovyService.invokeScript(apiScriptInfoList.get(0).getRuleScript(),info);
+            }
+            return R.ok(result);
+        }else {
+            return R.failed("请求出错");
         }
     }
 

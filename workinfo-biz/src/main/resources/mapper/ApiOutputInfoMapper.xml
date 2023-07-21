@@ -29,5 +29,6 @@
                         <result property="name" column="NAME"/>
                         <result property="parentId" column="PARENT_ID"/>
                         <result property="remark" column="REMARK"/>
+                        <result property="apiId" column="API_ID"/>
             </resultMap>
 </mapper>

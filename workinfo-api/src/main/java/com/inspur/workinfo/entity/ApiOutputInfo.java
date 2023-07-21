@@ -65,4 +65,10 @@ private static final long serialVersionUID = 1L;
      */
     @ApiModelProperty(value="$column.comments")
     private String remark;
+    /****
+     * 绑定API_ID
+     * ****/
+    @ApiModelProperty(value = "绑定接口id")
+    private String apiId;
+
     }
