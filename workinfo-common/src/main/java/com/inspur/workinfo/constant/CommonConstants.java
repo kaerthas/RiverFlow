@@ -120,21 +120,52 @@ public interface CommonConstants {
 
 	String XSS_EXCLUDES = ",/role/getRoleList,/route/*,/apimanage/*";
 
-
+	/**
+	 * oracleDriverCLass
+	 */
+	String DRIVER_ORACLE = "oracle.jdbc.driver.OracleDriver";
+	String SELECT_COLUMN = "column" ;
+	String SELECT_CONDITION = "condition";
+	String SELECT_CONSTANTS =  "constants";
 	/*******
 	 * 增加接口redis锁
 	 * */
 	String XT_BUSINESS_INFO_REDIS = "xt:businessinfo";
 	String XT_BUSINESS_ASSIGN_REDIS = "xt:businessassign";
-	String XT_BUSINESS_SEND_ACCEPT_REDIS = "xt:businesssendaccept";
+
+	String XT_BUSINESS_GET_ACCEPT_REDIS  = "xt:businessgetaccept";
+	String XT_BUSINESS_GET_DONE_REDIS = "xt:businessgetdone";
+	String XT_BUSINESS_GET_OUTCOME_REDIS = "xt:businessgetoutcome";
+	String XT_BUSINESS_GET_NEED_CORRECTION_REDIS = "xt:businessgetneedcorrection";
+
 	String XT_BUSINESS_SEND_DONE_REDIS = "xt:businesssenddone";
+	String XT_BUSINESS_SEND_ACCEPT_REDIS = "xt:businesssendaccept";
+	String XT_BUSINESS_SEND_OUTCOME_REDIS = "xt:businesssendoutcome";
+	String XT_BUSINESS_SEND_NEED_CORRECTION_REDIS = "xt:businesssendneedcorrection";
 
 	String XT_BUSINESS_APPROVE = "APPROVE";
 	String XT_BUSINESS_ASSIGN  = "ASSIGN";
 
 	String XT_BUSINESS_DONE    = "DONE";
 
+
+	String XT_BUSINESS_GET_OUTCOME  = "GETOUTCOME";
+	String XT_BUSINESS_GET_ACCEPT = "GETACCEPT";
+	String XT_BUSINESS_GET_DONE    = "GETDONE";
+	String XT_BUSINESS_GET_NEED_CORRECTION = "GETNEEDCORRECTION";
+
+
+
 	String XT_BUSINESS_SEND_DONE    = "SENDDONE";
 	String XT_BUSINESS_SEND_ACCEPT = "SENDACCEPT";
+	String XT_BUSINESS_SEND_OUTCOME = "SENDOUTCOME";
+	String XT_BUSINESS_SEND_NEED_CORRECTION ="SENDNEEDCORRECTION";
 
+	//分发脚本入参 固定key
+	String XT_BUSINESS_BASE = "businessBase"; //JSONOBJECT
+	String XT_BUSINESS_XML  = "businessXML";//JSONOBJECT
+	String XT_BUSINESS_FILE = "businessFile";//JSONARRARY
+
+
+	String API_TOKEN = "token";
 }
