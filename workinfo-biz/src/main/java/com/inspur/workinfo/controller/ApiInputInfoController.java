@@ -111,7 +111,7 @@ public class ApiInputInfoController {
     @PostMapping("/{appId}" )
     public R visitById(@PathVariable String appId,@RequestBody String body) {
         disabilityService.getCities("610000");
-        return R.ok(apiInputInfoService.getServiceByString(appId,body));
+        return apiInputInfoService.getServiceByString(appId,body);
     }
 
 }

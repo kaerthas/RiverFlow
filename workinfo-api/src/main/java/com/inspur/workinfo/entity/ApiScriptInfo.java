@@ -118,6 +118,11 @@ private static final long serialVersionUID = 1L;
     /**
      * 脚本分类
      */
-    @ApiModelProperty(value="脚本分类")
+    @ApiModelProperty(value="脚本分类FORMAT/HEADER/RESULT")
     private String ruleClassify;
+    /**
+     * 所属接口ID
+     */
+    @ApiModelProperty(value="所属接口ID")
+    private String apiId;
     }

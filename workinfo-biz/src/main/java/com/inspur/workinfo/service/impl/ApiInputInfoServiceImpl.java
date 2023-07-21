@@ -31,6 +31,7 @@ import com.inspur.workinfo.service.ApiScriptInfoService;
 import com.inspur.workinfo.service.ApiServiceCatalogService;
 import com.inspur.workinfo.service.GroovyService;
 import com.inspur.workinfo.util.HttpClientUtils;
+import com.inspur.workinfo.util.R;
 import com.inspur.workinfo.util.RedisCache;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -62,9 +63,9 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
     @Autowired
     RedisCache redisCache;
 
-    public JSONObject serviceHandle(String appId, String param,Map<String,Object> header){
+    public R serviceHandle(String apiId, String param, Map<String,Object> header){
         JSONObject result = new JSONObject();
-        ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(appId);
+        ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(apiId);
         String url = apiServiceCatalog.getUrl();
         if("proxy".equals(apiServiceCatalog.getType())){
             String requestType = apiServiceCatalog.getRequestType();//GET/POST/FORM
@@ -78,68 +79,62 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                 } else if ("FORM".equals(method)) {
                     info = HttpClientUtils.sendFormPostWithHeader(url,JSON.parseObject(param),header);
                 } else {
-                    result.put("state", "300");
-                    result.put("msg", "未识别的接口类型");
+                    return R.failed("未识别的接口类型");
                 }
             }else if("XML".equals(requestType)){
                 if ("POST".equals(method)) {
                     info = HttpClientUtils.postXmlRequest(url,param,header);
                 }
             }else {
-                result.put("state","300");
-                result.put("msg","未找到对应请求类型");
+                return R.failed("未找到对应请求类型");
             }
             if(!StringUtils.isEmpty(info)){
                 //查询结果处理脚本,如果有则对返回值进行处理
                 QueryWrapper<ApiScriptInfo> queryWrapperAll = new QueryWrapper<ApiScriptInfo>()
-                        .eq("API_ID", appId)
+                        .eq("API_ID", apiId)
                         .eq("RULE_CLASSIFY","RESULT");
                 List<ApiScriptInfo> apiScriptInfoList = apiScriptInfoService.list(queryWrapperAll);
                 if(apiScriptInfoList.size()>0){
-                    info = groovyService.invokeScript(apiScriptInfoList.get(0).getRuleScript(),info);
+                    result = groovyService.invokeScript(apiScriptInfoList.get(0).getRuleScript(),info);
                 }
-                result.put("state", "200");
-                result.put("info", info);
+                return R.ok(result);
             }else {
-                result.put("state", "300");
-                result.put("msg","请求出错");
+                return R.failed("请求出错");
             }
         }else{
-            result.put("state","300");
-            result.put("msg","未找到对应代理服务");
+            return R.failed("未找到对应代理服务");
         }
-        return result;
     }
 
 
 
 
 
-    public JSONObject getServiceByString(String appId, String body){
-        ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(appId);
+    public R getServiceByString(String apiId, String body){
+        ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(apiId);
         String requestType = apiServiceCatalog.getRequestType();
         if("JSON".equals(requestType)||"XML".equals(requestType)) {
             JSONObject jsonObject = JSONObject.parseObject(body);
             JSONObject param = jsonObject.getJSONObject("param");
             JSONObject header = jsonObject.getJSONObject("header");
-            return serviceHandle(appId,param.toString(),header);
+            return serviceHandle(apiId,param.toString(),header);
         }else {
-            return new JSONObject().fluentPut("state","300").fluentPut("msg","不支持的请求类型");
+            return R.failed("不支持的请求类型");
         }
     }
 
-    public JSONObject getServiceByMap(String appId, Map<String,Object> params,Map<String,Object> headers){
-        ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(appId);
+    public R getServiceByMap(String apiId, Map<String,Object> params,Map<String,Object> headers){
+        ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(apiId);
         String requestType = apiServiceCatalog.getRequestType();
 
         //全部输入
         QueryWrapper<ApiInputInfo> queryWrapperAll = new QueryWrapper<ApiInputInfo>()
-                .eq("API_ID", appId);
+                .eq("API_ID", apiId);
         List<ApiInputInfo> apiInputInfoListAll = apiInputInfoService.list(queryWrapperAll);
 
         //body顶层参数
         QueryWrapper<ApiInputInfo> queryWrapper = new QueryWrapper<ApiInputInfo>()
-                .eq("API_ID", appId)
+                .eq("API_ID", apiId)
                 .eq("PARENT_ID","#")
                 .eq("TYPE","NORMAL");
         List<ApiInputInfo> apiInputInfoList = apiInputInfoService.list(queryWrapper);
@@ -152,7 +147,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
 
         //header顶层参数
         QueryWrapper<ApiInputInfo> queryWrapperHeader = new QueryWrapper<ApiInputInfo>()
-                .eq("API_ID", appId)
+                .eq("API_ID", apiId)
                 .eq("PARENT_ID","#")
                 .eq("TYPE","HEADER");
         List<ApiInputInfo> apiInputInfoListHeader = apiInputInfoService.list(queryWrapperHeader);
@@ -163,12 +158,12 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
             header.putAll(getChildrenNode(id,key,apiInputInfoListAll,headers));
         }
         if("JSON".equals(requestType)) {
-            return serviceHandle(appId,param.toString(),header);
+            return serviceHandle(apiId,param.toString(),header);
         }else if("XML".equals(requestType)){
             String xmlParam = XML.toXml(param);
-            return serviceHandle(appId,xmlParam,header);
+            return serviceHandle(apiId,xmlParam,header);
         }else {
-            return new JSONObject().fluentPut("state","300").fluentPut("msg","不支持的请求类型");
+            return R.failed("不支持的请求类型");
         }
     }
 
@@ -207,19 +202,19 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
     }
 
 
-    public JSONObject getServiceByMap(String appId, Map<String,Object> params){
-        ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(appId);
+    public R getServiceByMap(String apiId, Map<String,Object> params){
+        ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(apiId);
         String requestType = apiServiceCatalog.getRequestType();
 
         //查询所有脚本
         QueryWrapper<ApiScriptInfo> queryWrapperAll = new QueryWrapper<ApiScriptInfo>()
-                .eq("API_ID", appId);
+                .eq("API_ID", apiId);
         //FORMAT/HEADER/RESULT三类
         List<ApiScriptInfo> apiScriptInfoList = apiScriptInfoService.list(queryWrapperAll);
 
         //header顶层参数
         QueryWrapper<ApiInputInfo> queryWrapperHeader = new QueryWrapper<ApiInputInfo>()
-                .eq("API_ID", appId)
+                .eq("API_ID", apiId)
                 .eq("TYPE","HEADER");
         List<ApiInputInfo> apiInputInfoListHeader = apiInputInfoService.list(queryWrapperHeader);
         Map<String,Object> headerParam = new HashMap<>();
@@ -237,25 +232,24 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
         }
 
         //参数转换
-        String param = new JSONObject(params).toString();
-        String header = new JSONObject(headerParam).toString();
+        JSONObject param = new JSONObject(params);
+        JSONObject header = new JSONObject(headerParam);
         for(int i = 0;i<apiScriptInfoList.size();i++){
             String scriptType = apiScriptInfoList.get(i).getRuleClassify();
             String scriptContent = apiScriptInfoList.get(i).getRuleScript();
             if("FORMAT".equals(scriptType)){
-                param = groovyService.invokeScript(scriptContent,param);
+                param = groovyService.invokeScript(scriptContent,param.toString());
             }else if("HEADER".equals(scriptType)){
-                header = groovyService.invokeScript(scriptContent,header);
+                header = groovyService.invokeScript(scriptContent,header.toString());
             }
         }
-        headerParam = JSONObject.parseObject(header);
 
         if("JSON".equals(requestType)) {
-            return serviceHandle(appId,param,headerParam);
+            return serviceHandle(apiId,param.toString(),header);
         }else if("XML".equals(requestType)){
-            return serviceHandle(appId,param,headerParam);
+            return serviceHandle(apiId,param.toString(),header);
         }else {
-            return new JSONObject().fluentPut("state","300").fluentPut("msg","不支持的请求类型");
+            return R.failed("不支持的请求类型");
         }
     }
 
