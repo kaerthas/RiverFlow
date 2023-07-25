@@ -13,6 +13,7 @@ import com.inspur.workinfo.constant.CommonConstants;
 import com.inspur.workinfo.entity.*;
 import com.inspur.workinfo.service.*;
 import com.inspur.workinfo.service.impl.ApiInputInfoServiceImpl;
+import com.inspur.workinfo.util.R;
 import com.inspur.workinfo.util.RedisCache;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -38,6 +39,8 @@ public class XtAssignServerTask {
     @Autowired
     private ApiInputInfoService apiInputInfoService;
     @Autowired
+    private ApiOutputInfoService apiOutputInfoService;
+    @Autowired
     private XtApproveBusinessBaseService businessBaseService;
     @Autowired
     private XtApproveItemConfigService itemConfigService;
@@ -50,7 +53,7 @@ public class XtAssignServerTask {
     private RedisCache redisCache;
 
     //定时分发流程
-//    @Scheduled(cron = "0 */1 * * * ? ")
+    @Scheduled(cron = "0 */1 * * * ? ")
     public void websocket() throws Exception {
         log.info("【推送消息XtAssignServerTask】开始执行：{}", DateUtil.formatDateTime(new Date()));
         String uuid = UUID.randomUUID().toString();
@@ -78,7 +81,7 @@ public class XtAssignServerTask {
                                 //如果节点中配置了分发接口直接调用内部流程接口
                                 if ("0".equals(xtApproveItemflowConfig.getExchangeType())) {
                                     if (StrUtil.isNotBlank(xtApproveItemflowConfig.getApiId())) {
-                                        //获取api配置并调用，一个过程可以绑定多个接口
+                                        //获取api配置并调用，分发过程可以绑定多个接口
                                         //获取入参信息
                                         Map<String ,Object> map  =  new HashMap<>();
                                         XtApproveBusinessBase businessBase = businessBaseService
@@ -96,17 +99,17 @@ public class XtAssignServerTask {
                                         if (xmlConfigs!=null&&xmlConfigs.size()>0){
                                             //拼接查询需要用到的参数放到map中
                                             Map<String, Object> params  =  new HashMap<>();
-                                            String[] colums  = new String[]{};
+                                            String[] colums  = new String[xmlConfigs.size()];
                                             for (int j= 0; j < xmlConfigs.size(); j++) {
                                                 if ("table".equals(xmlConfigs.get(j).getType())){
                                                     //将表名插入map
                                                     params.put("tableName",xmlConfigs.get(j).getXmlCode());
-                                                }else if("column".equals(xmlConfigs.get(i).getType())){
+                                                }else if("column".equals(xmlConfigs.get(j).getType())){
                                                     //将字段插入数组
-                                                    colums[i] = xmlConfigs.get(i).getXmlCode();
-                                                }else if("keyword".equals(xmlConfigs.get(i).getType())){
+                                                    colums[j] = xmlConfigs.get(j).getXmlCode();
+                                                }else if("keyword".equals(xmlConfigs.get(j).getType())){
                                                     //将条件插入
-                                                    params.put("keyword",xmlConfigs.get(i).getXmlCode());
+                                                    params.put("keyword",xmlConfigs.get(j).getXmlCode());
                                                     params.put("keywordValue",sblshshort);
                                                 }
                                             }
@@ -114,7 +117,7 @@ public class XtAssignServerTask {
                                             params.put("columns",colums);
                                             Map<String,Object> xmlMap  = businessXmlConfigService.selectXmlDataByKeyWord(params);
                                             //传入xml 的JSONOBJECT
-                                            JSONObject XMLObject = JSONObject.parseObject(JSON.toJSONString(map));
+                                            JSONObject XMLObject = JSONObject.parseObject(JSON.toJSONString(xmlMap));
                                             map.put(CommonConstants.XT_BUSINESS_XML,XMLObject);
                                             //查询材料信息，传入map中
                                             List<XtApproveBusinessMaterial> businessMaterials   = businessMaterialService
@@ -127,6 +130,10 @@ public class XtAssignServerTask {
                                             }else{
                                                 map.put(CommonConstants.XT_BUSINESS_FILE,null);
                                             }
+                                            //TODO 接口调用 为完成
+                                            R result = apiInputInfoService.getServiceByMap(xtApproveItemflowConfig.getApiId(),map);
+                                            //判断接口返回字段
+//                                            apiOutputInfoService.list(new QueryWrapper<>().eq(""))
 
 
 
@@ -142,7 +149,7 @@ public class XtAssignServerTask {
 
 
                                         //并进入下一个流程
-                                        this.businessCourseService.analysisCourse(sblshshort);
+                                       // this.businessCourseService.analysisCourse(sblshshort);
                                     }
                                 } else {
                                     //TODO 如果配置了数据交换就去交换 目前尚没有需求

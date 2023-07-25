@@ -17,6 +17,7 @@
 package com.inspur.workinfo.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.inspur.workinfo.entity.PreApasinfo;
@@ -29,10 +30,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 
+
+
 @Slf4j
 @Service
 public class GroovyServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinfo> implements GroovyService {
-
 
     public JSONObject invokeScript(String scriptString, String args) {
         JSONObject result = new JSONObject();
@@ -41,12 +43,15 @@ public class GroovyServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinf
                     "import groovy.json.JsonSlurper  \n"+
                     "import com.alibaba.fastjson.JSONObject \n"+
                     "import com.alibaba.fastjson.JSONArray \n"+
+                    "import groovy.xml.MarkupBuilder\n" +
+                    "import java.text.SimpleDateFormat\n"+
                     "def GroovyScript(String args){" +
                         scriptString +
                     "}";
 
             GroovyShell groovyShell = new GroovyShell();
             //装载解析脚本代码
+
             Script script = groovyShell.parse(scriptString);
             result = (JSONObject) script.invokeMethod("GroovyScript",new Object[]{args});
         }catch (Exception e){

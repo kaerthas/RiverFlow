@@ -1,13 +1,16 @@
 package com.inspur.workinfo.util;
 
 import cn.hutool.core.util.StrUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.jdbc.SQL;
 
 import java.util.Map;
 
+@Slf4j
 public class BaseDbHelper {
 
         public String insertXmlDataProvider(Map<String, Object> params) {
+
             return new SQL(){{
 
                 INSERT_INTO(params.get("tableName").toString());
@@ -27,12 +30,24 @@ public class BaseDbHelper {
 
         }
         public String selectXmlDataByKeyWord(Map<String, Object> params) {
-            return new SQL(){{
-                SELECT((String[]) params.get("columns"));
-                FROM(params.get("tableName").toString());
-                WHERE(params.get("keyword")+" = "+ params.get("keywordValue"));
+
+            StringBuffer sql = new StringBuffer();
+            String[] columns   = (String[]) params.get("columns");
+            if (columns!=null&&columns.length>0){
+
+                sql.append("SELECT ");
+                for (int i = 0; i <columns.length  ; i++) {
+                    if (columns[i]!=null) {
+                        sql.append(columns[i]).append(",");
+                    }
+                }
+                sql.deleteCharAt(sql.lastIndexOf(","))
+                        .append(" FROM ").append(params.get("tableName").toString())
+                        .append(" WHERE ").append(" 1=1 and ").append(params.get("keyword")+" = '"+ params.get("keywordValue")+"'");
+                log.error("@@"+sql.toString());
             }
-            }.toString();
+
+            return sql.toString();
 
 
         }
