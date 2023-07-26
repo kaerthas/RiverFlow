@@ -11,6 +11,7 @@ import com.inspur.workinfo.constant.CommonConstants;
 import com.inspur.workinfo.entity.XtApproveBusinessCourse;
 import com.inspur.workinfo.entity.XtApproveItemflowConfig;
 import com.inspur.workinfo.service.*;
+import com.inspur.workinfo.util.R;
 import com.inspur.workinfo.util.RedisCache;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -41,6 +42,8 @@ public class XtGetSendDoneServeTask {
     @Autowired
     private ApproveCallResultService approveCallResultService;
     @Autowired
+    private ApiInputInfoService apiInputInfoService;
+    @Autowired
     private XtApproveItemflowConfigService itemflowConfigService;
 
     @Autowired
@@ -60,7 +63,7 @@ public class XtGetSendDoneServeTask {
      * 按照标准时间来算，每隔 30min 执行一次
      * 任务为办件查询和办件材料查询相关
      */
-    @Scheduled(cron = "0 */1 * * * ? ")
+    //@Scheduled(cron = "0 */1 * * * ? ")
     public void websocket() throws Exception {
         log.info("【获取消息XtGetSendDoneServeTask】开始执行：{}", DateUtil.formatDateTime(new Date()));
         String uuid = UUID.randomUUID().toString();
@@ -82,8 +85,23 @@ public class XtGetSendDoneServeTask {
                     if(itemflowConfig!=null){
                         //判断是否绑定接口
                         if("0".equals(itemflowConfig.getExchangeType())){
-                            //TODO 等待接口代理完成
 
+                            //Map作为请求进度的默认入参
+
+                            try {
+                                Map<String, Object> map = itemflowConfigService.getImportantXtMessage(itemflowConfig,detail.getSblshShort());
+
+                                R result  =  apiInputInfoService.getServiceByMap(itemflowConfig.getApiId(),map);
+                                if (result.getCode()==0){//0表示成功
+                                    Object res =  result.getData();
+                                    JSONObject resObj =   JSONObject.parseObject(res.toString());
+                                    businessDoneService.saveFormApi(resObj,detail.getSblshShort());
+                                }else{
+                                    logger.error("接口查询失败，获取消息XtGetAcceptServerTask失败！");
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
 
 
                         }else{//判断是否绑定数据库表

@@ -168,4 +168,13 @@ public interface CommonConstants {
 
 
 	String API_TOKEN = "token";
+	String API_PROXY = "proxy";
+
+
+	//API_INTPUT_INFO参数类型
+	String API_INPUT_NORMAL= "NORMAL";
+	String API_INPUT_CONSTANT = "CONSTANT";
+	String API_INPUT_SCRIPT   = "SCRIPT";
+	String API_INPUT_HEADER   = "HEADER";
+
 }

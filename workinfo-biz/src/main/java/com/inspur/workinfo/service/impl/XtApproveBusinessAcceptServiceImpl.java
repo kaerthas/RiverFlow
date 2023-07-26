@@ -233,4 +233,51 @@ public class XtApproveBusinessAcceptServiceImpl extends ServiceImpl<XtApproveBus
         }
         return jsonResult;
     }
+
+    @Override
+    @Transactional
+    public JSONObject saveFormApi(JSONObject resObj,String sblshShort) {
+
+        JSONObject result = new JSONObject();
+        result.put("code", CommonConstants.API_SUCCESS);
+        result.put("error", "	请求成功！");
+        try {
+           if (resObj.get("code").equals(CommonConstants.API_SUCCESS)) {
+
+               XtApproveBusinessAccept businessAccept = new XtApproveBusinessAccept();//实体类
+
+               //获取实体类 返回的是一个数组 数组的数据就是实体类中的字段
+               Field[] fields = XtApproveBusinessAccept.class.getDeclaredFields();
+               for (int j = 0; j < fields.length; j++) {
+                   fields[j].setAccessible(true);
+//
+                   if (fields[j].getGenericType().toString().equals("class java.util.Date")) {
+                       fields[j].set(businessAccept, DateUtils.formatDate("yyyy-MM-dd HH:mm:ss", resObj.getString(fields[j].getName())));
+                   } else {
+                       fields[j].set(businessAccept, resObj.getString(fields[j].getName()));
+
+                   }
+               }
+               businessAccept.setSeqId(UUID.randomUUID().toString());
+               businessAccept.setSblshShort(sblshShort);
+               //查询事项编码
+               XtApproveBusinessBase businessBase = businessBaseService.getOne(new QueryWrapper<XtApproveBusinessBase>().eq("SBLSH_SHORT", businessAccept.getSblshShort()));
+               businessAccept.setSxbm(businessBase.getSxbm());
+               //保存数据库并启动下一个流程
+               this.baseMapper.insert(businessAccept);
+               this.businessCourseService.analysisCourse(sblshShort);
+           }else{
+
+               throw new Exception("未查询到受理信息，请等待");
+
+           }
+
+
+        }catch (Exception e){
+            result.put("code", CommonConstants.API_FAIL);
+            result.put("error",e.getMessage());
+            return result;
+        }
+        return result;
+    }
 }

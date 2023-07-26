@@ -8,6 +8,8 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
 
@@ -23,7 +25,40 @@ import java.security.SecureRandom;
 public class AesEncryptUtil {
 
 
+    public static String sign(String content) {
+        String ciphertext = null;
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-1");
+            // 对接后的字符串进行sha1 hash
+            byte[] digest = md.digest(content.toString().getBytes());
+            ciphertext = byteToStr(digest);
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
 
+        return ciphertext != null ? ciphertext.toLowerCase() : null;
+    }
+
+    /**
+     * 将字节数组转换为十六进制字符串
+     */
+    public static String byteToStr(byte[] byteArray) {
+        String strDigest = "";
+        for (int i = 0; i < byteArray.length; i++) {
+            strDigest += byteToHexStr(byteArray[i]);
+        }
+        return strDigest;
+    }
+
+    public static String byteToHexStr(byte mByte) {
+        char[] Digit = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+        char[] tempArr = new char[2];
+        tempArr[0] = Digit[(mByte >>> 4) & 0X0F];	// 取一个字节的高4位，然后获得其对应的十六进制字符
+        tempArr[1] = Digit[mByte & 0X0F];	//  取一个字节的低4位，然后获得其对应的十六进制字符
+
+        String s = new String(tempArr);
+        return s;
+    }
 
 
     /**

@@ -83,57 +83,15 @@ public class XtAssignServerTask {
                                     if (StrUtil.isNotBlank(xtApproveItemflowConfig.getApiId())) {
                                         //获取api配置并调用，分发过程可以绑定多个接口
                                         //获取入参信息
-                                        Map<String ,Object> map  =  new HashMap<>();
-                                        XtApproveBusinessBase businessBase = businessBaseService
-                                                .getOne(new QueryWrapper<XtApproveBusinessBase>().eq("SBLSH_SHORT",sblshshort));
-                                        //脚本转JSONObject
-                                        JSONObject businessBaseJson  = JSONObject.parseObject(JSON.toJSONString(businessBase));
-                                        //获取xmlData配置
-                                        map.put(CommonConstants.XT_BUSINESS_BASE,businessBaseJson);
-                                        //获取事项模型id
-                                        XtApproveItemConfig itemConfig  = itemConfigService.getOne(new QueryWrapper<XtApproveItemConfig>()
-                                                .eq("SXBM",xtApproveItemflowConfig.getSxbm()));
-                                        //根据模型id获取xmlData模板
-                                        List<XtApproveBusinessXmlConfig> xmlConfigs  = businessXmlConfigService.getBaseMapper()
-                                                .selectList(new QueryWrapper<XtApproveBusinessXmlConfig>().eq("ITEM_ID",itemConfig.getItemId()));
-                                        if (xmlConfigs!=null&&xmlConfigs.size()>0){
-                                            //拼接查询需要用到的参数放到map中
-                                            Map<String, Object> params  =  new HashMap<>();
-                                            String[] colums  = new String[xmlConfigs.size()];
-                                            for (int j= 0; j < xmlConfigs.size(); j++) {
-                                                if ("table".equals(xmlConfigs.get(j).getType())){
-                                                    //将表名插入map
-                                                    params.put("tableName",xmlConfigs.get(j).getXmlCode());
-                                                }else if("column".equals(xmlConfigs.get(j).getType())){
-                                                    //将字段插入数组
-                                                    colums[j] = xmlConfigs.get(j).getXmlCode();
-                                                }else if("keyword".equals(xmlConfigs.get(j).getType())){
-                                                    //将条件插入
-                                                    params.put("keyword",xmlConfigs.get(j).getXmlCode());
-                                                    params.put("keywordValue",sblshshort);
-                                                }
-                                            }
-                                            //循环结束将字段名数组插入map
-                                            params.put("columns",colums);
-                                            Map<String,Object> xmlMap  = businessXmlConfigService.selectXmlDataByKeyWord(params);
-                                            //传入xml 的JSONOBJECT
-                                            JSONObject XMLObject = JSONObject.parseObject(JSON.toJSONString(xmlMap));
-                                            map.put(CommonConstants.XT_BUSINESS_XML,XMLObject);
-                                            //查询材料信息，传入map中
-                                            List<XtApproveBusinessMaterial> businessMaterials   = businessMaterialService
-                                                    .list(new QueryWrapper<XtApproveBusinessMaterial>().eq("SBLSH_SHORT",sblshshort));
-                                            if (businessMaterials!=null && businessMaterials.size()>0){
-
-                                                JSONArray jsonArray = JSONArray.parseArray(JSON.toJSONString(businessMaterials));
-                                                map.put(CommonConstants.XT_BUSINESS_FILE,jsonArray);
-
-                                            }else{
-                                                map.put(CommonConstants.XT_BUSINESS_FILE,null);
-                                            }
+                                        Map<String, Object > map   = itemflowConfigService.getImportantXtMessage(xtApproveItemflowConfig,sblshshort);
+                                        if (map!=null){
                                             //TODO 接口调用 为完成
                                             R result = apiInputInfoService.getServiceByMap(xtApproveItemflowConfig.getApiId(),map);
-                                            //判断接口返回字段
-//                                            apiOutputInfoService.list(new QueryWrapper<>().eq(""))
+
+                                        }
+
+                                          //判断接口返回字段
+//                                       apiOutputInfoService.list(new QueryWrapper<>().eq(""))
 
 
 
@@ -159,10 +117,6 @@ public class XtAssignServerTask {
                                     }
 
                                 }
-
-
-                            }
-
                         } catch (Exception e) {
                             continue;
                         }
