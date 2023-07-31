@@ -20,6 +20,8 @@ package com.inspur.workinfo.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.inspur.workinfo.entity.XtApproveItemflowConfig;
 
+import java.util.Map;
+
 /**
  * 事项办理流程配置
  *
@@ -28,4 +30,5 @@ import com.inspur.workinfo.entity.XtApproveItemflowConfig;
  */
 public interface XtApproveItemflowConfigService extends IService<XtApproveItemflowConfig> {
 
+    public Map<String,Object> getImportantXtMessage(XtApproveItemflowConfig itemflowConfig,String sblshShort) throws Exception;
 }

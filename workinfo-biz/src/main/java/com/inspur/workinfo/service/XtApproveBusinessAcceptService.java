@@ -37,4 +37,7 @@ public interface XtApproveBusinessAcceptService extends IService<XtApproveBusine
 
     //推送受理
     JSONObject sendBusinessAccept(XtApproveBusinessAccept businessAccept);
+
+    //接口调用保存返回值
+    JSONObject saveFormApi(JSONObject resObj,String sblshShort);
 }

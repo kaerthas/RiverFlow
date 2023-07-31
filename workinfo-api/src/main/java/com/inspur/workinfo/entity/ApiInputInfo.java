@@ -73,8 +73,8 @@ private static final long serialVersionUID = 1L;
     /**
      * 是否缓存TOKEN，可根据接口设置某规则key
      */
-    @ApiModelProperty(value="是否缓存TOKEN，可根据接口设置某规则key")
-    private String isTokenCache;
+    @ApiModelProperty(value="是否常量，1表示常量 0 表示变量")
+    private String isConstant;
     /**
      * 注释
      */

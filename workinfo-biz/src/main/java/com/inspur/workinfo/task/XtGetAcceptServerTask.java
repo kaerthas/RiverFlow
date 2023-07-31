@@ -2,17 +2,16 @@ package com.inspur.workinfo.task;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.inspur.workinfo.config.PropertyConfig;
 import com.inspur.workinfo.constant.CommonConstants;
-import com.inspur.workinfo.entity.ApiDataTableExchange;
-import com.inspur.workinfo.entity.XtApproveBusinessAccept;
-import com.inspur.workinfo.entity.XtApproveBusinessCourse;
-import com.inspur.workinfo.entity.XtApproveItemflowConfig;
+import com.inspur.workinfo.entity.*;
 import com.inspur.workinfo.service.*;
+import com.inspur.workinfo.util.R;
 import com.inspur.workinfo.util.RedisCache;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.extern.slf4j.Slf4j;
@@ -22,12 +21,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ClassUtils;
+import org.springframework.web.bind.annotation.RequestBody;
 
 
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /*********
  * 获取受理信息接口
@@ -45,6 +42,11 @@ public class XtGetAcceptServerTask {
     private ApproveCallService approveCallService;
     @Autowired
     private ApproveCallResultService approveCallResultService;
+    @Autowired
+    private ApiInputInfoService apiInputInfoService;
+    @Autowired
+    private XtApproveBusinessBaseService businessBaseService;
+
     @Autowired
     private XtApproveItemflowConfigService itemflowConfigService;
 
@@ -65,7 +67,7 @@ public class XtGetAcceptServerTask {
      * 按照标准时间来算，每隔 30min 执行一次
      * 任务为办件查询和办件材料查询相关
      */
-   @Scheduled(cron = "0 */1 * * * ? ")
+  // @Scheduled(cron = "0 */1 * * * ? ")
     public void websocket() throws Exception {
         log.info("【获取消息XtGetAcceptServerTask】开始执行：{}", DateUtil.formatDateTime(new Date()));
         String uuid = UUID.randomUUID().toString();
@@ -80,35 +82,49 @@ public class XtGetAcceptServerTask {
                         .selectPage(page, new QueryWrapper<XtApproveBusinessCourse>()
                                 .eq("ACTIVE","1")
                                 .eq("CURRENT_NODE_CODE",CommonConstants.XT_BUSINESS_GET_ACCEPT));
-                businessCourseOld.getRecords().stream().forEach(detail->{
+                for (int i = 0; i <businessCourseOld.getRecords().size() ; i++) {
+                    String sblshShort  =  businessCourseOld.getRecords().get(i).getSblshShort();
+                    String currentNodeId = businessCourseOld.getRecords().get(i).getCurrentNodeId();
                     //1.查询当前流程绑定的相关接口，或者数据库表
-                    XtApproveItemflowConfig itemflowConfig = itemflowConfigService.getById(detail.getCurrentNodeId());
+                    XtApproveItemflowConfig itemflowConfig = itemflowConfigService.getById(currentNodeId);
                     //判断流程是否存在
                     if(itemflowConfig!=null){
                         //判断是否绑定接口
                         if("0".equals(itemflowConfig.getExchangeType())){
-                            //TODO 等待接口代理完成
+                            //接口代理基本完成现在开始处理
+                            String apiId   = itemflowConfig.getApiId();
+                            //通过申办流水号获取接口入参，主要传递基本信息和脚本信息
+                            if(StrUtil.isNotBlank(apiId)){
+                               //Map作为请求进度的默认入参
+                               Map<String, Object> map  =  itemflowConfigService.getImportantXtMessage(itemflowConfig,sblshShort);
+                               R result  =  apiInputInfoService.getServiceByMap(apiId,map);
+                               if (result.getCode()==0){//0表示成功
+                                   Object res =  result.getData();
+                                   JSONObject resObj =   JSONObject.parseObject(res.toString());
+                                   businessAcceptService.saveFormApi(resObj,sblshShort);
+                               }else{
+                                   logger.error("接口查询失败，获取消息XtGetAcceptServerTask失败！");
+                               }
 
-
-
+                            }
                         }else{//判断是否绑定数据库表
                           //获取绑定关系表对应
                           //抽出通用方法
-                          JSONObject dataExchangeObj = apiDataTableExchangeService.analysisDataExchange(itemflowConfig,detail.getSblshShort());
+                          JSONObject dataExchangeObj = apiDataTableExchangeService.analysisDataExchange(itemflowConfig,sblshShort);
                           if(!CommonConstants.API_SUCCESS.equals(dataExchangeObj.getString("code"))){
                               logger.error("查询失败，获取消息XtGetAcceptServerTask失败！");
                           }else{
                               List<Map<String,Object>> list = (List<Map<String, Object>>) dataExchangeObj.get("data");
                               String tableId   = (String) dataExchangeObj.get("tableId");
                               //数据保存受理信息表
-                              businessAcceptService.saveFromTable(list,detail,tableId);
+                              businessAcceptService.saveFromTable(list,businessCourseOld.getRecords().get(i),tableId);
                           }
                         }
                     }else{
                         logger.error("当前流程不存在请联系管理员处理");
                     }
 
-                });
+                }
 
             }catch (Exception e){
                 e.printStackTrace();

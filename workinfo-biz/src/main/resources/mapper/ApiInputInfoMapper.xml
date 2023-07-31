@@ -30,9 +30,10 @@
                         <result property="apiId" column="API_ID"/>
                         <result property="type" column="TYPE"/>
                         <result property="tokenApiId" column="TOKEN_API_ID"/>
-                        <result property="isTokenCache" column="IS_TOKEN_CACHE"/>
+                        <result property="isConstant" column="IS_CONSTANT"/>
                         <result property="remark" column="REMARK"/>
                         <result property="name" column="NAME"/>
                         <result property="isMust" column="IS_MUST"/>
+                        <result property="value" column="VALUE"/>
             </resultMap>
 </mapper>

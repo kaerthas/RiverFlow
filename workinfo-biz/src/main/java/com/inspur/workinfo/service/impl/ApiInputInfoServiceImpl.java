@@ -41,8 +41,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.inspur.workinfo.constant.CommonConstants.API_TOKEN;
-import static com.inspur.workinfo.constant.CommonConstants.BACK_END_PROJECT;
+import static com.inspur.workinfo.constant.CommonConstants.*;
 
 /**
  * ${comments}
@@ -52,6 +51,7 @@ import static com.inspur.workinfo.constant.CommonConstants.BACK_END_PROJECT;
  */
 @Service
 public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, ApiInputInfo> implements ApiInputInfoService {
+
 
     @Autowired
     ApiServiceCatalogService apiServiceCatalogService;
@@ -71,7 +71,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
         String requestType = apiServiceCatalog.getRequestType();//GET/POST/FORM
         String method = apiServiceCatalog.getMethod();
         String info = "";
-        if("proxy".equals(apiServiceCatalog.getType())){
+        if(API_PROXY.equals(apiServiceCatalog.getType())){
 
             if("JSON".equals(requestType)) {
                 if ("POST".equals(method)) {
@@ -151,7 +151,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
         QueryWrapper<ApiInputInfo> queryWrapper = new QueryWrapper<ApiInputInfo>()
                 .eq("API_ID", apiId)
                 .eq("PARENT_ID","#")
-                .eq("TYPE","NORMAL");
+                .eq("TYPE",API_INPUT_NORMAL);
         List<ApiInputInfo> apiInputInfoList = apiInputInfoService.list(queryWrapper);
         JSONObject param = new JSONObject();
         for(int i = 0;i<apiInputInfoList.size();i++){
@@ -164,7 +164,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
         QueryWrapper<ApiInputInfo> queryWrapperHeader = new QueryWrapper<ApiInputInfo>()
                 .eq("API_ID", apiId)
                 .eq("PARENT_ID","#")
-                .eq("TYPE","HEADER");
+                .eq("TYPE",API_INPUT_HEADER);
         List<ApiInputInfo> apiInputInfoListHeader = apiInputInfoService.list(queryWrapperHeader);
         Map<String,Object> header = new HashMap<>();
         for(int i = 0;i<apiInputInfoListHeader.size();i++){
@@ -172,6 +172,10 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
             String key = apiInputInfoListHeader.get(i).getKey();
             header.putAll(getChildrenNode(id,key,apiInputInfoListAll,headers));
         }
+
+
+
+
         if("JSON".equals(requestType)) {
             return serviceHandle(apiId,param.toString(),header);
         }else if("XML".equals(requestType)){
@@ -236,19 +240,33 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
         for(int i = 0;i<apiInputInfoListHeader.size();i++){
             String value = apiInputInfoListHeader.get(i).getValue();
             String key = apiInputInfoListHeader.get(i).getKey();
-            String apiID = apiInputInfoListHeader.get(i).getApiId();
+            String tokenApiId = apiInputInfoListHeader.get(i).getTokenApiId();
             headerParam.put(key,value);
-            if(!StringUtils.isEmpty(apiID)){
-                String cacheValue = redisCache.getCacheObject(BACK_END_PROJECT+"_"+apiID);
+            if(!StringUtils.isEmpty(tokenApiId)){
+                String cacheValue = redisCache.getCacheObject(BACK_END_PROJECT+"_"+tokenApiId);
                 if(!StringUtils.isEmpty(cacheValue)) {
                     headerParam.put(key, cacheValue);
                 }
             }
         }
-
         //参数转换
         JSONObject param = new JSONObject(params);
         JSONObject header = new JSONObject(headerParam);
+        //查询所有入参 TODO 目前没遇到嵌套的入参形式，遇到了在做处理
+        QueryWrapper<ApiInputInfo> queryWrapperParam = new QueryWrapper<ApiInputInfo>()
+                .eq("API_ID", apiId)
+                .eq("PARENT_ID","#")
+                .eq("TYPE",API_INPUT_NORMAL);
+        List<ApiInputInfo> apiInputInfoListParams = apiInputInfoService.list(queryWrapperParam);
+        if (apiInputInfoListParams!=null&&apiInputInfoListParams.size()>0){
+            for (int k = 0; k <apiInputInfoListParams.size() ; k++) {
+                //判断是否为常量,常量则放入
+                if ("1".equals(apiInputInfoListParams.get(k).getIsConstant()))
+                    param.put(apiInputInfoListParams.get(k).getKey(),apiInputInfoListParams.get(k).getValue());
+            }
+        }
+
+
         for(int i = 0;i<apiScriptInfoList.size();i++){
             String scriptType = apiScriptInfoList.get(i).getRuleClassify();
             String scriptContent = apiScriptInfoList.get(i).getRuleScript();
@@ -260,9 +278,25 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
         }
 
         if("JSON".equals(requestType)) {
+            //将SCRIPT 动态填充到
             return serviceHandle(apiId,param.toString(),header);
         }else if("XML".equals(requestType)){
-            return serviceHandle(apiId,param.toString(),header);
+            //对xml类型参数进行处理
+            QueryWrapper<ApiInputInfo> queryWrapper = new QueryWrapper<ApiInputInfo>()
+                    .eq("API_ID", apiId)
+                    .eq("PARENT_ID","#")
+                    .eq("TYPE",API_INPUT_SCRIPT);
+            //xml参数来说只有一个body
+            List<ApiInputInfo> inputInfolist =  apiInputInfoService.list(queryWrapper);
+            if(inputInfolist!=null&&inputInfolist.size()==1){
+
+                String xml  = param.getString(inputInfolist.get(0).getKey());
+
+                return serviceHandle(apiId,xml,header);
+            }else{
+                return R.failed("找到多条，请配置唯一值作为xml的传参!");
+            }
+
         }else {
             return R.failed("不支持的请求类型");
         }

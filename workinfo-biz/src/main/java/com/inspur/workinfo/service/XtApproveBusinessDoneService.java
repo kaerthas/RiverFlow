@@ -36,4 +36,6 @@ public interface XtApproveBusinessDoneService extends IService<XtApproveBusiness
     JSONObject sendBusinessFinish(XtApproveBusinessDone businessDone);
 
     JSONObject saveFromTable(List<Map<String, Object>> list, XtApproveBusinessCourse detail, String tableId);
+
+    JSONObject saveFormApi(JSONObject resObj, String sblshShort);
 }
