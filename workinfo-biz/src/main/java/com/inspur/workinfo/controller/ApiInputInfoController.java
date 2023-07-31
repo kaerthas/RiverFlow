@@ -108,10 +108,9 @@ public class ApiInputInfoController {
      * @return R
      */
     @ApiOperation(value = "调用统一入口", notes = "调用统一入口")
-    @PostMapping("/{appId}" )
-    public R visitById(@PathVariable String appId,@RequestBody String body) {
-        disabilityService.getCities("610000");
-        return apiInputInfoService.getServiceByString(appId,body);
+    @PostMapping("/{apiId}" )
+    public R visitById(@PathVariable String apiId,@RequestBody String body) {
+        return apiInputInfoService.getServiceByString(apiId,body);
     }
 
 }
