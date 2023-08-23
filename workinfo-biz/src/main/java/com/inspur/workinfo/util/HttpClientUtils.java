@@ -8,6 +8,7 @@ import com.inspur.workinfo.constant.CommonConstants;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
@@ -74,15 +75,15 @@ public class HttpClientUtils {
 	 *
 	 * @param urlStr 请求地址
 	 * @param params 参数字典
-	 * @param charset 编码，最好传“UTF-8”
+	 * @param headers 编码，最好传“UTF-8”
 	 * @return
 	 * @exception  RuntimeException
 	 */
-	public String sendPostByHttpUrlConnection(String urlStr, Map<String, Object> params, String charset) {
+	public  static String sendPostByHttpUrlConnection(String urlStr, Map<String, Object> params, Map<String,Object> headers) {
 		StringBuffer resultBuffer = null;
 		// 构建请求参数
 		String sbParams= JoiningTogetherParams(params);
-		HttpURLConnection con = null;
+		HttpURLConnection con=null;
 		OutputStreamWriter osw = null;
 		BufferedReader br = null;
 		// 发送请求
@@ -90,13 +91,19 @@ public class HttpClientUtils {
 
 			URL url = new URL(urlStr);
 			con = (HttpURLConnection) url.openConnection();
+
+			if (MapUtil.isNotEmpty(headers)) {
+				HttpURLConnection finalCon = con;
+				headers.forEach((k, v) ->
+                        finalCon.setRequestProperty(k, String.valueOf(v)));
+			}
 			con.setRequestMethod("POST");
 			con.setDoOutput(true);
 			con.setDoInput(true);
 			con.setUseCaches(false);
 			con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 			if (sbParams != null && sbParams.length() > 0) {
-				osw = new OutputStreamWriter(con.getOutputStream(), charset);
+				osw = new OutputStreamWriter(con.getOutputStream(), "UTF-8");
 				osw.write(sbParams);
 				osw.flush();
 			}
@@ -104,7 +111,7 @@ public class HttpClientUtils {
 			resultBuffer = new StringBuffer();
 			int contentLength = Integer.parseInt(con.getHeaderField("Content-Length"));
 			if (contentLength > 0) {
-				br = new BufferedReader(new InputStreamReader(con.getInputStream(), charset));
+				br = new BufferedReader(new InputStreamReader(con.getInputStream(),"UTF-8"));
 				String temp;
 				while ((temp = br.readLine()) != null) {
 					resultBuffer.append(temp);
@@ -142,6 +149,47 @@ public class HttpClientUtils {
 		}
 
 		return resultBuffer.toString();
+	}
+
+	public static String postWithParamsForString(String url,Map<String,Object> param, Map<String, Object> headers) {
+
+		List<NameValuePair> params = new ArrayList<>();
+		HttpClient client = HttpClients.createDefault();
+		HttpPost httpPost = new HttpPost(url);
+		String msg = "";
+		try {
+			if (MapUtil.isNotEmpty(headers)){
+				headers.forEach((k,v) ->
+						httpPost.addHeader(k,String.valueOf(v)));
+			}
+			if (param != null && param.size() != 0) {
+				for (Map.Entry<String, Object> entry : param.entrySet()) {
+					params.add(new NameValuePair() {
+						@Override
+						public String getName() {
+							return entry.getKey();
+						}
+
+						@Override
+						public String getValue() {
+							return entry.getValue().toString();
+						}
+					});
+				}
+			}
+
+			httpPost.setEntity(new UrlEncodedFormEntity(params, StandardCharsets.UTF_8));
+			httpPost.setHeader("Content-type", "application/x-www-form-urlencoded");
+			HttpResponse response = client.execute(httpPost);
+			int statusCode = response.getStatusLine().getStatusCode();
+			if (HttpURLConnection.HTTP_OK == statusCode) {
+				HttpEntity entity = response.getEntity();
+				msg = EntityUtils.toString(entity);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return msg;
 	}
 
 	private static String JoiningTogetherParams(Map<String, Object> params){
@@ -587,11 +635,13 @@ public class HttpClientUtils {
 	}
 
 
+
 	public static String sendPostWithHeader(String url,String params,Map<String, Object> headers){
 		HttpPost httpPost = new HttpPost(url);
 		/** 添加请求头 */
 		if (MapUtil.isNotEmpty(headers)){
-			headers.forEach((k,v) -> httpPost.addHeader(k,(String)v));
+			headers.forEach((k,v) ->
+					httpPost.addHeader(k,String.valueOf(v)));
 		}
 		httpPost.addHeader("Content-Type", "application/json;charset=UTF-8");
 		ContentType contentType = null;
@@ -629,7 +679,7 @@ public class HttpClientUtils {
 		try {
 			HttpPost httpPost = new HttpPost(url);
 			if (MapUtil.isNotEmpty(headers)){
-				headers.forEach((k,v) -> httpPost.addHeader(k,(String)v));
+				headers.forEach((k,v) -> httpPost.addHeader(k,String.valueOf(v)));
 			}
 			List<NameValuePair> pairs = covertParams(params);
 			httpPost.setEntity(new UrlEncodedFormEntity(pairs, "UTF-8"));
@@ -641,7 +691,7 @@ public class HttpClientUtils {
 					responseContent = EntityUtils.toString(response.getEntity(), "UTF-8");
 				}
 			}
-
+			
 		} catch (Exception e) {
 			logger.error(e.getMessage(),e);
 		}

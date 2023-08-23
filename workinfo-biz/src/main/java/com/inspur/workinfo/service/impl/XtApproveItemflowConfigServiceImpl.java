@@ -62,9 +62,11 @@ public class XtApproveItemflowConfigServiceImpl extends ServiceImpl<XtApproveIte
             JSONObject businessBaseJson  = JSONObject.parseObject(JSON.toJSONString(businessBase));
             //将数据放到map中
             map.put(CommonConstants.XT_BUSINESS_BASE,businessBaseJson);
+
             //查询xml数据
             XtApproveItemConfig itemConfig  = itemConfigService.getOne(new QueryWrapper<XtApproveItemConfig>()
                     .eq("SXBM",itemflowConfig.getSxbm()));
+            map.put(CommonConstants.XT_BUSINESS_ITEM,itemConfig);
             //根据模型id获取xmlData模板
             List<XtApproveBusinessXmlConfig> xmlConfigs  = businessXmlConfigService.getBaseMapper()
                     .selectList(new QueryWrapper<XtApproveBusinessXmlConfig>().eq("ITEM_ID",itemConfig.getItemId()));

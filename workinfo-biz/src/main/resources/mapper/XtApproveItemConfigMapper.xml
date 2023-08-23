@@ -31,5 +31,8 @@
                         <result property="regionName" column="REGION_NAME"/>
                         <result property="itemId" column="ITEM_ID"/>
                         <result property="serviceObj" column="SERVICE_OBJ"/>
+                        <result property="catalogcode" column="CATALOGCODE"/>
+                        <result property="taskcode" column="TASKCODE"/>
+                        <result property="taskhandleitem" column="TASKHANDLEITEM"/>
             </resultMap>
 </mapper>

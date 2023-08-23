@@ -42,7 +42,7 @@ public class APIGetTokenTask {
     /**
      * 获取某些api前置token 每天凌晨执行一次
      */
-//    @Scheduled(cron = "0 0 1 * * ? ")
+//   @Scheduled(cron = "0 0 1 * * ? ")
 //    @Scheduled(cron = "0 */1 * * * ? ")
     public void websocket() throws Exception {
         log.info("【获取消息APIGetTokenTask】开始执行：{}", DateUtil.formatDateTime(new Date()));
@@ -61,7 +61,9 @@ public class APIGetTokenTask {
                      ) {
                     //从表里获取input参数
                    List<ApiInputInfo> apiInputInfos =  inputInfoService
-                           .list(new QueryWrapper<ApiInputInfo>().eq("API_ID",apiServiceCatalog.getId()));
+                           .list(new QueryWrapper<ApiInputInfo>()
+                                   .eq("API_ID",apiServiceCatalog.getId())
+                                   .eq("TYPE",CommonConstants.API_INPUT_NORMAL));
                    Map<String , Object> map   =   new HashMap<>();
                    apiInputInfos.stream().forEach(n->
                         map.put(n.getKey(),n.getValue())
@@ -69,14 +71,19 @@ public class APIGetTokenTask {
                    //包括后台脚本处理
                    R jsonObject = inputInfoService.getServiceByMap(apiServiceCatalog.getId(),map);
                    //获取出参配置
-                   ApiOutputInfo apiOutputInfo =  outputInfoService
-                           .getOne(new QueryWrapper<ApiOutputInfo>().eq("API_ID",apiServiceCatalog.getId()));
-                    if (apiOutputInfo != null) {
+                   List<ApiOutputInfo> apiOutputInfos =  outputInfoService
+                           .list(new QueryWrapper<ApiOutputInfo>().eq("API_ID",apiServiceCatalog.getId()));
+                    if (apiOutputInfos != null&&apiInputInfos.size()>0) {
                         Object objectData =jsonObject.getData();
                         JSONObject res =   JSONObject.parseObject(objectData.toString());
                         //存放redis
                         //计算过期时间然后处理
-                        redisCache.setCacheObject(CommonConstants.BACK_END_PROJECT+"_"+apiServiceCatalog.getId(), res.get(CommonConstants.API_TOKEN),Integer.valueOf(getRemainSecondsOneDay(new Date())+""), TimeUnit.SECONDS);
+                        for (ApiOutputInfo apiOutputInfo:
+                        apiOutputInfos) {
+
+                            redisCache.setCacheObject(CommonConstants.BACK_END_PROJECT+"_"+apiServiceCatalog.getId()+"_"+apiOutputInfo.getKey(), res.get(apiOutputInfo.getKey()),Integer.valueOf(getRemainSecondsOneDay(new Date())+""), TimeUnit.SECONDS);
+
+                        }
                    }
                 }
             }

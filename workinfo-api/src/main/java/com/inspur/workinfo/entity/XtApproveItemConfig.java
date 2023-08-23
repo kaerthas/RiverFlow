@@ -76,5 +76,19 @@ private static final long serialVersionUID = 1L;
     @ApiModelProperty(value ="事项办理类型 0 个人 1 法人")
     private String serviceObj;
 
+    /*****
+     * 国家基本编码
+     * ***/
+    @ApiModelProperty(value ="国家基本编码")
+    private String catalogcode;
+
+    @ApiModelProperty(value = "国家实施编码")
+    private String taskcode;
+
+    @ApiModelProperty(value = "国家业务办理项编码")
+    private String taskhandleitem;
+
+
+
 
     }

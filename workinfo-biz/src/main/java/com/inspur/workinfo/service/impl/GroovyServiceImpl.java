@@ -46,6 +46,7 @@ public class GroovyServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinf
                     "import groovy.xml.MarkupBuilder\n" +
                     "import java.text.SimpleDateFormat\n"+
                     "import com.inspur.workinfo.util.AesEncryptUtil\n"+
+                    "import com.inspur.workinfo.util.AESUtils\n"+
                     "def GroovyScript(String args){" +
                         scriptString +
                     "}";

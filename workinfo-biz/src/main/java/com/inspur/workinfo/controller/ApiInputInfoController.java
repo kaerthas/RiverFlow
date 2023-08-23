@@ -25,9 +25,13 @@ import com.inspur.workinfo.service.ApiInputInfoService;
 import com.inspur.workinfo.service.DisabilityService;
 import com.inspur.workinfo.util.R;
 import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiModelProperty;
 import io.swagger.annotations.ApiOperation;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 
 /**
@@ -110,7 +114,7 @@ public class ApiInputInfoController {
     @ApiOperation(value = "调用统一入口", notes = "调用统一入口")
     @PostMapping("/{appId}" )
     public R visitById(@PathVariable String appId,@RequestBody String body) {
-        disabilityService.getCities("610000");
+//        disabilityService.getCities("610000");
         return apiInputInfoService.getServiceByString(appId,body);
     }
 

@@ -165,10 +165,12 @@ public interface CommonConstants {
 	String XT_BUSINESS_BASE = "businessBase"; //JSONOBJECT
 	String XT_BUSINESS_XML  = "businessXML";//JSONOBJECT
 	String XT_BUSINESS_FILE = "businessFile";//JSONARRARY
+	String XT_BUSINESS_ITEM = "businessItem";//JSONOBJECT
 
 
 	String API_TOKEN = "token";
 	String API_PROXY = "proxy";
+	String API_RESULT ="result";
 
 
 	//API_INTPUT_INFO参数类型
