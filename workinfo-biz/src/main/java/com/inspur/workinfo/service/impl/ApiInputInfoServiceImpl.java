@@ -141,14 +141,29 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
             JSONObject jsonObject = JSONObject.parseObject(body);
             JSONObject param = jsonObject.getJSONObject("param");
             JSONObject header = jsonObject.getJSONObject("header");
-            //全部输入
-            QueryWrapper<ApiInputInfo> queryWrapperAll = new QueryWrapper<ApiInputInfo>()
-                    .eq("API_ID", apiId);
-
 
             //FORMAT/HEADER/RESULT三类
             List<ApiScriptInfo> apiScriptInfoList = apiScriptInfoService
                     .list(new QueryWrapper<ApiScriptInfo>().eq("API_ID",apiId));
+
+
+            //处理param参数
+            QueryWrapper<ApiInputInfo> queryWrapperNormal = new QueryWrapper<ApiInputInfo>()
+                    .eq("API_ID", apiId)
+                    .eq("PARENT_ID","#")
+                    .eq("TYPE",API_INPUT_NORMAL);
+            List<ApiInputInfo> apiInputInfoListNormal = apiInputInfoService.list(queryWrapperNormal);
+            JSONObject paramIn = new JSONObject();
+            for(ApiInputInfo apiInputInfo:apiInputInfoListNormal){
+                //首先判断是否为常数
+                if ("1".equals(apiInputInfo.getIsConstant())){
+                    paramIn.put(apiInputInfo.getKey(),apiInputInfo.getValue());
+                }else{
+                    if (param!=null) {
+                        paramIn.put(apiInputInfo.getKey(), param.getString(apiInputInfo.getKey()));
+                    }
+                }
+            }
 
             //处理header参数
             QueryWrapper<ApiInputInfo> queryWrapperHeader = new QueryWrapper<ApiInputInfo>()
@@ -182,7 +197,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                 String scriptType = apiScriptInfoList.get(i).getRuleClassify();
                 String scriptContent = apiScriptInfoList.get(i).getRuleScript();
                 if("FORMAT".equals(scriptType)){
-                    param = groovyService.invokeScript(scriptContent,param.toString());
+                    param = groovyService.invokeScript(scriptContent,paramIn.toJSONString());
                 }else if("HEADER".equals(scriptType)){
                     header = groovyService.invokeScript(scriptContent,headerIn.toJSONString());
                 }

@@ -655,7 +655,12 @@ public class HttpClientUtils {
 			httpPost.setEntity(new StringEntity(params, contentType));
 			CloseableHttpResponse response = null;
 
-			response = httpclient.execute(httpPost);
+			if (url.contains("https")) {
+				SSLClient client = new SSLClient();
+				response = client.execute(httpPost);
+			}else{
+				response = httpclient.execute(httpPost);
+			}
 			HttpEntity entity = response.getEntity();
 			int status = response.getStatusLine().getStatusCode();
 			if (status >= 200 && status < 300) {
@@ -683,7 +688,13 @@ public class HttpClientUtils {
 			}
 			List<NameValuePair> pairs = covertParams(params);
 			httpPost.setEntity(new UrlEncodedFormEntity(pairs, "UTF-8"));
-			CloseableHttpResponse response = httpclient.execute(httpPost);
+			CloseableHttpResponse response = null;
+			if (url.contains("https")) {
+				SSLClient client = new SSLClient();
+				response = client.execute(httpPost);
+			}else{
+				response = httpclient.execute(httpPost);
+			}
 			HttpEntity entity = response.getEntity();
 			int status = response.getStatusLine().getStatusCode();
 			if (status >= 200 && status < 300) {
@@ -699,7 +710,7 @@ public class HttpClientUtils {
 	}
 
 	public static String postXmlRequest(String url, String xml , Map<String, Object> headers) {
-		CloseableHttpClient client = HttpClients.createDefault();
+		CloseableHttpClient httpclient = HttpClients.createDefault();
 		String responseContent = null;
 		try {
 			HttpPost post = new HttpPost(url);
@@ -708,7 +719,13 @@ public class HttpClientUtils {
 			}
 			post.setHeader("Content-type", "text/xml");
 			post.setEntity(new StringEntity(xml, "UTF-8"));
-			CloseableHttpResponse response = client.execute(post);
+			CloseableHttpResponse response = null;
+			if (url.contains("https")) {
+				SSLClient client = new SSLClient();
+				response = client.execute(post);
+			}else{
+				response = httpclient.execute(post);
+			}
 			HttpEntity entity = response.getEntity();
 			int status = response.getStatusLine().getStatusCode();
 			if (status >= 200 && status < 300) {
