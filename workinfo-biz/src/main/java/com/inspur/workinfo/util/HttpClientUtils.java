@@ -620,6 +620,9 @@ public class HttpClientUtils {
 				url = url + "?" + JoiningTogetherParams(params);
 			}
 			HttpGet httpGet = new HttpGet(url);
+			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(Integer.parseInt("300") * 1000)
+					.setConnectTimeout(Integer.parseInt("300") * 1000).build();//设置请求和传输超时时间
+			httpGet.setConfig(requestConfig);
 			if (MapUtil.isNotEmpty(headers)) {
 				headers.forEach((k, v) -> httpGet.addHeader(k, (String)v));
 			}
@@ -688,6 +691,9 @@ public class HttpClientUtils {
 			}
 			List<NameValuePair> pairs = covertParams(params);
 			httpPost.setEntity(new UrlEncodedFormEntity(pairs, "UTF-8"));
+			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(Integer.parseInt("300") * 1000)
+					.setConnectTimeout(Integer.parseInt("300") * 1000).build();//设置请求和传输超时时间
+			httpPost.setConfig(requestConfig);
 			CloseableHttpResponse response = null;
 			if (url.contains("https")) {
 				SSLClient client = new SSLClient();
@@ -717,6 +723,9 @@ public class HttpClientUtils {
 			if (MapUtil.isNotEmpty(headers)){
 				headers.forEach((k,v) -> post.addHeader(k,(String)v));
 			}
+			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(Integer.parseInt("300") * 1000)
+					.setConnectTimeout(Integer.parseInt("300") * 1000).build();//设置请求和传输超时时间
+			post.setConfig(requestConfig);
 			post.setHeader("Content-type", "text/xml");
 			post.setEntity(new StringEntity(xml, "UTF-8"));
 			CloseableHttpResponse response = null;
