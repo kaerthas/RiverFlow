@@ -105,4 +105,10 @@ private static final long serialVersionUID = 1L;
      */
     @ApiModelProperty(value="网盘ID或证照唯一标识")
     private String attachPath;
+    /**
+     * 交换状态
+     */
+    @ApiModelProperty(value="交换状态")
+    private String exchange;
     }
+

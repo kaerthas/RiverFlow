@@ -24,6 +24,7 @@ import com.inspur.workinfo.mapper.PreApasinfoMapper;
 import com.inspur.workinfo.service.ApiInputInfoService;
 import com.inspur.workinfo.service.DisabilityService;
 import com.inspur.workinfo.util.HttpUtil;
+import com.inspur.workinfo.util.UploadUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -152,13 +153,15 @@ public class DisabilityServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApa
     }
 
 
-    public JSONObject upLoadImg(String base64,String type,String idCard){
+    public JSONObject upLoadImg(String docId,String fileName,String idCard){
         JSONObject info = new JSONObject();
         try {
             String url = propertyConfig.getDisabilityAllowanceUrl() +"/v1/upLoadImg";
             String downloadUrl = propertyConfig.getDownloadUrl();
             String webDiskAppCode = propertyConfig.getWebDiskAppCode();
             String webDiskDecryptKey = propertyConfig.getWebDiskDecryptKey();
+            String base64 = UploadUtil.getBase64ByFilePath(docId,downloadUrl,webDiskAppCode,webDiskDecryptKey);
+            String type = materialType(fileName);
 
             Map<String, Object> params = new HashMap<String, Object>();
             params.put("base64", base64);
@@ -395,6 +398,25 @@ public class DisabilityServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApa
 
         String s = new String(tempArr);
         return s;
+    }
+
+    public String materialType(String fileName){
+        if("身份证".equals(fileName)){
+            return "idCard";
+        }else if("残疾人证".equals(fileName)){
+            return "disabledCard";
+        }else if("低保证".equals(fileName)){
+            return "dibaoCard";
+        }else if("银行卡".equals(fileName)){
+            return "bankCard";
+        }else if("户口本主页".equals(fileName)){
+            return "hkbzyUrl";
+        }else if("户口本本人页".equals(fileName)) {
+            return "hkbbrUrl";
+        }else {
+            return "additional_one";
+        }
+
     }
 
 }

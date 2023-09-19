@@ -137,6 +137,7 @@ public interface CommonConstants {
 	 * */
 	String XT_BUSINESS_INFO_REDIS = "xt:businessinfo";
 	String XT_BUSINESS_ASSIGN_REDIS = "xt:businessassign";
+	String XT_BUSINESS_MATERIAL_REDIS = "xt:businessmaterial";
 
 	String XT_BUSINESS_GET_ACCEPT_REDIS  = "xt:businessgetaccept";
 	String XT_BUSINESS_GET_DONE_REDIS = "xt:businessgetdone";
@@ -150,7 +151,7 @@ public interface CommonConstants {
 
 	String XT_BUSINESS_APPROVE = "APPROVE";
 	String XT_BUSINESS_ASSIGN  = "ASSIGN";
-
+	String XT_BUSINESS_MATERIAL = "MATERIAL";
 	String XT_BUSINESS_DONE    = "DONE";
 
 

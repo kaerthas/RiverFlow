@@ -37,7 +37,7 @@ public interface DisabilityService extends IService<PreApasinfo> {
 
     JSONObject applyCheck(String name,String idcard,String mobile,String provinceid,String cityid, String countyid,String townid);
 
-    JSONObject upLoadImg(String base64,String type,String idCard);
+    JSONObject upLoadImg(String docId,String fileName,String idCard);
 
     JSONObject submitApply(String name,String idcard,String mobile,String provinceid,String cityid, String countyid,String townid,String clientType);
 
