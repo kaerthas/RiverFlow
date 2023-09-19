@@ -91,6 +91,11 @@ public interface CommonConstants {
 	String  API_SUCCESS  = "200";
 
 	/***
+	 * 请求出现服务降级字样，介于成功失败的中间状态
+	 * **/
+	String  API_STOP  = "100";
+
+	/***
 	 * 请求成功标识
 	 * **/
 	String  API_FAIL  = "300";

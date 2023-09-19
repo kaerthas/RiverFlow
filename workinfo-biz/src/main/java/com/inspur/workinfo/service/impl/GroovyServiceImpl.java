@@ -16,6 +16,8 @@
  */
 package com.inspur.workinfo.service.impl;
 
+
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -48,6 +50,10 @@ public class GroovyServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinf
                     "import com.inspur.workinfo.util.AesEncryptUtil\n"+
                     "import com.inspur.workinfo.util.AESUtils\n"+
                     "import java.util.UUID\n"+
+                    "import cn.hutool.core.util.StrUtil\n"+
+                    "import groovy.xml.Namespace\n" +
+                    "import groovy.xml.QName\n"+
+                    "import groovy.xml.XmlUtil\n"+
                     "def GroovyScript(String args){" +
                         scriptString +
                     "}";

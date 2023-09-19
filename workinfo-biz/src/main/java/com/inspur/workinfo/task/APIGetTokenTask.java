@@ -43,7 +43,7 @@ public class APIGetTokenTask {
      * 获取某些api前置token 每天凌晨执行一次
      */
 //   @Scheduled(cron = "0 0 1 * * ? ")
-//    @Scheduled(cron = "0 */1 * * * ? ")
+ //   @Scheduled(cron = "0 */1 * * * ? ")
     public void websocket() throws Exception {
         log.info("【获取消息APIGetTokenTask】开始执行：{}", DateUtil.formatDateTime(new Date()));
 

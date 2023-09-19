@@ -88,6 +88,8 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                         businessCourseOld.setModifyTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",new Date()));
                         businessCourseOld.setActive("0");
                         this.baseMapper.updateById(businessCourseOld);
+                    }else{
+                        throw new Exception("流程配置错误，事项itemid为"+itemflowConfigOld.getSxbm());
                     }
                 }else {
                     //判断环节名称

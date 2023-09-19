@@ -9,10 +9,12 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.google.gson.Gson;
 import com.inspur.workinfo.constant.CommonConstants;
 import com.inspur.workinfo.entity.*;
 import com.inspur.workinfo.service.*;
 import com.inspur.workinfo.service.impl.ApiInputInfoServiceImpl;
+import com.inspur.workinfo.util.DateUtils;
 import com.inspur.workinfo.util.R;
 import com.inspur.workinfo.util.RedisCache;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.text.ParseException;
 import java.util.*;
 
 import static com.mysql.cj.conf.PropertyKey.logger;
@@ -47,13 +50,17 @@ public class XtAssignServerTask {
     @Autowired
     private XtApproveBusinessXmlConfigService businessXmlConfigService;
     @Autowired
-    private XtApproveBusinessMaterialService businessMaterialService;
+    private ApiServiceCatalogService apiServiceCatalogService;
+    @Autowired
+    private ApproveCallService approveCallService;
+    @Autowired
+    private ApproveCallResultService approveCallResultService;
 
     @Autowired
     private RedisCache redisCache;
 
     //定时分发流程
-    @Scheduled(cron = "0 */1 * * * ? ")
+    //@Scheduled(cron = "0 */1 * * * ? ")
     public void websocket() throws Exception {
         log.info("【推送消息XtAssignServerTask】开始执行：{}", DateUtil.formatDateTime(new Date()));
         String uuid = UUID.randomUUID().toString();
@@ -83,33 +90,57 @@ public class XtAssignServerTask {
                                     if (StrUtil.isNotBlank(xtApproveItemflowConfig.getApiId())) {
                                         //获取api配置并调用，分发过程可以绑定多个接口
                                         //获取入参信息
+                                        //创建接口记录相关代码
+                                        ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(xtApproveItemflowConfig.getApiId());
+                                        ApproveCall callBean  =  new ApproveCall();
+                                        String callId  = UUID.randomUUID().toString().replace("-","");
+                                        callBean.setBsnum(sblshshort);//获取token接口不存在
+                                        callBean.setCalledSystemAddr(apiServiceCatalog.getUrl());
+                                        callBean.setCalledSystemCode("");
+                                        callBean.setCallId(callId);
+                                        callBean.setCalledSystemName(apiServiceCatalog.getName());
+                                        callBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",new Date()));
+
+
                                         Map<String, Object > map   = itemflowConfigService.getImportantXtMessage(xtApproveItemflowConfig,sblshshort);
                                         if (map!=null){
+                                            callBean.setParameterValue(new Gson().toJson(map));
                                             //TODO 接口调用 为完成
                                             R result = apiInputInfoService.getServiceByMap(xtApproveItemflowConfig.getApiId(),map);
+                                            //result判断固定参数为 code msg data
+                                            //TODO 后期改为可以配合out表使用的参数
+                                           JSONObject res   = (JSONObject) result.getData();
+                                           //创建接口调用记录 后期用aop处理多余代码
+                                            ApproveCallResult callResultBean  =  new ApproveCallResult();
+                                           //判断res中封装值
+                                            if(CommonConstants.API_SUCCESS.equals(res.getString("code"))){
 
-                                        }
+                                                //并进入下一个流程
+                                                this.businessCourseService.analysisCourse(sblshshort);
 
-                                          //判断接口返回字段
-//                                       apiOutputInfoService.list(new QueryWrapper<>().eq(""))
+                                                //中间状态既不修改也不做处理，下次调用依旧处理
+                                            }else{
+                                                //TODO 通知查看是否对接短信或者如何
+                                            }
 
-
+                                            //接口调用记录处理
+                                            callResultBean.setResultValue(res.getString("data"));
+                                            callResultBean.setCalledSystemName(callBean.getCalledSystemName());
+                                            callResultBean.setCalledSystemAddr(callBean.getCalledSystemAddr());
+                                            callResultBean.setCallState(res.getString("code"));
+                                            callResultBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",new Date()));
+                                            callResultBean.setCallId(callId);
+                                            callResultBean.setSeqId(UUID.randomUUID().toString().replace("-",""));
+                                            approveCallService.saveOrUpdate(callBean);
+                                            approveCallResultService.saveOrUpdate(callResultBean);
 
                                         }else{
-                                            logger.error("xml模板配置存在问题，请联系管理员处理！事项编码为"+xtApproveItemflowConfig.getSxbm());
+                                            logger.error("办件信息不完整！事项编码为"+xtApproveItemflowConfig.getSxbm());
                                         }
-
-
-                                      //  apiInputInfoService.getServiceByMap(xtApproveItemflowConfig.getApiId(),map);
-                                        //判断是否处理完成相关条件
-                                        //获取接口完成将完成数据保存到物化表
-
-
-
-                                        //并进入下一个流程
-                                       // this.businessCourseService.analysisCourse(sblshshort);
+                                    }else{
+                                        logger.error("xml模板配置存在问题，请联系管理员处理！事项编码为"+xtApproveItemflowConfig.getSxbm());
                                     }
-                                } else {
+                                }else {
                                     //TODO 如果配置了数据交换就去交换 目前尚没有需求
                                     if (StrUtil.isNotBlank(xtApproveItemflowConfig.getTableId())) {
 
@@ -117,6 +148,9 @@ public class XtAssignServerTask {
                                     }
 
                                 }
+                            }else{
+                                logger.error("itemflow流程模板配置存在问题，请联系管理员处理！事项编码为"+xtApproveItemflowConfig.getSxbm());
+                            }
                         } catch (Exception e) {
                             continue;
                         }

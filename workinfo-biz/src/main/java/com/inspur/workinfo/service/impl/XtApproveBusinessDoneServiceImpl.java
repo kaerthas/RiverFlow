@@ -16,6 +16,7 @@
  */
 package com.inspur.workinfo.service.impl;
 
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -64,6 +65,10 @@ public class XtApproveBusinessDoneServiceImpl extends ServiceImpl<XtApproveBusin
     private ApiDataColumnsExchangService columnsExchangService;
     @Autowired
     private XtApproveBusinessBaseService businessBaseService;
+    @Autowired
+    private ApiDataScriptInfoService apiDataScriptInfoService;
+    @Autowired
+    private GroovyService  groovyService;
     /**
      * 推送业务办结数据到协同
      * @return
@@ -187,7 +192,7 @@ public class XtApproveBusinessDoneServiceImpl extends ServiceImpl<XtApproveBusin
 
                 List<ApiDataColumnsExchang> columnsExchang = this.columnsExchangService.getBaseMapper().selectList(new QueryWrapper<ApiDataColumnsExchang>()
                         .eq("TABLE_ID",tableId)
-                        .eq("COLUMNS_TYPE",CommonConstants.SELECT_COLUMN));
+                        .in("COLUMNS_TYPE",CommonConstants.SELECT_COLUMN));
                 //通过反射获取fieds
                 XtApproveBusinessDone businessDone = new XtApproveBusinessDone();//实体类
 
@@ -197,22 +202,49 @@ public class XtApproveBusinessDoneServiceImpl extends ServiceImpl<XtApproveBusin
 
                 for (int i = 0; i < columnsExchang.size(); i++) {
                     //这个是，有的字段是用private修饰的 将他设置为可读
-                    //TODO 缺少对返回结果进行格式化操作，后续完善通过script_id进行配置
                     //TODO 暂时分别写在每个实现中，最终可以抽出为公共方法
-                    for (int j = 0; j < fields.length; j++) {
-                        fields[j].setAccessible(true);
+                        for (int j = 0; j < fields.length; j++) {
+                            fields[j].setAccessible(true);
 //                        System.err.println(fields[j].getName()+":"+j);
-                        //判断如果字段名称相等了
-                        if (columnsExchang.get(i).getLocalColumns().equals(fields[j].getName())){
-                            //取出map中参数
-//                            System.out.println("!!!"+fields[j].getGenericType());
-                            if (fields[j].getGenericType().toString().equals("class java.util.Date")){
-                                fields[j].set(businessDone, DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",String.valueOf(list.get(0).get(columnsExchang.get(i).getBusinessColumns()))));
-                            }else{
-                                fields[j].set(businessDone,list.get(0).get(columnsExchang.get(i).getBusinessColumns()));
+                            //判断如果字段名称相等了
+                            if (columnsExchang.get(i).getLocalColumns().equals(fields[j].getName())){
+                                //取出map中参数
+                                //完善通过script_id进行配置
+                                if (StrUtil.isNotBlank(columnsExchang.get(i).getScrtptId())) {
+                                    //查询format转换的数据
+                                    ApiDataScriptInfo apiDataScriptInfo = apiDataScriptInfoService.getById(columnsExchang.get(i).getScrtptId());
+                                    //转换
+                                    if(null!=apiDataScriptInfo){
 
+                                        JSONObject jsonObject  = new JSONObject();
+                                        jsonObject.put(fields[j].getName(),list.get(0).get(columnsExchang.get(i).getBusinessColumns()));
+                                        jsonObject = groovyService.invokeScript(apiDataScriptInfo.getRuleScript(),jsonObject.toString());
+                                        if (null!=jsonObject){
+                                            if (fields[j].getGenericType().toString().equals("class java.util.Date")){
+                                                fields[j].set(businessDone, DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",String.valueOf(jsonObject.get(columnsExchang.get(i).getBusinessColumns()))));
+                                            }else{
+                                                fields[j].set(businessDone,jsonObject.get(columnsExchang.get(i).getBusinessColumns()));
+
+                                            }
+                                            break;
+                                        }else{
+                                            logger.error("下行数据状态不在规定的对接状态中，请联系管理处理，办件编号为："+detail.getSblshShort());
+                                        }
+
+                                    }else{
+                                        logger.error("字段值转换脚本配置失败！请联系管理员，办件编号为："+detail.getSblshShort());
+                                    }
+
+                                }else{
+    //                            System.out.println("!!!"+fields[j].getGenericType());
+                                    if (fields[j].getGenericType().toString().equals("class java.util.Date")){
+                                        fields[j].set(businessDone, DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",String.valueOf(list.get(0).get(columnsExchang.get(i).getBusinessColumns()))));
+                                    }else{
+                                        fields[j].set(businessDone,list.get(0).get(columnsExchang.get(i).getBusinessColumns()));
+
+                                    }
+                                    break;
                             }
-                            break;
                         }
                     }
                 }

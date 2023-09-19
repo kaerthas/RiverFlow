@@ -5,6 +5,7 @@ import cn.hutool.core.map.MapUtil;
 import com.alibaba.fastjson.JSONObject;
 
 import com.inspur.workinfo.constant.CommonConstants;
+import com.inspur.workinfo.entity.ApproveCall;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.http.HttpEntity;
@@ -682,6 +683,8 @@ public class HttpClientUtils {
 	 *
 	 */
 	public static String sendFormPostWithHeader(String url, Map<String, Object> params,Map<String, Object> headers) {
+
+
 		CloseableHttpClient httpclient = HttpClients.createDefault();
 		String responseContent = null;
 		try {
@@ -712,6 +715,7 @@ public class HttpClientUtils {
 		} catch (Exception e) {
 			logger.error(e.getMessage(),e);
 		}
+		log.info("中国残联推送结果返回值{}"+responseContent);
 		return responseContent;
 	}
 

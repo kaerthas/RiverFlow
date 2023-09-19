@@ -122,9 +122,9 @@ public class XtApproveBusinessMaterialController {
     @SneakyThrows
     @ApiOperation(value = "通过id查询", notes = "通过id查询")
     @GetMapping("/WebDiskServerDemo/doc" )
-    public void WebDiskServerDemo(@RequestParam("materialName" ) String materialName,
-                     @RequestParam("projectNo") String projectNo,
-                     @RequestParam("materialCode") String materialCode,
+    public void WebDiskServerDemo(@RequestParam("MaterialName" ) String materialName,
+                     @RequestParam("ProjectNo") String projectNo,
+                     @RequestParam("MaterialCode") String materialCode,
                                   HttpServletRequest request,
                                   HttpServletResponse response) {
         QueryWrapper wrapper  = new QueryWrapper();
