@@ -1,0 +1,13 @@
+def result =  new JSONObject()
+
+def businessRes  = JSONObject.parseObject(args)
+if("0".equals(businessRes.get("bjjgdm"))){
+
+result.put("ResultType","7")
+}else if("1".equals(businessRes.get("bjjgdm"))){
+
+result.put("ResultType","6")
+}
+
+
+ return result
