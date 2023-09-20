@@ -3,20 +3,6 @@
   <component name="CompilerConfiguration">
     <annotationProcessing>
       <profile default="true" name="Default" enabled="true" />
-      <profile name="Maven default annotation processors profile" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <module name="workinfo-biz" />
-        <module name="workinfo-api" />
-        <module name="workinfo-common" />
-      </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="inspur-workinfo" target="1.5" />
-      <module name="workinfo-api" target="1.8" />
-      <module name="workinfo-biz" target="1.8" />
-      <module name="workinfo-common" target="1.8" />
-    </bytecodeTargetLevel>
   </component>
 </project>
