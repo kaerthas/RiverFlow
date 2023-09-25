@@ -592,8 +592,10 @@ public class HttpClientUtils {
 			//默认值 300秒
 //			String readTimeout=GlobalConfig.getInstance().getConfig("app.read.timeout","300");
 //			String connectionTimeout=GlobalConfig.getInstance().getConfig("app.connection.timeout", "300");
-			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(Integer.parseInt("300") * 1000)
-					.setConnectTimeout(Integer.parseInt("300") * 1000).build();//设置请求和传输超时时间
+			RequestConfig requestConfig = RequestConfig.custom()
+					.setSocketTimeout(Integer.parseInt("300") * 1000)
+					.setConnectTimeout(Integer.parseInt("300") * 1000)
+					.setConnectionRequestTimeout(Integer.parseInt("5") * 1000).build();//设置请求和传输超时时间
 			httpPost.setConfig(requestConfig);
 			httpPost.setEntity(new StringEntity(json, contentType));
 			CloseableHttpResponse response = null;
@@ -641,20 +643,23 @@ public class HttpClientUtils {
 
 
 	public static String sendPostWithHeader(String url,String params,Map<String, Object> headers){
-		HttpPost httpPost = new HttpPost(url);
-		/** 添加请求头 */
-		if (MapUtil.isNotEmpty(headers)){
-			headers.forEach((k,v) ->
-					httpPost.addHeader(k,String.valueOf(v)));
-		}
-		httpPost.addHeader("Content-Type", "application/json;charset=UTF-8");
-		ContentType contentType = null;
 		String responseInfo="";
 		try {
+			HttpPost httpPost = new HttpPost(url);
+			/** 添加请求头 */
+			if (MapUtil.isNotEmpty(headers)){
+				headers.forEach((k,v) ->
+						httpPost.addHeader(k,String.valueOf(v)));
+			}
+			httpPost.addHeader("Content-Type", "application/json;charset=UTF-8");
+			ContentType contentType = null;
+
+
 			contentType = ContentType.create("application/json", CharsetUtils.get("UTF-8"));
 			CloseableHttpClient httpclient = HttpClients.createDefault();
-			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(Integer.parseInt("300") * 1000)
-					.setConnectTimeout(Integer.parseInt("300") * 1000).build();//设置请求和传输超时时间
+			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(3000)
+					.setConnectTimeout(3000)
+					.setConnectionRequestTimeout(3000).build();//设置请求和传输超时时间
 			httpPost.setConfig(requestConfig);
 			httpPost.setEntity(new StringEntity(params, contentType));
 			CloseableHttpResponse response = null;
@@ -672,7 +677,7 @@ public class HttpClientUtils {
 					responseInfo = EntityUtils.toString(entity,"utf-8");
 				}
 			}
-		} catch (Exception e) {
+		}catch (Exception e) {
 			logger.error(e.getMessage(),e);
 		}
 		return responseInfo;

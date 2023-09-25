@@ -172,6 +172,7 @@ public interface CommonConstants {
 	String XT_BUSINESS_XML  = "businessXML";//JSONOBJECT
 	String XT_BUSINESS_FILE = "businessFile";//JSONARRARY
 	String XT_BUSINESS_ITEM = "businessItem";//JSONOBJECT
+	String XT_BUSINESS_MATERRIAL = "businessMaterial";//JSONOBJECT
 
 
 	String API_TOKEN = "token";

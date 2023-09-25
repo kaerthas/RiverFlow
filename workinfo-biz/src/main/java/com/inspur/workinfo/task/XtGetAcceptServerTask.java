@@ -101,6 +101,7 @@ public class XtGetAcceptServerTask {
                                if (result.getCode()==0){//0表示成功
                                    Object res =  result.getData();
                                    JSONObject resObj =   JSONObject.parseObject(res.toString());
+                                   System.out.println("###"+resObj.toJSONString());
                                    businessAcceptService.saveFormApi(resObj,sblshShort);
                                }else{
                                    logger.error("接口查询失败，获取消息XtGetAcceptServerTask失败！");

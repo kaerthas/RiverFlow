@@ -7,6 +7,7 @@ package com.inspur.workinfo.util;
  * @description 
  */
 
+import cn.hutool.core.util.StrUtil;
 import com.inspur.workinfo.config.PropertyConfig;
 import lombok.extern.slf4j.Slf4j;
 
@@ -17,6 +18,7 @@ import org.springframework.util.StringUtils;
 
 import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
 
@@ -48,6 +50,35 @@ public class UploadUtil {
 		}else {
 			return "";
 		}
+	}
+
+//	public static void main(String[] args) {
+//		try {
+//			String lo = UploadUtil.getBase64ByFilePath("http://59.218.251.19:8680/WebDiskServerDemo/doc?doc_id=2b1bb49c-b1f8-4391-9177-3591c5636e74&appCode=INSPUR-DZZW-QYSL&token=354c7446466e454c7835424677754d654c7635357278657177414a2b396f6c683878537250515963684b656f306b4470582b50576c69526d4774306d752f4747423938553770576d627342460a6c65b7f71bd3f1d46eab62c5");
+//			System.out.println(lo);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//	}
+
+	public static String getBase64ByFilePath(String filePath){
+		log.error("downloadUrl:" +filePath);
+
+		String base64 ="";
+		try {
+			URL url = new URL(filePath);
+
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			InputStream inputStream = conn.getInputStream(); // 通过输入流获得文档数据
+			byte[] getData = readInputStream(inputStream); // 获得文档的二进制数据
+			 base64= Base64.getEncoder().encodeToString(getData);
+			log.error("getBase64ByFilePath:" +base64);
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		}catch (IOException e){
+			e.printStackTrace();
+		}
+		return base64;
 	}
 
 

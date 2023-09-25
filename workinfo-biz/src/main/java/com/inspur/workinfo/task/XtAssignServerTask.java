@@ -124,12 +124,14 @@ public class XtAssignServerTask {
                                             }
 
                                             //接口调用记录处理
-                                            callResultBean.setResultValue(res.getString("data"));
+                                            callResultBean.setResultValue(res.toJSONString());
                                             callResultBean.setCalledSystemName(callBean.getCalledSystemName());
                                             callResultBean.setCalledSystemAddr(callBean.getCalledSystemAddr());
                                             callResultBean.setCallState(res.getString("code"));
                                             callResultBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",new Date()));
                                             callResultBean.setCallId(callId);
+                                            callBean.setCallState(res.getString("code"));
+
                                             callResultBean.setSeqId(UUID.randomUUID().toString().replace("-",""));
                                             approveCallService.saveOrUpdate(callBean);
                                             approveCallResultService.saveOrUpdate(callResultBean);

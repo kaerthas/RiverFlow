@@ -249,13 +249,16 @@ public class XtApproveBusinessAcceptServiceImpl extends ServiceImpl<XtApproveBus
                //获取实体类 返回的是一个数组 数组的数据就是实体类中的字段
                Field[] fields = XtApproveBusinessAccept.class.getDeclaredFields();
                for (int j = 0; j < fields.length; j++) {
-                   fields[j].setAccessible(true);
-//
-                   if (fields[j].getGenericType().toString().equals("class java.util.Date")) {
-                       fields[j].set(businessAccept, DateUtils.formatDate("yyyy-MM-dd HH:mm:ss", resObj.getString(fields[j].getName())));
-                   } else {
-                       fields[j].set(businessAccept, resObj.getString(fields[j].getName()));
+                   if (resObj.containsKey(fields[j].getName())){
 
+                       fields[j].setAccessible(true);
+    //
+                       if (fields[j].getGenericType().toString().equals("class java.util.Date")) {
+                           fields[j].set(businessAccept, DateUtils.formatDate("yyyy-MM-dd HH:mm:ss", resObj.getString(fields[j].getName())));
+                       } else {
+                           fields[j].set(businessAccept, resObj.getString(fields[j].getName()));
+
+                       }
                    }
                }
                businessAccept.setSeqId(UUID.randomUUID().toString());
