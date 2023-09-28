@@ -1,6 +1,7 @@
 package com.inspur.workinfo.config;
 
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -41,4 +42,15 @@ public class PropertyConfig {
     private String downloadUrl;
     private String webDiskAppCode;
     private String webDiskDecryptKey;
+
+
+    /****
+     * 互联网区代理模式
+     * *****/
+    private  String httpProxyIP;
+    private  String httpPort;
+
+    public PropertyConfig() {
+
+    }
 }

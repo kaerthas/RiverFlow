@@ -167,5 +167,11 @@ private static final long serialVersionUID = 1L;
      */
     @ApiModelProperty(value="是否已经生成出参物化表，1是，0否")
     private String  isNeedWh;
+    /*****
+     * 是否互联网区配置
+     * *****/
+    @ApiModelProperty(value = "是否互联网区0不是，1是")
+    private String isInternet;
+
 
     }

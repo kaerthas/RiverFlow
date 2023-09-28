@@ -47,5 +47,6 @@
                         <result property="checkState" column="CHECK_STATE"/>
                         <result property="originalUrl" column="ORIGINAL_URL"/>
                         <result property="requestMode" column="REQUEST_MODE"/>
+                        <result property="isInternet" column="IS_INTERNET"/>
             </resultMap>
 </mapper>

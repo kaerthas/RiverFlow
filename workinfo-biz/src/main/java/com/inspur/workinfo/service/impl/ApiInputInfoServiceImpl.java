@@ -70,22 +70,27 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
         String url = apiServiceCatalog.getUrl();
         String requestType = apiServiceCatalog.getRequestType();//GET/POST/FORM
         String method = apiServiceCatalog.getMethod();
+        //增加互联网区正向代理模式
+        boolean isInternet ="0".equals(apiServiceCatalog.getIsInternet())?false:true;
+
+
+
         String info = "";
         if(API_PROXY.equals(apiServiceCatalog.getType())){
 
             if("JSON".equals(requestType)) {
                 if ("POST".equals(method)) {
-                    info = HttpClientUtils.sendPostWithHeader(url,param,header);
+                    info = HttpClientUtils.sendPostByHttpURLConnection(url,param,header,isInternet);
                 } else if ("GET".equals(method)) {
-                    info = HttpClientUtils.sendGetWithHeader(url,JSONObject.parseObject(param),header);
+                    info = HttpClientUtils.sendGetWithHeader(url,JSONObject.parseObject(param),header,isInternet);
                 } else if ("FORM".equals(method)) {
-                    info = HttpClientUtils.sendFormPostWithHeader(url,JSONObject.parseObject(param),header);
+                    info = HttpClientUtils.sendFormPostWithHeader(url,JSONObject.parseObject(param),header,isInternet);
                 } else{
                     return R.failed("未识别的接口类型");
                 }
             }else if("XML".equals(requestType)){
                 if ("POST".equals(method)) {
-                    info = HttpClientUtils.postXmlRequest(url,param,header);
+                    info = HttpClientUtils.postXmlRequest(url,param,header,isInternet);
                 }
             }else {
                 return R.failed("未找到对应请求类型");
@@ -94,10 +99,10 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
         }else if(API_TOKEN.equals(apiServiceCatalog.getType())){
             if("JSON".equals(requestType)) {
                 if ("FORM".equals(method)) {
-                    info = HttpClientUtils.sendFormPostWithHeader(url,JSON.parseObject(param),header);
+                    info = HttpClientUtils.sendFormPostWithHeader(url,JSON.parseObject(param),header,isInternet);
 
                 }else if ("POST".equals(method)) {
-                    info = HttpClientUtils.sendPostWithHeader(url,param,header);
+                    info = HttpClientUtils.sendPostWithHeader(url,param,header,isInternet);
                 }
                  else {
                     return R.failed("未识别的接口类型");

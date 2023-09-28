@@ -2,16 +2,15 @@ package com.inspur.workinfo.util;
 
 
 import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 
+import com.inspur.workinfo.config.PropertyConfig;
 import com.inspur.workinfo.constant.CommonConstants;
 import com.inspur.workinfo.entity.ApproveCall;
 import lombok.extern.slf4j.Slf4j;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.NameValuePair;
+import org.apache.http.*;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -28,11 +27,15 @@ import org.apache.http.util.EntityUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Component;
 
 import javax.net.ssl.*;
 import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -52,7 +55,16 @@ import java.util.Random;
  * @version 1.0
  */
 @Slf4j
+@Component
 public class HttpClientUtils {
+
+	private static PropertyConfig propertyConfig;
+
+	@Autowired
+	public HttpClientUtils(PropertyConfig myDependency) {
+		HttpClientUtils.propertyConfig = myDependency;
+	}
+
 	MyX509TrustManager xtm = new MyX509TrustManager();
     MyHostnameVerifier hnv = new MyHostnameVerifier();
     private static Logger logger = LoggerFactory.getLogger(HttpClientUtils.class);
@@ -70,6 +82,11 @@ public class HttpClientUtils {
 		}
 		HttpsURLConnection.setDefaultHostnameVerifier(hnv);
 	}
+	static final HostnameVerifier DO_NOT_VERIFY = new HostnameVerifier() {
+		public boolean verify(String hostname, SSLSession session) {
+			return true;
+		}
+	};
 
 	/**
 	 * POST请求
@@ -615,36 +632,179 @@ public class HttpClientUtils {
 	}
 
 
-	public static String sendGetWithHeader(String url,Map<String, Object> params,Map<String, Object> headers){
+	public static String sendGetWithHeader(String url,Map<String, Object> params,Map<String, Object> headers,boolean isInternet){
 		String responseInfo = "";
 		try {
+			URL urlString = new URL(url);
+			String ip = urlString.getHost(); // 获取IP地址
+			int port = urlString.getPort(); // 获取端口号
 			CloseableHttpClient httpClient = HttpClients.createDefault();
 			if (MapUtil.isNotEmpty(params)) {
 				url = url + "?" + JoiningTogetherParams(params);
 			}
 			HttpGet httpGet = new HttpGet(url);
-			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(Integer.parseInt("300") * 1000)
-					.setConnectTimeout(Integer.parseInt("300") * 1000).build();//设置请求和传输超时时间
-			httpGet.setConfig(requestConfig);
+			RequestConfig requestConfig = null;
+			CloseableHttpResponse response =null;
+
 			if (MapUtil.isNotEmpty(headers)) {
 				headers.forEach((k, v) -> httpGet.addHeader(k, (String)v));
 			}
-			CloseableHttpResponse response = httpClient.execute(httpGet);
+
+			if (url.contains("https")) {
+				//增加正向代理先转发到代理服务器
+				if (isInternet) {
+					HttpHost target = new HttpHost(ip, port,
+							"https");
+					logger.error("使用代理模式,host:" + propertyConfig.getHttpProxyIP() +",port:"+ propertyConfig.getHttpPort());
+
+					requestConfig = RequestConfig.custom().setSocketTimeout(5000)
+							.setConnectTimeout(5000)
+							.setConnectionRequestTimeout(5000).setProxy(new HttpHost(propertyConfig.getHttpProxyIP(),Integer.valueOf(propertyConfig.getHttpPort()),"HTTPS")).build();//设置请求和传输超时时间
+//					httpGet.setConfig(requestConfig);
+//
+//					SSLClient client = new SSLClient();
+//					response = client.execute(target,httpGet);
+				}else{
+					requestConfig = RequestConfig.custom().setSocketTimeout(3000)
+							.setConnectTimeout(3000)
+							.setConnectionRequestTimeout(3000).build();//设置请求和传输超时时间
+
+
+
+				}
+				httpGet.setConfig(requestConfig);
+				SSLClient client = new SSLClient();
+				response = client.execute(httpGet);
+
+			}else{
+
+				if (isInternet) {
+					HttpHost target = new HttpHost(ip, port,
+							"http");
+					logger.error("使用代理模式,host:" + propertyConfig.getHttpProxyIP() +",port:"+ propertyConfig.getHttpPort());
+
+					requestConfig = RequestConfig.custom().setSocketTimeout(5000)
+							.setConnectTimeout(5000)
+							.setConnectionRequestTimeout(5000).setProxy(new HttpHost(propertyConfig.getHttpProxyIP(),Integer.valueOf(propertyConfig.getHttpPort()),"HTTP")).build();//设置请求和传输超时时间
+					httpGet.setConfig(requestConfig);
+
+					SSLClient client = new SSLClient();
+					response = client.execute(target,httpGet);
+				}else{
+					requestConfig = RequestConfig.custom().setSocketTimeout(3000)
+							.setConnectTimeout(3000)
+							.setConnectionRequestTimeout(3000).build();//设置请求和传输超时时间
+					httpGet.setConfig(requestConfig);
+
+					response = httpClient.execute(httpGet);
+				}
+
+			}
+
+
+
 			int statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode == HttpStatus.SC_OK) {
 				responseInfo = EntityUtils.toString(response.getEntity(), "UTF-8");
 			}
 		} catch (Exception e) {
-			log.error(e.getMessage(), e);
+			try {
+				logger.error(new String(e.getMessage().getBytes("GB2312"),"UTF-8"),e);
+			} catch (UnsupportedEncodingException e1) {
+				e1.printStackTrace();
+			}
 		}
 		return responseInfo;
 	}
 
 
+	public static String sendPostByHttpURLConnection(String url,String params,Map<String, Object> headers,boolean isInternet)  {
+		String result = "";
+		BufferedReader reader = null;
+		HttpURLConnection conn = null;
+		try {
 
-	public static String sendPostWithHeader(String url,String params,Map<String, Object> headers){
+			URL urlPath = new URL(url);
+			if (isInternet) {
+				String proxyIP = propertyConfig.getHttpProxyIP();
+				int proxyPort = Integer.valueOf(propertyConfig.getHttpPort());
+				logger.error("使用代理模式,host:" + proxyIP + ",port:" + proxyPort);
+				Proxy.Type var10002 = Proxy.Type.DIRECT;
+				Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyIP, proxyPort));
+				if (url.contains("https")) {
+					HttpsURLConnection httpsConn = (HttpsURLConnection)urlPath.openConnection(proxy);
+					httpsConn.setHostnameVerifier(DO_NOT_VERIFY);
+					conn = httpsConn;
+				} else {
+					conn = (HttpURLConnection)urlPath.openConnection(proxy);
+				}
+			} else if (url.substring(0, 5).equals("https")) {
+				HttpsURLConnection httpsConn = (HttpsURLConnection)urlPath.openConnection();
+				httpsConn.setHostnameVerifier(DO_NOT_VERIFY);
+				conn = httpsConn;
+			} else {
+				conn = (HttpURLConnection)urlPath.openConnection();
+			}
+			conn.setRequestMethod("POST");
+			conn.setDoOutput(true);
+			conn.setDoInput(true);
+			conn.setUseCaches(false);
+			conn.setRequestProperty("Connection", "Keep-Alive");
+			conn.setRequestProperty("Charset", "UTF-8");
+			// 设置文件类型:
+			conn.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+
+			/** 添加请求头 */
+			if (MapUtil.isNotEmpty(headers)){
+				HttpURLConnection finalConn = conn;
+				headers.forEach((k, v) ->
+						finalConn.setRequestProperty(k,String.valueOf(v)));
+			}
+
+			// 设置接收类型否则返回415错误
+			//conn.setRequestProperty("accept","*/*")此处为暴力方法设置接受所有类型，以此来防范返回415;
+			//conn.setRequestProperty("accept","application/json");
+			// 往服务器里面发送数据
+			if (params != null && !StrUtil.isEmpty(params)) {
+				byte[] writebytes = params.getBytes();
+				// 设置文件长度
+				conn.setRequestProperty("Content-Length", String.valueOf(writebytes.length));
+				OutputStream outwritestream = conn.getOutputStream();
+				outwritestream.write(params.getBytes());
+				outwritestream.flush();
+				outwritestream.close();
+				logger.error("hlhupload", "doJsonPost: conn"+conn.getResponseCode());
+			}
+			if (conn.getResponseCode() == 200) {
+				reader = new BufferedReader(
+						new InputStreamReader(conn.getInputStream(), "UTF-8"));
+				result = reader.readLine();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (reader != null) {
+				try {
+					reader.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return result;
+	}
+
+
+
+	public static String sendPostWithHeader(String url,String params,Map<String, Object> headers,boolean isInternet)  {
 		String responseInfo="";
 		try {
+			URL urlString = new URL(url);
+			String ip = urlString.getHost(); // 获取IP地址
+			int port = urlString.getPort(); // 获取端口号
+
+//			Proxy proxy = new Proxy(Proxy.Type.DIRECT.HTTP,new InetSocketAddress(httpProxyIP, Integer.valueOf(httpPort)));
+
 			HttpPost httpPost = new HttpPost(url);
 			/** 添加请求头 */
 			if (MapUtil.isNotEmpty(headers)){
@@ -653,22 +813,65 @@ public class HttpClientUtils {
 			}
 			httpPost.addHeader("Content-Type", "application/json;charset=UTF-8");
 			ContentType contentType = null;
-
+			RequestConfig requestConfig=null;
 
 			contentType = ContentType.create("application/json", CharsetUtils.get("UTF-8"));
 			CloseableHttpClient httpclient = HttpClients.createDefault();
-			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(3000)
-					.setConnectTimeout(3000)
-					.setConnectionRequestTimeout(3000).build();//设置请求和传输超时时间
-			httpPost.setConfig(requestConfig);
+
+
 			httpPost.setEntity(new StringEntity(params, contentType));
 			CloseableHttpResponse response = null;
 
 			if (url.contains("https")) {
+				//增加正向代理先转发到代理服务器
+				if (isInternet) {
+					logger.error("使用者url:"+ip+port+",使用者url:"+url+"使用代理模式,host:" + propertyConfig.getHttpProxyIP() +",port:"+ propertyConfig.getHttpPort());
+
+//					HttpHost target = new HttpHost(ip, port,
+//							"https");
+
+					requestConfig = RequestConfig.custom().setSocketTimeout(30000)
+							.setConnectTimeout(5000)
+							.setConnectionRequestTimeout(5000)
+							.setProxy(new HttpHost(propertyConfig.getHttpProxyIP(),Integer.valueOf(propertyConfig.getHttpPort()),"HTTPS"))
+							.build();//设置请求和传输超时时间
+
+//					httpPost.setConfig(requestConfig);
+//
+//					SSLClient client = new SSLClient();
+//					response = client.execute(target,httpPost);
+
+				}else{
+					requestConfig = RequestConfig.custom().setSocketTimeout(3000)
+							.setConnectTimeout(3000)
+							.setConnectionRequestTimeout(3000).build();//设置请求和传输超时时间
+
+				}
+				httpPost.setConfig(requestConfig);
 				SSLClient client = new SSLClient();
 				response = client.execute(httpPost);
+
 			}else{
+
+				if (isInternet) {
+//					HttpHost target = new HttpHost(ip, port,
+//							"http");
+					logger.error("使用代理模式,host:" + propertyConfig.getHttpProxyIP() +",port:"+ propertyConfig.getHttpPort());
+
+					requestConfig = RequestConfig.custom().setSocketTimeout(5000)
+							.setConnectTimeout(5000)
+							.setConnectionRequestTimeout(5000).setProxy(new HttpHost(propertyConfig.getHttpProxyIP(),Integer.valueOf(propertyConfig.getHttpPort()),"HTTP")).build();//设置请求和传输超时时间
+
+				}else{
+
+					 requestConfig = RequestConfig.custom().setSocketTimeout(3000)
+							.setConnectTimeout(3000)
+							.setConnectionRequestTimeout(3000).build();//设置请求和传输超时时间
+				}
+				httpPost.setConfig(requestConfig);
 				response = httpclient.execute(httpPost);
+
+
 			}
 			HttpEntity entity = response.getEntity();
 			int status = response.getStatusLine().getStatusCode();
@@ -678,7 +881,11 @@ public class HttpClientUtils {
 				}
 			}
 		}catch (Exception e) {
-			logger.error(e.getMessage(),e);
+			try {
+				logger.error(new String(e.getMessage().getBytes("GBK"),"UTF-8"),e);
+			} catch (UnsupportedEncodingException e1) {
+				e1.printStackTrace();
+			}
 		}
 		return responseInfo;
 	}
@@ -687,27 +894,70 @@ public class HttpClientUtils {
 	 * post请求,form请求参数
 	 *
 	 */
-	public static String sendFormPostWithHeader(String url, Map<String, Object> params,Map<String, Object> headers) {
+	public static String sendFormPostWithHeader(String url, Map<String, Object> params,Map<String, Object> headers,boolean isInternet) {
 
 
 		CloseableHttpClient httpclient = HttpClients.createDefault();
 		String responseContent = null;
 		try {
+			URL urlString = new URL(url);
+			String ip = urlString.getHost(); // 获取IP地址
+			int port = urlString.getPort(); // 获取端口号
+
 			HttpPost httpPost = new HttpPost(url);
 			if (MapUtil.isNotEmpty(headers)){
 				headers.forEach((k,v) -> httpPost.addHeader(k,String.valueOf(v)));
 			}
 			List<NameValuePair> pairs = covertParams(params);
 			httpPost.setEntity(new UrlEncodedFormEntity(pairs, "UTF-8"));
-			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(Integer.parseInt("300") * 1000)
-					.setConnectTimeout(Integer.parseInt("300") * 1000).build();//设置请求和传输超时时间
-			httpPost.setConfig(requestConfig);
+			RequestConfig requestConfig = null;
 			CloseableHttpResponse response = null;
+
 			if (url.contains("https")) {
-				SSLClient client = new SSLClient();
-				response = client.execute(httpPost);
+				//增加正向代理先转发到代理服务器
+				if (isInternet) {
+
+					HttpHost target = new HttpHost(ip, port,
+							"https");
+					logger.error("使用代理模式,host:" + propertyConfig.getHttpProxyIP() +",port:"+ propertyConfig.getHttpPort());
+					requestConfig = RequestConfig.custom().setSocketTimeout(5000)
+							.setConnectTimeout(5000)
+							.setConnectionRequestTimeout(5000).setProxy(new HttpHost(propertyConfig.getHttpProxyIP(),Integer.valueOf(propertyConfig.getHttpPort()),"HTTPS")).build();//设置请求和传输超时时间
+					httpPost.setConfig(requestConfig);
+					SSLClient client = new SSLClient();
+					response = client.execute(target,httpPost);
+				}else{
+					requestConfig = RequestConfig.custom().setSocketTimeout(5000)
+							.setConnectTimeout(5000)
+							.setConnectionRequestTimeout(5000).build();//设置请求和传输超时时间
+					httpPost.setConfig(requestConfig);
+					SSLClient client = new SSLClient();
+					response = client.execute(httpPost);
+				}
+
+
+
 			}else{
-				response = httpclient.execute(httpPost);
+
+				if (isInternet) {
+
+					HttpHost target = new HttpHost(ip, port,
+							"http");
+					logger.error("使用代理模式,host:" + propertyConfig.getHttpProxyIP() +",port:"+ propertyConfig.getHttpPort());
+
+					requestConfig = RequestConfig.custom().setSocketTimeout(5000)
+							.setConnectTimeout(5000)
+							.setConnectionRequestTimeout(5000).setProxy(new HttpHost(propertyConfig.getHttpProxyIP(),Integer.valueOf(propertyConfig.getHttpPort()),"HTTP")).build();//设置请求和传输超时时间
+					httpPost.setConfig(requestConfig);
+					response = httpclient.execute(target,httpPost);
+				}else{
+
+					requestConfig = RequestConfig.custom().setSocketTimeout(5000)
+							.setConnectTimeout(5000)
+							.setConnectionRequestTimeout(5000).build();//设置请求和传输超时时间
+					httpPost.setConfig(requestConfig);
+					response = httpclient.execute(httpPost);
+				}
 			}
 			HttpEntity entity = response.getEntity();
 			int status = response.getStatusLine().getStatusCode();
@@ -724,25 +974,80 @@ public class HttpClientUtils {
 		return responseContent;
 	}
 
-	public static String postXmlRequest(String url, String xml , Map<String, Object> headers) {
+	public static String postXmlRequest(String url, String xml , Map<String, Object> headers,boolean isInternet) {
 		CloseableHttpClient httpclient = HttpClients.createDefault();
 		String responseContent = null;
 		try {
+
+			URL urlString = new URL(url);
+			String ip = urlString.getHost(); // 获取IP地址
+			int port = urlString.getPort(); // 获取端口号
 			HttpPost post = new HttpPost(url);
 			if (MapUtil.isNotEmpty(headers)){
 				headers.forEach((k,v) -> post.addHeader(k,(String)v));
 			}
-			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(Integer.parseInt("300") * 1000)
-					.setConnectTimeout(Integer.parseInt("300") * 1000).build();//设置请求和传输超时时间
-			post.setConfig(requestConfig);
+			RequestConfig requestConfig = null;
+//			RequestConfig.custom().setSocketTimeout(Integer.parseInt("300") * 1000)
+//					.setConnectTimeout(Integer.parseInt("300") * 1000).build();//设置请求和传输超时时间
+//			post.setConfig(requestConfig);
+//
 			post.setHeader("Content-type", "text/xml");
 			post.setEntity(new StringEntity(xml, "UTF-8"));
 			CloseableHttpResponse response = null;
+//			if (url.contains("https")) {
+//				SSLClient client = new SSLClient();
+//				response = client.execute(post);
+//			}else{
+//				response = httpclient.execute(post);
+//			}
 			if (url.contains("https")) {
-				SSLClient client = new SSLClient();
-				response = client.execute(post);
+				//增加正向代理先转发到代理服务器
+				if (isInternet) {
+					HttpHost target = new HttpHost(ip, port,
+							"https");
+
+					logger.error("使用代理模式,host:" + propertyConfig.getHttpProxyIP() +",port:"+ propertyConfig.getHttpPort());
+
+					requestConfig = RequestConfig.custom().setSocketTimeout(5000)
+							.setConnectTimeout(5000)
+							.setConnectionRequestTimeout(5000)
+							.setProxy(new HttpHost(propertyConfig.getHttpProxyIP(),Integer.valueOf(propertyConfig.getHttpPort()),"HTTPS")).build();//设置请求和传输超时时间
+					post.setConfig(requestConfig);
+
+					SSLClient client = new SSLClient();
+					response = client.execute(target,post);
+				}else{
+					requestConfig = RequestConfig.custom().setSocketTimeout(3000)
+							.setConnectTimeout(3000)
+							.setConnectionRequestTimeout(3000).build();//设置请求和传输超时时间
+					post.setConfig(requestConfig);
+
+					SSLClient client = new SSLClient();
+					response = client.execute(post);
+				}
+
 			}else{
-				response = httpclient.execute(post);
+
+				if (isInternet) {
+					HttpHost target = new HttpHost(ip, port,
+							"http");
+					logger.error("使用代理模式,host:" + propertyConfig.getHttpProxyIP() +",port:"+ propertyConfig.getHttpPort());
+
+					requestConfig = RequestConfig.custom().setSocketTimeout(5000)
+							.setConnectTimeout(5000)
+							.setConnectionRequestTimeout(5000).setProxy(new HttpHost(propertyConfig.getHttpProxyIP(),Integer.valueOf(propertyConfig.getHttpPort()),"HTTP")).build();//设置请求和传输超时时间
+					post.setConfig(requestConfig);
+					response = httpclient.execute(target,post);
+				}else{
+
+					requestConfig = RequestConfig.custom().setSocketTimeout(3000)
+							.setConnectTimeout(3000)
+							.setConnectionRequestTimeout(3000).build();//设置请求和传输超时时间
+					post.setConfig(requestConfig);
+					response = httpclient.execute(post);
+				}
+
+
 			}
 			HttpEntity entity = response.getEntity();
 			int status = response.getStatusLine().getStatusCode();
