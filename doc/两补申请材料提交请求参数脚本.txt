@@ -1,0 +1,28 @@
+ def result =  new JSONObject()
+
+ def appid = JSONObject.parseObject(args).get("appid")
+ def appkey = JSONObject.parseObject(args).get("appkey")
+ def businessXML  = JSONObject.parseObject(args).get("businessXML")
+ def businessMaterial = JSONObject.parseObject(args).get("businessMaterial")
+ 
+ def nonce =  UUID.randomUUID().toString().replaceAll("-", "")
+ def timestamp =  String.valueOf(System.currentTimeMillis())
+ StringBuilder stringBuilder = new StringBuilder("appid=").append(appid).append("&appkey=")
+        .append(appkey).append("&nonce=").append(nonce).append("&timestamp=").append(timestamp)
+        
+ result.put("nonce",nonce)
+ result.put("timestamp",timestamp)
+ result.put("signature",AesEncryptUtil.sign(stringBuilder.toString())) 
+ result.put("appid",appid)
+ result.put("appkey",appkey)
+ 
+ result.put("idCard",businessXML.get("SHENFENZHENGHAO"))
+ result.put("fileName",businessMaterial.get("attachName"))
+ if("11001499001".equals(businessMaterial.get("stuffSeq"))){
+  result.put("type","idCard")
+ }else if("11007758001".equals(businessMaterial.get("stuffSeq"))){
+  result.put("type","disabledCard")
+ }
+ def base64 = UploadUtil.getBase64ByFilePath(businessMaterial.get("attachBody"))
+ result.put("base64",base64)
+ return result
