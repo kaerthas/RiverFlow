@@ -31,7 +31,7 @@ import java.util.UUID;
  @Configuration
  @EnableScheduling
  @ConditionalOnProperty(name="task.getSignalDataEnable")
-  * 后续修改为配置文件控制相关任务是否执行
+  * 后续修改为配置文件控制相关任务是否执行 (淘汰为许雪里)
  * *********/
 @Slf4j
 @Component
@@ -59,7 +59,8 @@ public class XtAcceptServerTask {
      * 任务为办件查询和办件材料查询相关
      *
      */
-    //@Scheduled(cron = "0 */1 * * * ? ")
+//    @Scheduled(cron = "0 */1 * * * ? ")
+//    @Scheduled(cron = "0 */10 * * * ? ")
     public void websocket() throws Exception {
         log.info("【推送消息XtAcceptServerTask】开始执行：{}", DateUtil.formatDateTime(new Date()));
         String uuid = UUID.randomUUID().toString();

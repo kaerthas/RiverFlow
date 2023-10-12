@@ -1,7 +1,29 @@
 server:
   port: 8090
 
+#配置xuxueli xxl-job
+xxl:
+  job:
+    admin:
+      addresses: http://127.0.0.1:8080/sx-job-admin
+    executor:
+      appname: xtapprovel-job-executor
+      ip: ''
+      port: 9997
+      logpath: /data/applogs/esexchange/jobhandler
+      logretentiondays: -1
+    accessToken: ''
+
+
+
 spring:
+#  redis:
+#    sentinel:
+#      master: mymaster
+#      nodes:
+#        - 192.168.56.10:27001
+#        - 192.168.56.10:27002
+#        - 192.168.56.10:27003
   redis:
     # 地址
     host: 127.0.0.1
