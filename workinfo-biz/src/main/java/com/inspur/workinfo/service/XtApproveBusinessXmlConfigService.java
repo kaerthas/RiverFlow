@@ -32,7 +32,7 @@ import java.util.Map;
  * @date 2023-07-10 16:25:35
  */
 public interface XtApproveBusinessXmlConfigService extends IService<XtApproveBusinessXmlConfig> {
-    public int  insertXmlDataProvider(Map<String, Object> params);
+    public int  insertXmlDataProvider(Map<String, Object> params) throws Exception;
 
     Map<String,Object>  selectXmlDataByKeyWord(Map<String,Object> params);
 }

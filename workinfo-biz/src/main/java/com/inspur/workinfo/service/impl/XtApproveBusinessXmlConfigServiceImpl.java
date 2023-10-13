@@ -36,7 +36,7 @@ import java.util.Map;
 public class XtApproveBusinessXmlConfigServiceImpl extends ServiceImpl<XtApproveBusinessXmlConfigMapper, XtApproveBusinessXmlConfig> implements XtApproveBusinessXmlConfigService {
 
     @Override
-    public int insertXmlDataProvider(Map<String, Object> params) {
+    public int insertXmlDataProvider(Map<String, Object> params) throws Exception{
         return baseMapper.insertXmlDataProvider(params);
     }
 

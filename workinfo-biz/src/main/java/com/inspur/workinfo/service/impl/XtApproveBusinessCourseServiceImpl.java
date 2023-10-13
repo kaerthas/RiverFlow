@@ -140,7 +140,6 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
             }
             return result;
         }catch (Exception e){
-
             e.printStackTrace();
             throw e;
         }

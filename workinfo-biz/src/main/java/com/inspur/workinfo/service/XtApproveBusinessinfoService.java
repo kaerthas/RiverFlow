@@ -32,7 +32,7 @@ public interface XtApproveBusinessinfoService extends IService<XtApproveBusiness
 
     JSONObject getBusinessApplyData(String receiveNumber , String sxbm);
 
-    JSONObject analysisApplyData(String sxbm,String applyXmlStr);
+    JSONObject analysisApplyData(String sxbm,String applyXmlStr) throws Exception;
 
 
     JSONObject getBusiApplyMaterial(String sblshShort, String sxbm, String ywlx);

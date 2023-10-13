@@ -116,8 +116,8 @@ public class XtApproveBusinessinfoServiceImpl extends ServiceImpl<XtApproveBusin
      * 数据分析，并保存相关库表，采用sql语句的方式动态插入
      * ***/
     @Override
-    @Transactional
-    public JSONObject analysisApplyData(String sxbm,String applyXmlStr) {
+    @Transactional(rollbackFor = Exception.class)
+    public JSONObject analysisApplyData(String sxbm,String applyXmlStr) throws Exception {
         //初始化返回值
         JSONObject result = new JSONObject();
         result.put("code", CommonConstants.API_SUCCESS);
@@ -220,7 +220,7 @@ public class XtApproveBusinessinfoServiceImpl extends ServiceImpl<XtApproveBusin
                         List<XtApproveBusinessXmlConfig>  xmlConfigs  = xmlConfigService.getBaseMapper().selectList(new QueryWrapper<XtApproveBusinessXmlConfig>()
                                 .eq("ITEM_ID",itemId));
                         Map<String, Object> params  =  new HashMap<>();
-                        String[] colums  = new String[]{};
+                        String[] colums  = new String[xmlConfigs.size()];
                         for (int i = 0; i < xmlConfigs.size(); i++) {
                             if ("table".equals(xmlConfigs.get(i).getType())){
                                 //将表名插入map
@@ -237,7 +237,7 @@ public class XtApproveBusinessinfoServiceImpl extends ServiceImpl<XtApproveBusin
                             }else if("keyword".equals(xmlConfigs.get(i).getType())){
                                 //TODO 后续修改为可配置的关联关系
                                 params.put("keyword",xmlConfigs.get(i).getXmlCode());
-                                params.put("keywordvalue",baseInfoId);
+                                params.put("keywordvalue",applyAcceptData.getString("sblshShort"));
                             }
 
                         }
@@ -260,9 +260,10 @@ public class XtApproveBusinessinfoServiceImpl extends ServiceImpl<XtApproveBusin
             return result;
         }catch (Exception e){
             e.printStackTrace();
-            result.put("code", CommonConstants.API_FAIL);
-            result.put("error", e.getMessage());
-            return result;
+            throw e;
+//            result.put("code", CommonConstants.API_FAIL);
+//            result.put("error", e.getMessage());
+//            return result;
         }
 
 

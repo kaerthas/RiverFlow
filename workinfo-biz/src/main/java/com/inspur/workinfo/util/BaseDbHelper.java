@@ -5,27 +5,57 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.jdbc.SQL;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 public class BaseDbHelper {
 
-        public String insertXmlDataProvider(Map<String, Object> params) {
+        public String insertXmlDataProvider(Map<String, Object> params) throws Exception {
+            try {
+//                System.out.println(new SQL() {
+//                    {
+//
+//                        INSERT_INTO(params.get("tableName").toString());
+//                        String[] colums = (String[]) params.get("columns");
+//                        String keyword = String.valueOf(params.get("keyword"));
+//                        for (int i = 0; i < colums.length; i++) {
+//                            if (colums[i] != null && params.get(colums[i].toString()) != null) {
+//                                //                    VALUES(colums[i],params.get(colums[i].toString()).toString());
+//                                VALUES(colums[i], "'" + params.get(colums[i].toString()).toString() + "'");
+////                        VALUES(colums[i],"#{"+colums[i]+"}");
+//
+//                            }
+//                        }
+//                        if (StrUtil.isNotBlank(keyword)) {
+//                            VALUES(keyword, "'" + params.get("keywordvalue").toString() + "'");
+//                        }
+//                        //暂时写死
+//                        VALUES("SEQ_ID", "'" + UUID.randomUUID().toString().replaceAll("-", "") + "'");
+//                    }
+//                }.toString());
+            return new SQL() {
+                {
 
-            return new SQL(){{
-
-                INSERT_INTO(params.get("tableName").toString());
-                String[]  colums = (String[]) params.get("columns");
-                String keyword  =  String.valueOf(params.get("keyword"));
-                for (int i = 0; i < colums.length ; i++) {
-                    if (params.get(colums[i].toString())!=null){
-                        VALUES(colums[i],params.get(colums[i].toString()).toString());
+                    INSERT_INTO(params.get("tableName").toString());
+                    String[] colums = (String[]) params.get("columns");
+                    String keyword = String.valueOf(params.get("keyword"));
+                    for (int i = 0; i < colums.length; i++) {
+                          if (colums[i]!=null&&params.get(colums[i].toString())!=null){
+                      //  if (params.get(colums[i].toString()) != null) {
+                            VALUES(colums[i], "'" + params.get(colums[i].toString()).toString() + "'");
+                        }
                     }
+                    if (StrUtil.isNotBlank(keyword)) {
+                        VALUES(keyword, "'" + params.get("keywordvalue").toString() + "'");
+                    }
+                    VALUES("SEQ_ID", "'" + UUID.randomUUID().toString().replaceAll("-", "") + "'");
+
                 }
-                if (StrUtil.isNotBlank(keyword)){
-                    VALUES(keyword,params.get("keywordvalue").toString());
-                }
-            }
             }.toString();
+        }catch (Exception e){
+                e.printStackTrace();
+                throw e;
+            }
 
 
         }
