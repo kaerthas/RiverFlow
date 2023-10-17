@@ -29,6 +29,6 @@ import com.inspur.workinfo.entity.PreApasinfo;
  * @date 2020-06-17 10:15:05
  */
 public interface GroovyService extends IService<PreApasinfo> {
-     JSONObject invokeScript(String scriptString,String args);
+     JSONObject invokeScript(String scriptString,String args) throws Exception;
 
 }

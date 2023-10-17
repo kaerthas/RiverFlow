@@ -94,6 +94,7 @@ public class XtAssignServerJobHandler extends IJobHandler {
                                         //创建接口记录相关代码
                                         ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(xtApproveItemflowConfig.getApiId());
                                         ApproveCall callBean  =  new ApproveCall();
+                                        ApproveCallResult callResultBean = new ApproveCallResult();
                                         String callId  = UUID.randomUUID().toString().replace("-","");
                                         callBean.setBsnum(sblshshort);//获取token接口不存在
                                         callBean.setCalledSystemAddr(apiServiceCatalog.getUrl());
@@ -110,30 +111,47 @@ public class XtAssignServerJobHandler extends IJobHandler {
                                             R result = apiInputInfoService.getServiceByMap(xtApproveItemflowConfig.getApiId(),map);
                                             //result判断固定参数为 code msg data
                                             //TODO 后期改为可以配合out表使用的参数
-                                            JSONObject res   = (JSONObject) result.getData();
-                                            //创建接口调用记录 后期用aop处理多余代码
-                                            ApproveCallResult callResultBean  =  new ApproveCallResult();
-                                            //判断res中封装值
-                                            if(CommonConstants.API_SUCCESS.equals(res.getString("code"))){
+                                            if (CommonConstants.SUCCESS.equals(result.getCode())) {
+                                                JSONObject res = (JSONObject) result.getData();
+                                                //创建接口调用记录 后期用aop处理多余代码
 
-                                                //并进入下一个流程
-                                                this.businessCourseService.analysisCourse(sblshshort);
+                                                //判断res中封装值
+                                                //测试发现接口超时的情况发生如果超时办件已经上报给国家
+                                                // 应该来说要进入下一个流程并改变办件过程
+                                                if (CommonConstants.API_SUCCESS.equals(res.getString("code"))) {
 
-                                                //中间状态既不修改也不做处理，下次调用依旧处理
+                                                    //并进入下一个流程
+                                                    this.businessCourseService.analysisCourse(sblshshort);
+
+                                                    //中间状态既不修改也不做处理，下次调用依旧处理
+                                                } else {
+                                                    //TODO 通知查看是否对接短信或者如何
+                                                }
+
+                                                //接口调用记录处理
+                                                callResultBean.setResultValue(res.toJSONString());
+                                                callResultBean.setCalledSystemName(callBean.getCalledSystemName());
+                                                callResultBean.setCalledSystemAddr(callBean.getCalledSystemAddr());
+                                                callResultBean.setCallState(res.getString("code"));
+                                                callResultBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss", new Date()));
+                                                callResultBean.setCallId(callId);
+                                                callBean.setCallState(res.getString("code"));
+
+                                                callResultBean.setSeqId(UUID.randomUUID().toString().replace("-", ""));
                                             }else{
-                                                //TODO 通知查看是否对接短信或者如何
+                                                //JSONObject res = (JSONObject) result.getData();
+                                                //接口调用记录处理
+                                                callResultBean.setResultValue(result.getMsg());
+                                                callResultBean.setCalledSystemName(callBean.getCalledSystemName());
+                                                callResultBean.setCalledSystemAddr(callBean.getCalledSystemAddr());
+                                                callResultBean.setCallState(CommonConstants.API_FAIL);
+                                                callResultBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss", new Date()));
+                                                callResultBean.setCallId(callId);
+                                                callBean.setCallState(CommonConstants.API_FAIL);
+
+                                                callResultBean.setSeqId(UUID.randomUUID().toString().replace("-", ""));
+
                                             }
-
-                                            //接口调用记录处理
-                                            callResultBean.setResultValue(res.toJSONString());
-                                            callResultBean.setCalledSystemName(callBean.getCalledSystemName());
-                                            callResultBean.setCalledSystemAddr(callBean.getCalledSystemAddr());
-                                            callResultBean.setCallState(res.getString("code"));
-                                            callResultBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",new Date()));
-                                            callResultBean.setCallId(callId);
-                                            callBean.setCallState(res.getString("code"));
-
-                                            callResultBean.setSeqId(UUID.randomUUID().toString().replace("-",""));
                                             approveCallService.saveOrUpdate(callBean);
                                             approveCallResultService.saveOrUpdate(callResultBean);
 
@@ -155,6 +173,7 @@ public class XtAssignServerJobHandler extends IJobHandler {
                                 logger.error("itemflow流程模板配置存在问题，请联系管理员处理！事项编码为"+xtApproveItemflowConfig.getSxbm());
                             }
                         } catch (Exception e) {
+                            e.printStackTrace();
                             continue;
                         }
                     }

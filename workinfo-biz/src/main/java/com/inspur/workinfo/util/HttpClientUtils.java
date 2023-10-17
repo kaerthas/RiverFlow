@@ -41,10 +41,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
  * @Title: HttpClientUtils.java
@@ -952,11 +950,18 @@ public class HttpClientUtils {
 					response = httpclient.execute(target,httpPost);
 				}else{
 
-					requestConfig = RequestConfig.custom().setSocketTimeout(10000)
-							.setConnectTimeout(10000)
-							.setConnectionRequestTimeout(10000).build();//设置请求和传输超时时间
+					requestConfig = RequestConfig.custom().setSocketTimeout(-1)
+							.setConnectTimeout(-1)
+							.setConnectionRequestTimeout(-1).build();//设置请求和传输超时时间
 					httpPost.setConfig(requestConfig);
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					logger.error("######################中残推送交换时间开始"+sdf.format(new Date()));
+					logger.error("######################中残推送交换时间开始"+System.currentTimeMillis());
+
 					response = httpclient.execute(httpPost);
+					logger.error("######################中残推送交换时间结束"+sdf.format(new Date()));
+					logger.error("######################中残推送交换时间开始"+System.currentTimeMillis());
+
 				}
 			}
 			HttpEntity entity = response.getEntity();

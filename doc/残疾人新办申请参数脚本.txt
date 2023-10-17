@@ -46,7 +46,7 @@
       brith_time(businessXML.get("BRITH_TIME"))
       sex(businessXML.get("SEX"))
       nation(businessXML.get("NATION"))
-      education(businessXML.get("NATION"))
+      education(businessXML.get("EDUCATION"))
       marital(businessXML.get("MARITAL"))
       residence(businessXML.get("RESIDENCE"))
       con_tel(StrUtil.isNotBlank(businessXML.get("CON_TEL"))?businessXML.get("CON_TEL"):"")

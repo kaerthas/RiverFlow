@@ -38,7 +38,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class GroovyServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinfo> implements GroovyService {
 
-    public JSONObject invokeScript(String scriptString, String args) {
+    public JSONObject invokeScript(String scriptString, String args)throws Exception{
         JSONObject result = new JSONObject();
         try {
             scriptString = "package groovy\n" +
@@ -66,6 +66,7 @@ public class GroovyServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinf
             result = (JSONObject) script.invokeMethod("GroovyScript",new Object[]{args});
         }catch (Exception e){
             log.error(e.getMessage(),e);
+            throw e;
         }
         return result;
     }

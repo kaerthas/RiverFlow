@@ -118,6 +118,7 @@ public class XtApproveBusinessAcceptServiceImpl extends ServiceImpl<XtApproveBus
 
             return result;
         }catch (Exception e){
+            e.printStackTrace();
             result.put("code", CommonConstants.API_FAIL);
             result.put("error",e.getMessage());
             return result;
@@ -194,7 +195,7 @@ public class XtApproveBusinessAcceptServiceImpl extends ServiceImpl<XtApproveBus
             if(!"success".equals(txnBodyComJson.getString("C-Response-Desc"))){
                 jsonResult.put("code", CommonConstants.API_FAIL);
                 jsonResult.put("error", "接口返回失败");
-                callBean.setCallState("0");
+                callBean.setCallState(CommonConstants.API_FAIL);
                 callResultBean.setResultValue(callRestXml);
             }else {
                 String bodyStr = txnBodyComJson.getString("C-Response-Body");
@@ -207,7 +208,7 @@ public class XtApproveBusinessAcceptServiceImpl extends ServiceImpl<XtApproveBus
                 }else{
                     //3.判断业务是否推送成功,如果成功变更流程
                     businessCourseService.analysisCourse(businessAccept.getSblshShort()) ;
-                    callBean.setCallState("1");
+                    callBean.setCallState(CommonConstants.API_SUCCESS);
                     callResultBean.setResultValue(callRestXml);
                 }
             }
@@ -219,7 +220,7 @@ public class XtApproveBusinessAcceptServiceImpl extends ServiceImpl<XtApproveBus
             jsonResult.put("error", "调用失败" + e.getMessage());
             e.printStackTrace();
             try{
-                callBean.setCallState("0");
+                callBean.setCallState(CommonConstants.API_FAIL);
                 callResultBean.setCallState(callBean.getCallState());
                 callResultBean.setResultValue("返回结果：" + callRestXml + "----------异常原因：" + e.getMessage());
                 callService.saveOrUpdate(callBean);
