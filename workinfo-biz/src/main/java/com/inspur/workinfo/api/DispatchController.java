@@ -14,10 +14,12 @@ import com.inspur.workinfo.service.*;
 
 import com.inspur.workinfo.service.impl.XtApproveBusinessCourseServiceImpl;
 import com.inspur.workinfo.util.DateUtils;
+import com.inspur.workinfo.util.R;
 import io.swagger.annotations.Api;
 import lombok.AllArgsConstructor;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jasypt.encryption.StringEncryptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
@@ -67,6 +70,8 @@ public class DispatchController{
 	private XtApproveBusinessCorrectionService businessCorrectionService;
 	@Autowired
 	private XtApproveBusinessCorrectMService businessCorrectMService;
+	@Autowired
+	private StringEncryptor stringEncryptor;
 
 	@Autowired
 	PropertyConfig propertyConfig;
@@ -111,7 +116,8 @@ public class DispatchController{
 			String sxbm  = txnBodyComJson.getString("sxbm"); //事项编码
 			String expressType  = txnBodyComJson.getString("expressType"); //0：业务受理  1：补齐补正  9:审批退回后修改再次提交
 			String channelCode  = txnBodyComJson.getString("channelCode");
-			callBean.setBsnum(receiveNumber);
+			String xzqhdm   = txnBodyComJson.getString("xzqhdm");
+//			callBean.setBsnum(receiveNumber);
 			//根据业务受理编码获取业务申办，业务预受理，业务受理信息
 			//1.调用调度接口获取系统token
 			if("0".equals(expressType)||"3".equals(expressType)) {//0:业务受理；3：收件后待受理业务；
@@ -127,6 +133,7 @@ public class DispatchController{
 					xtApproveBusinessinfo.setChannelCode(channelCode);
 					xtApproveBusinessinfo.setExpressType(expressType);
 					xtApproveBusinessinfo.setSxbm(sxbm);
+					xtApproveBusinessinfo.setXzqhdm(xzqhdm);
 					xtApproveBusinessinfoService.save(xtApproveBusinessinfo);
 				}
 				//根据配置的流程信息，写入业务过程信息表
@@ -151,10 +158,12 @@ public class DispatchController{
 			return result;
 		}catch (Exception e){
 			e.printStackTrace();
+			JSONObject jsonObject =new JSONObject();
+			jsonObject.put("msg",e.getMessage());
 			result.put("C-Response-Desc", "fail");
 			result.put("C-API-Status", "01");
 			result.put("C-Response-Code", "000000000000");
-			result.put("C-Response-Body", JSON.toJSON(new JSONObject().put("msg",e.getMessage())));
+			result.put("C-Response-Body", JSON.toJSON(jsonObject));
 			return result;
 		}
 
@@ -262,6 +271,26 @@ public class DispatchController{
 				approveCallResultService.save(callResultBean);
 			}
 			return resultBody;
+		}
+	}
+
+
+	@SuppressWarnings("unchecked")
+	@RequestMapping(value = "/jaspyt/encrypt",method = RequestMethod.POST)
+	public R encrypt(@RequestParam("word") String word){
+
+		//读取应用名称
+		try{
+			if (StrUtil.isNotBlank(word)){
+				return R.ok(stringEncryptor.encrypt(word));
+			}else{
+				return R.failed("输入参数不能空！");
+			}
+
+
+		}catch(Exception e){
+			e.printStackTrace();
+			return R.failed("加密失败！！");
 		}
 	}
 
