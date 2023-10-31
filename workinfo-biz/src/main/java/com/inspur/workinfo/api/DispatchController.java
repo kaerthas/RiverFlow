@@ -20,6 +20,8 @@ import lombok.AllArgsConstructor;
 
 import lombok.extern.slf4j.Slf4j;
 import org.jasypt.encryption.StringEncryptor;
+import org.jasypt.encryption.pbe.PooledPBEStringEncryptor;
+import org.jasypt.encryption.pbe.config.SimpleStringPBEConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -282,7 +284,14 @@ public class DispatchController{
 		//读取应用名称
 		try{
 			if (StrUtil.isNotBlank(word)){
-				return R.ok(stringEncryptor.encrypt(word));
+				JSONObject jsonObject  = new JSONObject();
+				jsonObject.put("encEncrypt",stringEncryptor.encrypt(word));
+				PooledPBEStringEncryptor encryptor = new PooledPBEStringEncryptor();
+				encryptor.setConfig(cryptor("yunhom"));
+				jsonObject.put("normalEncrypt",encryptor.encrypt(word));
+
+
+				return R.ok(jsonObject);
 			}else{
 				return R.failed("输入参数不能空！");
 			}
@@ -292,6 +301,26 @@ public class DispatchController{
 			e.printStackTrace();
 			return R.failed("加密失败！！");
 		}
+	}
+
+	/**
+	 * 配置,对应yml中的配置
+	 * @param password 盐值
+	 * @return SimpleStringPBEConfig
+	 */
+	public  SimpleStringPBEConfig cryptor(String password){
+		SimpleStringPBEConfig config = new SimpleStringPBEConfig();
+		//设置盐值
+		config.setPassword(password);
+		//设置算法
+		config.setAlgorithm("PBEWithMD5AndDES");
+		config.setKeyObtentionIterations("1000");
+		config.setPoolSize("1");
+		config.setProviderName("SunJCE");
+		//  config.setIvGeneratorClassName("org.jasypt.iv.RandomIvGenerator");
+		config.setSaltGeneratorClassName("org.jasypt.salt.RandomSaltGenerator");
+		config.setStringOutputType("base64");
+		return config;
 	}
 
 }
