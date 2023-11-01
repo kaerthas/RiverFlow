@@ -95,4 +95,12 @@ private static final long serialVersionUID = 1L;
      */
     @ApiModelProperty(value="下级条件值")
     private String childValue;
+
+    /***
+     * 排序
+     * **/
+    @ApiModelProperty(value = "排序")
+    private String order;
+
+
     }

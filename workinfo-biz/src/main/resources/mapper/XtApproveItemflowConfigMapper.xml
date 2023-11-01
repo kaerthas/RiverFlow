@@ -35,5 +35,6 @@
                         <result property="tableId" column="TABLE_ID"/>
                         <result property="condition" column="CONDITION"/>
                         <result property="childValue" column="CHILD_VALUE"/>
-            </resultMap>
+                        <result property="order" column="ORDER"/>
+  </resultMap>
 </mapper>

@@ -21,9 +21,7 @@ package com.inspur.workinfo.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.inspur.workinfo.entity.XtApproveBusinessXmlConfig;
 import com.inspur.workinfo.util.BaseDbHelper;
-import org.apache.ibatis.annotations.InsertProvider;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.SelectProvider;
+import org.apache.ibatis.annotations.*;
 
 import java.util.List;
 import java.util.Map;
@@ -38,7 +36,10 @@ import java.util.Map;
 public interface XtApproveBusinessXmlConfigMapper extends BaseMapper<XtApproveBusinessXmlConfig> {
 
     @InsertProvider(type = BaseDbHelper.class,method = "insertXmlDataProvider")
-    public int insertXmlDataProvider(Map<String ,Object> params);
+//    @SelectKey(keyProperty = "seq_id", resultType = String.class, before = true,
+//            statement = "select replace(uuid(), '-', '') FROM dual")
+//    @Options(keyProperty = "seq_id", useGeneratedKeys = true,keyColumn = "SEQ_ID")
+    public int insertXmlDataProvider(Map<String ,Object> params) throws Exception;
 
     @SelectProvider(type = BaseDbHelper.class,method = "selectXmlDataByKeyWord")
     Map<String,Object> selectXmlDataByKeyWord(Map<String ,Object> params);
