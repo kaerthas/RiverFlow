@@ -100,7 +100,7 @@ private static final long serialVersionUID = 1L;
      * 排序
      * **/
     @ApiModelProperty(value = "排序")
-    private String order;
+    private String sorter;
 
 
     }
