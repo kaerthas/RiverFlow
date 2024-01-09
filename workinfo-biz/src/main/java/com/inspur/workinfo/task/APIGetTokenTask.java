@@ -69,7 +69,7 @@ public class APIGetTokenTask {
                         map.put(n.getKey(),n.getValue())
                    );
                    //包括后台脚本处理
-                   R jsonObject = inputInfoService.getServiceByMap(apiServiceCatalog.getId(),map);
+                   R jsonObject = inputInfoService.getServiceByMap(apiServiceCatalog.getId(),map,"");
                    //获取出参配置
                    List<ApiOutputInfo> apiOutputInfos =  outputInfoService
                            .list(new QueryWrapper<ApiOutputInfo>().eq("API_ID",apiServiceCatalog.getId()));

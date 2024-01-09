@@ -112,13 +112,13 @@ public class XtMaterialServerTask {
                                                     if (map != null) {
                                                         callBean.setParameterValue(new Gson().toJson(map));
                                                         //TODO 接口调用 为完成
-                                                        R result = apiInputInfoService.getServiceByMap(xtApproveItemflowConfig.getApiId(), map);
+                                                        R result = apiInputInfoService.getServiceByMap(xtApproveItemflowConfig.getApiId(), map,sblshshort);
                                                         //result判断固定参数为 code msg data
                                                         //TODO 后期改为可以配合out表使用的参数
                                                         JSONObject res = (JSONObject) result.getData();
                                                         if (!CommonConstants.API_SUCCESS.equals(res.getString("code"))) {
 
-                                                            throw new Exception("接口调用不成功，办件编号为"+sblshshort+",材料编码为"+materialList.get(j).getStuffSeq());
+                                                            throw new Exception("接口调用不成功，办件编号为"+sblshshort+",材料编码为"+materialList.get(j).getStuffSeq()+",返回值："+res);
 
                                                         }
                                                         //接口调用记录处理

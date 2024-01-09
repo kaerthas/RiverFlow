@@ -108,7 +108,7 @@ public class XtAssignServerJobHandler extends IJobHandler {
                                         if (map!=null){
                                             callBean.setParameterValue(new Gson().toJson(map));
                                             //TODO 接口调用 为完成
-                                            R result = apiInputInfoService.getServiceByMap(xtApproveItemflowConfig.getApiId(),map);
+                                            R result = apiInputInfoService.getServiceByMap(xtApproveItemflowConfig.getApiId(),map,sblshshort);
                                             //result判断固定参数为 code msg data
                                             //TODO 后期改为可以配合out表使用的参数
                                             if (CommonConstants.SUCCESS.equals(result.getCode())) {

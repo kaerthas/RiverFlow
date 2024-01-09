@@ -71,6 +71,7 @@ public class XtGetAcceptServerJobHandler extends IJobHandler {
         String xt_business_get_accept = redisCache.getCacheObject(CommonConstants.XT_BUSINESS_GET_ACCEPT_REDIS);
         if (StrUtil.isBlank(xt_business_get_accept)) {
             //如果是空的先将数据插入
+            log.info("xt_business_get_accept 开始执行：{}", DateUtil.formatDateTime(new Date()));
             redisCache.setCacheObject(CommonConstants.XT_BUSINESS_GET_ACCEPT_REDIS,uuid);
             try{
                 Page page = new Page();
@@ -78,9 +79,11 @@ public class XtGetAcceptServerJobHandler extends IJobHandler {
                         .selectPage(page, new QueryWrapper<XtApproveBusinessCourse>()
                                 .eq("ACTIVE","1")
                                 .eq("CURRENT_NODE_CODE",CommonConstants.XT_BUSINESS_GET_ACCEPT));
+                log.info("businessCourseOld:"+businessCourseOld.getRecords().size());
                 for (int i = 0; i <businessCourseOld.getRecords().size() ; i++) {
                     String sblshShort  =  businessCourseOld.getRecords().get(i).getSblshShort();
                     String currentNodeId = businessCourseOld.getRecords().get(i).getCurrentNodeId();
+                    log.info("currentNodeId:"+currentNodeId);
                     //1.查询当前流程绑定的相关接口，或者数据库表
                     XtApproveItemflowConfig itemflowConfig = itemflowConfigService.getById(currentNodeId);
                     //判断流程是否存在
@@ -93,7 +96,7 @@ public class XtGetAcceptServerJobHandler extends IJobHandler {
                             if(StrUtil.isNotBlank(apiId)){
                                 //Map作为请求进度的默认入参
                                 Map<String, Object> map  =  itemflowConfigService.getImportantXtMessage(itemflowConfig,sblshShort);
-                                R result  =  apiInputInfoService.getServiceByMap(apiId,map);
+                                R result  =  apiInputInfoService.getServiceByMap(apiId,map,sblshShort);
                                 if (result.getCode()==0){//0表示成功
                                     Object res =  result.getData();
                                     JSONObject resObj =   JSONObject.parseObject(res.toString());

@@ -86,6 +86,7 @@ public class DispatchController{
 	public JSONObject ddpt61001(HttpServletRequest request, HttpServletResponse response ){
 		ApproveCall callBean=null;
 		ApproveCallResult callResultBean=null;
+		XtApproveBusinessinfo xtApproveBusinessinfo = new XtApproveBusinessinfo();
 		JSONObject result = new JSONObject();
 		result.put("C-Response-Desc", "success");
 		result.put("C-API-Status", "00");
@@ -128,7 +129,6 @@ public class DispatchController{
 				if (businessinfoOld!=null){
 					throw new Exception("当前业务已成功推送到审批，无需多次推送该业务！");
 				}else{
-					XtApproveBusinessinfo xtApproveBusinessinfo = new XtApproveBusinessinfo();
 					xtApproveBusinessinfo.setSeqId(UUID.randomUUID().toString());
 					xtApproveBusinessinfo.setIsUsed("0");
 					xtApproveBusinessinfo.setSblshShort(receiveNumber);
@@ -160,6 +160,7 @@ public class DispatchController{
 			return result;
 		}catch (Exception e){
 			e.printStackTrace();
+			xtApproveBusinessinfoService.removeById(xtApproveBusinessinfo.getSeqId());
 			JSONObject jsonObject =new JSONObject();
 			jsonObject.put("msg",e.getMessage());
 			result.put("C-Response-Desc", "fail");

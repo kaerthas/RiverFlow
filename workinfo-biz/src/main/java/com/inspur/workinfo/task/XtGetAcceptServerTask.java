@@ -97,7 +97,7 @@ public class XtGetAcceptServerTask {
                             if(StrUtil.isNotBlank(apiId)){
                                //Map作为请求进度的默认入参
                                Map<String, Object> map  =  itemflowConfigService.getImportantXtMessage(itemflowConfig,sblshShort);
-                               R result  =  apiInputInfoService.getServiceByMap(apiId,map);
+                               R result  =  apiInputInfoService.getServiceByMap(apiId,map,sblshShort);
                                if (result.getCode()==0){//0表示成功
                                    Object res =  result.getData();
                                    JSONObject resObj =   JSONObject.parseObject(res.toString());

@@ -36,5 +36,5 @@ public interface ApiInputInfoService extends IService<ApiInputInfo> {
 
     R getServiceByMap(String apiId, Map<String,Object> params, Map<String,Object> headers);
 
-    R getServiceByMap(String apiId, Map<String,Object> params);
+    R getServiceByMap(String apiId, Map<String,Object> params,String bsNum);
 }

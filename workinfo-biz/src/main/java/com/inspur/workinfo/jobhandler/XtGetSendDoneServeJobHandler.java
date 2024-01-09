@@ -98,7 +98,7 @@ public class XtGetSendDoneServeJobHandler extends IJobHandler {
                             try {
                                 Map<String, Object> map = itemflowConfigService.getImportantXtMessage(itemflowConfig,detail.getSblshShort());
 
-                                R result  =  apiInputInfoService.getServiceByMap(itemflowConfig.getApiId(),map);
+                                R result  =  apiInputInfoService.getServiceByMap(itemflowConfig.getApiId(),map,detail.getSblshShort());
                                 if (result.getCode()==0){//0表示成功
                                     Object res =  result.getData();
                                     JSONObject resObj =   JSONObject.parseObject(res.toString());

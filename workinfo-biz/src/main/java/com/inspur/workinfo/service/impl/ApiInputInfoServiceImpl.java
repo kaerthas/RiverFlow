@@ -63,8 +63,14 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
     GroovyService groovyService;
     @Autowired
     RedisCache redisCache;
+    @Autowired
+    private  ApproveCallService callService;
+    @Autowired
+    private ApproveCallResultService approveCallResultService;
 
-    public R serviceHandle(String apiId, String param, Map<String,Object> header) {
+    public R serviceHandle(String apiId, String param, Map<String,Object> header,String bsNum) {
+        ApproveCall callBean=new ApproveCall();
+        ApproveCallResult callResultBean=new ApproveCallResult();
         try {
             JSONObject result = new JSONObject();
             ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(apiId);
@@ -73,9 +79,11 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
             String method = apiServiceCatalog.getMethod();
             //增加互联网区正向代理模式
             boolean isInternet ="0".equals(apiServiceCatalog.getIsInternet())?false:true;
-
-
-
+            if(null!=header) {
+                callBean = callService.createCallBean(bsNum, url, "param:" + param + "||header:" + header.toString(), "中转系统", method, "");
+            }else {
+                callBean = callService.createCallBean(bsNum, url, "param:" + param + "||header:null", "中转系统", method, "");
+            }
             String info = "";
             if(API_PROXY.equals(apiServiceCatalog.getType())){
 
@@ -115,6 +123,17 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                 return R.failed("未找到对应代理服务");
             }
 
+            callResultBean.setResultValue(info);
+            callResultBean.setCalledSystemName(callBean.getCalledSystemName());
+            callResultBean.setCalledSystemAddr(callBean.getCalledSystemAddr());
+            callResultBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",new Date()));
+            callResultBean.setCallId(callBean.getCallId());
+            callResultBean.setSeqId(UUID.randomUUID().toString().replace("-",""));
+            callResultBean.setCallState(CommonConstants.API_SUCCESS);
+
+            callService.save(callBean);
+            approveCallResultService.save(callResultBean);
+
             if(!StringUtils.isEmpty(info)){
                 //查询结果处理脚本,如果有则对返回值进行处理
                 QueryWrapper<ApiScriptInfo> queryWrapperAll = new QueryWrapper<ApiScriptInfo>()
@@ -132,6 +151,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                 return R.failed("请求出错");
             }
         }catch (Exception e){
+            log.error(e.getMessage(),e);
             return R.failed(e.getMessage());
         }
     }
@@ -210,7 +230,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                         header = groovyService.invokeScript(scriptContent,headerIn.toJSONString());
                     }
                 }
-                return serviceHandle(apiId,param.toString(),header);
+                return serviceHandle(apiId,param.toString(),header,"");
             }else {
                 return R.failed("不支持的请求类型");
             }
@@ -259,10 +279,10 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
 
 
             if("JSON".equals(requestType)) {
-                return serviceHandle(apiId,param.toString(),header);
+                return serviceHandle(apiId,param.toString(),header,"");
             }else if("XML".equals(requestType)){
                 String xmlParam = XML.toXml(param);
-                return serviceHandle(apiId,xmlParam,header);
+                return serviceHandle(apiId,xmlParam,header,"");
             }else {
                 return R.failed("不支持的请求类型");
             }
@@ -306,7 +326,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
     }
 
 
-    public R getServiceByMap(String apiId, Map<String,Object> params){
+    public R getServiceByMap(String apiId, Map<String,Object> params,String bsNum){
        try {
             ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(apiId);
 
@@ -366,7 +386,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
 
             if("JSON".equals(requestType)) {
                 //将SCRIPT 动态填充到
-                return serviceHandle(apiId,param.toString(),header);
+                return serviceHandle(apiId,param.toString(),header,bsNum);
             }else if("XML".equals(requestType)){
                 //对xml类型参数进行处理
                 QueryWrapper<ApiInputInfo> queryWrapper = new QueryWrapper<ApiInputInfo>()
@@ -379,7 +399,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
 
                     String xml  = param.getString(inputInfolist.get(0).getKey());
 
-                    return serviceHandle(apiId,xml,header);
+                    return serviceHandle(apiId,xml,header,bsNum);
                 }else{
                     return R.failed("找到多条，请配置唯一值作为xml的传参!");
                 }

@@ -39,16 +39,20 @@ public class ApproveCallServiceImpl extends ServiceImpl<ApproveCallMapper, Appro
     @Override
     public ApproveCall createCallBean(String bsnum, String url, String param, String systemName, String method, String interfaceName) {
         ApproveCall callBean=new ApproveCall();
-        callBean.setCallState(CommonConstants.API_SUCCESS);
-        callBean.setBsnum(bsnum);
-        callBean.setCalledSystemAddr(url);
-        callBean.setCalledSystemName(systemName);
-        callBean.setCallId(UUID.randomUUID().toString());
-        callBean.setCallParameter(method);
-        callBean.setCallTime(new Date());
-        callBean.setCallTimes(1);
-        callBean.setInterfaceName(interfaceName);
-        callBean.setParameterValue(param);
+        try {
+            callBean.setCallState(CommonConstants.API_SUCCESS);
+            callBean.setBsnum(bsnum);
+            callBean.setCalledSystemAddr(url);
+            callBean.setCalledSystemName(systemName);
+            callBean.setCallId(UUID.randomUUID().toString());
+            callBean.setCallParameter(method);
+            callBean.setCallTime(new Date());
+            callBean.setCallTimes(1);
+            callBean.setInterfaceName(interfaceName);
+            callBean.setParameterValue(param);
+        }catch (Exception e){
+            log.error(e.getMessage(),e);
+        }
         return callBean;
     }
 }
