@@ -1,5 +1,6 @@
 package com.inspur.workinfo.util;
 
+import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.jdbc.SQL;
@@ -81,5 +82,30 @@ public class BaseDbHelper {
 
 
         }
+
+
+    public String updateXmlDataProvider(Map<String, Object> params) throws Exception {
+        try {
+            StringBuffer sql = new StringBuffer();
+            Map<String,Object> columns   = (Map<String, Object>) params.get("columns");
+            if (columns!=null&&columns.size()>0){
+
+                sql.append("UPDATE ");
+                sql.append(params.get("tableName").toString()).append(" SET ");
+                for (int i = 0; i <columns.size()  ; i++) {
+                    if (MapUtil.isNotEmpty(columns)){
+                        columns.forEach((k,v) -> sql.append(k).append(" = ").append("'").append(String.valueOf(v)).append("',"));
+                    }
+                }
+                sql.deleteCharAt(sql.lastIndexOf(","))
+                        .append(" WHERE ").append(" 1=1 and ").append(params.get("keyword")+" = '"+ params.get("keywordValue")+"'");
+                log.error("@@"+sql.toString());
+            }
+            return sql.toString();
+        }catch (Exception e){
+            e.printStackTrace();
+            throw e;
+        }
+    }
 
 }

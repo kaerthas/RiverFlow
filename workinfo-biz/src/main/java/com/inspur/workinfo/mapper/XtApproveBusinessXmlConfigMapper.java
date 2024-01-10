@@ -43,4 +43,7 @@ public interface XtApproveBusinessXmlConfigMapper extends BaseMapper<XtApproveBu
 
     @SelectProvider(type = BaseDbHelper.class,method = "selectXmlDataByKeyWord")
     Map<String,Object> selectXmlDataByKeyWord(Map<String ,Object> params);
+
+    @UpdateProvider(type =BaseDbHelper.class,method = "updateXmlDataProvider")
+    public int updateXmlDataProvider(Map<String, Object> params);
 }

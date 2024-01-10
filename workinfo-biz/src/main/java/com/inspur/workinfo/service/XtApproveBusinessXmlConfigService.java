@@ -35,4 +35,7 @@ public interface XtApproveBusinessXmlConfigService extends IService<XtApproveBus
     public int  insertXmlDataProvider(Map<String, Object> params) throws Exception;
 
     Map<String,Object>  selectXmlDataByKeyWord(Map<String,Object> params);
+
+    public int updateXmlDataProvider(Map<String,Object> params) throws Exception;
+
 }

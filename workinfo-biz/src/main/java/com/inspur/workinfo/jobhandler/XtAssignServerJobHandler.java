@@ -23,9 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.Date;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @JobHandler(value = "xtAssignServerJobHandler")
 @Component
@@ -114,18 +112,35 @@ public class XtAssignServerJobHandler extends IJobHandler {
                                             if (CommonConstants.SUCCESS.equals(result.getCode())) {
                                                 JSONObject res = (JSONObject) result.getData();
                                                 //创建接口调用记录 后期用aop处理多余代码
+                                                //调用out表处理回填参数
+                                                List<ApiOutputInfo> apiOutputInfos =  apiOutputInfoService
+                                                        .list(new QueryWrapper<ApiOutputInfo>().eq("API_ID",apiServiceCatalog.getId()));
+                                                if (apiOutputInfos != null&&apiOutputInfos.size()>0) {
+                                                    if (CommonConstants.API_SUCCESS.equals(res.getString("code"))) {
+                                                        Map<String,Object> objectMap = new HashMap<>();
+                                                        for (ApiOutputInfo outputInfo:apiOutputInfos){
+                                                            objectMap.put(outputInfo.getKey(), res.getString(outputInfo.getKey()));
+                                                        }
+                                                        //并进入下一个流程
+                                                        this.businessCourseService.analysisCourse(sblshshort,objectMap);
 
-                                                //判断res中封装值
-                                                //测试发现接口超时的情况发生如果超时办件已经上报给国家
-                                                // 应该来说要进入下一个流程并改变办件过程
-                                                if (CommonConstants.API_SUCCESS.equals(res.getString("code"))) {
+                                                        //中间状态既不修改也不做处理，下次调用依旧处理
+                                                    } else {
+                                                        //TODO 通知查看是否对接短信或者如何
+                                                    }
+                                                }else {
+                                                    //判断res中封装值
+                                                    //测试发现接口超时的情况发生如果超时办件已经上报给国家
+                                                    // 应该来说要进入下一个流程并改变办件过程
+                                                    if (CommonConstants.API_SUCCESS.equals(res.getString("code"))) {
 
-                                                    //并进入下一个流程
-                                                    this.businessCourseService.analysisCourse(sblshshort);
+                                                        //并进入下一个流程
+                                                        this.businessCourseService.analysisCourse(sblshshort);
 
-                                                    //中间状态既不修改也不做处理，下次调用依旧处理
-                                                } else {
-                                                    //TODO 通知查看是否对接短信或者如何
+                                                        //中间状态既不修改也不做处理，下次调用依旧处理
+                                                    } else {
+                                                        //TODO 通知查看是否对接短信或者如何
+                                                    }
                                                 }
 
                                                 //接口调用记录处理

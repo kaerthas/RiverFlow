@@ -19,7 +19,11 @@ package com.inspur.workinfo.service;
 
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.inspur.workinfo.entity.ApiOutputInfo;
 import com.inspur.workinfo.entity.XtApproveBusinessCourse;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * 业务过程信息表
@@ -30,4 +34,6 @@ import com.inspur.workinfo.entity.XtApproveBusinessCourse;
 public interface XtApproveBusinessCourseService extends IService<XtApproveBusinessCourse> {
 
     JSONObject analysisCourse(String sblshShort) throws Exception;
+    //用于回填必要数据
+    JSONObject analysisCourse(String sblshShort, Map<String,Object> objectMap) throws Exception;
 }

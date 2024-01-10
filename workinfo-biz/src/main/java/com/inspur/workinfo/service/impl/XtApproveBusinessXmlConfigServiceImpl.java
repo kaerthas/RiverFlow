@@ -44,4 +44,9 @@ public class XtApproveBusinessXmlConfigServiceImpl extends ServiceImpl<XtApprove
     public Map<String, Object> selectXmlDataByKeyWord(Map<String, Object> params) {
         return baseMapper.selectXmlDataByKeyWord(params);
     }
+
+    @Override
+    public int updateXmlDataProvider(Map<String, Object> params) throws Exception {
+        return baseMapper.updateXmlDataProvider(params) ;
+    }
 }

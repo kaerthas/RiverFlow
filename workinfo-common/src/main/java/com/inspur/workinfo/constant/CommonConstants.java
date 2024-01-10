@@ -143,6 +143,7 @@ public interface CommonConstants {
 	String XT_BUSINESS_GET_DONE_REDIS = "xt:businessgetdone";
 	String XT_BUSINESS_GET_OUTCOME_REDIS = "xt:businessgetoutcome";
 	String XT_BUSINESS_GET_NEED_CORRECTION_REDIS = "xt:businessgetneedcorrection";
+	String XT_BUSINESS_CANCEL_SUBMIT_REDIS = "xt:businesscancelsubmit";
 
 	String XT_BUSINESS_SEND_DONE_REDIS = "xt:businesssenddone";
 	String XT_BUSINESS_SEND_ACCEPT_REDIS = "xt:businesssendaccept";
@@ -158,6 +159,7 @@ public interface CommonConstants {
 	String XT_BUSINESS_GET_OUTCOME  = "GETOUTCOME";
 	String XT_BUSINESS_GET_ACCEPT = "GETACCEPT";
 	String XT_BUSINESS_GET_DONE    = "GETDONE";
+	String XT_BUISNESS_CANCEL_SUBMIT = "CANCELSUBMIT";
 	String XT_BUSINESS_GET_NEED_CORRECTION = "GETNEEDCORRECTION";
 
 
