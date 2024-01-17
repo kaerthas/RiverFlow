@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.inspur.workinfo.config.PropertyConfig;
 import com.inspur.workinfo.constant.CommonConstants;
 import com.inspur.workinfo.entity.XtApproveBusinessCourse;
+import com.inspur.workinfo.entity.XtApproveBusinessSpecial;
 import com.inspur.workinfo.entity.XtApproveItemflowConfig;
 import com.inspur.workinfo.service.*;
 import com.inspur.workinfo.util.R;
@@ -23,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.lang.reflect.Field;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +48,9 @@ public class XtCancelSubmitServeJobHandler extends IJobHandler {
 
     @Autowired
     private XtApproveBusinessCourseService businessCourseService;
+    @Autowired
+    private XtApproveBusinessSpecialService businessSpecialService;
+
 
     @Autowired
     private RedisCache redisCache;
@@ -92,6 +97,16 @@ public class XtCancelSubmitServeJobHandler extends IJobHandler {
                                     Object res =  result.getData();
                                     JSONObject resObj =   JSONObject.parseObject(res.toString());
                                     System.out.println("###"+resObj.toJSONString());
+                                    JSONObject jsonObject = (JSONObject) map.get(CommonConstants.XT_BUSINESS_XML);
+
+                                    //将参数保存到特殊环节表
+                                    XtApproveBusinessSpecial businessSpecial = new XtApproveBusinessSpecial();
+                                    businessSpecial.setIdcard(jsonObject.getString("IDCARD"));
+                                    businessSpecial.setSeqId(UUID.randomUUID().toString());
+                                    businessSpecial.setSblshShort(sblshShort);
+
+                                    businessSpecialService.saveOrUpdate(businessSpecial);
+
                                     businessCourseService.analysisCourse(sblshShort);
                                 }else{
                                     logger.error("接口查询失败，撤销申请xtCancelSubmitServerTask！");

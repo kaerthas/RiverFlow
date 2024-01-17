@@ -21,21 +21,14 @@
 
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.inspur.workinfo.mapper.XtApproveItemflowConfigMapper">
+<mapper namespace="com.inspur.workinfo.mapper.XtApproveBusinessSpecialMapper">
 
-  <resultMap id="xtApproveItemflowConfigMap" type="com.inspur.workinfo.entity.XtApproveItemflowConfig">
+  <resultMap id="xtApproveBusinessSpecialMap" type="com.inspur.workinfo.entity.XtApproveBusinessSpecial">
                   <id property="seqId" column="SEQ_ID"/>
-                        <result property="sxbm" column="SXBM"/>
-                        <result property="nodeName" column="NODE_NAME"/>
-                        <result property="parentId" column="PARENT_ID"/>
-                        <result property="nodeCode" column="NODE_CODE"/>
-                        <result property="exchangeType" column="EXCHANGE_TYPE"/>
+                        <result property="sblshShort" column="SBLSH_SHORT"/>
+                        <result property="idcard" column="IDCARD"/>
+                        <result property="apName" column="AP_NAME"/>
+                        <result property="remark" column="REMARK"/>
                         <result property="createTime" column="CREATE_TIME"/>
-                        <result property="apiId" column="API_ID"/>
-                        <result property="tableId" column="TABLE_ID"/>
-                        <result property="condition" column="CONDITION"/>
-                        <result property="conditionType" column="CONDITION_TYPE"/>
-                        <result property="childValue" column="CHILD_VALUE"/>
-                        <result property="sorter" column="SORTER"/>
-  </resultMap>
+            </resultMap>
 </mapper>

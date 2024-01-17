@@ -196,6 +196,7 @@ public class XtMaterialServerJobHandler extends IJobHandler {
                             }else{
                                 logger.error("itemflow流程模板配置存在问题，请联系管理员处理！事项编码为"+xtApproveItemflowConfig.getSxbm());
                             }
+
                         } catch (Exception e) {
                             e.printStackTrace();
                             continue;
@@ -203,6 +204,7 @@ public class XtMaterialServerJobHandler extends IJobHandler {
 
 
                     }
+                    isflag=true;
                 }
             }catch (Exception e){
                 e.printStackTrace();

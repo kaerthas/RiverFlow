@@ -187,5 +187,8 @@ public interface CommonConstants {
 	String API_INPUT_CONSTANT = "CONSTANT";
 	String API_INPUT_SCRIPT   = "SCRIPT";
 	String API_INPUT_HEADER   = "HEADER";
+	//流程条件
+	String XT_ITEM_CONDITION_COLUMNS="0";
+	String XT_ITEM_CONDITION_SQL ="1";
 
 }

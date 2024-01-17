@@ -85,6 +85,12 @@ private static final long serialVersionUID = 1L;
      */
     @ApiModelProperty(value="库表名称")
     private String tableId;
+
+    /**
+     * 条件关键字
+     */
+    @ApiModelProperty(value="条件类型0表示字段条件，1表示带count的sql条件")
+    private String conditionType;
     /**
      * 条件关键字
      */

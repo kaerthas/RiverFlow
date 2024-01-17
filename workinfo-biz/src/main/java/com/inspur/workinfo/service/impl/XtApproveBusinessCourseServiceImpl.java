@@ -19,6 +19,7 @@ package com.inspur.workinfo.service.impl;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import com.inspur.workinfo.constant.CommonConstants;
@@ -26,10 +27,12 @@ import com.inspur.workinfo.entity.*;
 import com.inspur.workinfo.mapper.XtApproveBusinessCourseMapper;
 import com.inspur.workinfo.service.*;
 import com.inspur.workinfo.util.DateUtils;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.ParseException;
 import java.util.*;
 
 /**
@@ -51,6 +54,10 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
     private XtApproveBusinessXmlConfigService xmlConfigService;
     @Autowired
     private XtApproveItemConfigService itemConfigService;
+    @Autowired
+    private SqlSessionFactory sqlSessionFactory; // 注入SqlSessionFactory
+    @Autowired
+    private  XtApproveBusinessSpecialService businessSpecialService;
 
 
     @Override
@@ -93,84 +100,7 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                         throw new Exception("流程配置错误，事项itemid为"+itemflowConfigOld.getSxbm());
                     }
                 }else {
-                    //判断环节名称
-                    //处理受理发送环节流程
-                    if (CommonConstants.XT_BUSINESS_SEND_ACCEPT.equals(businessCourseOld.getCurrentNodeCode())){
-                        //TODO 暂时写死 后期通过反射获取
-//                        Class clazz = XtApproveBusinessAccept.class;
-//                        clazz.getField(itemflowConfigOld.getCondition());
-
-                        XtApproveBusinessAccept businessAccept = businessAcceptService.getBaseMapper().selectOne(new QueryWrapper<XtApproveBusinessAccept>()
-                                .eq("SBLSH_SHORT",sblshShort));
-
-                        //获取下一级流程
-                        List<XtApproveItemflowConfig> itemflowConfigs = this.itemflowConfigService.getBaseMapper()
-                                .selectList(new QueryWrapper<XtApproveItemflowConfig>()
-                                        .eq("PARENT_ID",businessCourseOld.getCurrentNodeId()));
-
-                        if (itemflowConfigs!=null&&itemflowConfigs.size()>1){
-
-                            for (int i = 0; i < itemflowConfigs.size(); i++) {
-                                //判断流程中的值走那一步
-
-                                if(itemflowConfigs.get(i).getChildValue().equals(businessAccept.getYwlszt())){
-
-                                    XtApproveBusinessCourse businessCourseNew  = new XtApproveBusinessCourse();
-
-                                    businessCourseNew.setSeqId(UUID.randomUUID().toString());
-                                    businessCourseNew.setSblshShort(sblshShort);
-                                    businessCourseNew.setCurrentNodeId(itemflowConfigs.get(i).getSeqId());
-                                    businessCourseNew.setCurrentNodeCode(itemflowConfigs.get(i).getNodeCode());
-                                    businessCourseNew.setActive("1");
-
-                                    this.baseMapper.insert(businessCourseNew);
-                                    businessCourseOld.setModifyTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",new Date()));
-                                    businessCourseOld.setActive("0");
-                                    this.baseMapper.updateById(businessCourseOld);
-
-                                    break;
-                                }
-
-
-                            }
-                        }
-                    }
-                    //两补增加办结驳回，撤回申请流程
-                    else if (CommonConstants.XT_BUSINESS_SEND_DONE.equals(businessCourseOld.getCurrentNodeCode())){
-                        XtApproveBusinessDone businessDone = businessDoneService.getBaseMapper().selectOne(new QueryWrapper<XtApproveBusinessDone>()
-                                .eq("SBLSH_SHORT",sblshShort));
-
-                        //获取下一级流程
-                        List<XtApproveItemflowConfig> itemflowConfigs = this.itemflowConfigService.getBaseMapper()
-                                .selectList(new QueryWrapper<XtApproveItemflowConfig>()
-                                        .eq("PARENT_ID",businessCourseOld.getCurrentNodeId()));
-
-                        if (itemflowConfigs!=null &&itemflowConfigs.size()>0){
-                            for (int i = 0; i < itemflowConfigs.size(); i++) {
-                                //0：出证办结 1：退回办结 2：作废办结 3：删除办结 5：补正不来办结 6：准予许可 7：不予许可
-                                if(itemflowConfigs.get(i).getChildValue().contains(businessDone.getBjjgdm())) {
-
-                                    XtApproveBusinessCourse businessCourseNew = new XtApproveBusinessCourse();
-
-                                    businessCourseNew.setSeqId(UUID.randomUUID().toString());
-                                    businessCourseNew.setSblshShort(sblshShort);
-                                    businessCourseNew.setCurrentNodeId(itemflowConfigs.get(i).getSeqId());
-                                    businessCourseNew.setCurrentNodeCode(itemflowConfigs.get(i).getNodeCode());
-                                    businessCourseNew.setActive("1");
-
-                                    this.baseMapper.insert(businessCourseNew);
-                                    businessCourseOld.setModifyTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss", new Date()));
-                                    businessCourseOld.setActive("0");
-                                    this.baseMapper.updateById(businessCourseOld);
-                                    break;
-
-                                }
-                            }
-                        }
-
-
-
-                    }
+                    this.analysisCoursePlus(sblshShort,businessCourseOld,itemflowConfigOld);
                 }
             }else{
                 throw  new Exception("环节配置失败，初始化信息失败！");
@@ -243,84 +173,8 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                         throw new Exception("流程配置错误，事项itemid为"+itemflowConfigOld.getSxbm());
                     }
                 }else {
-                    //判断环节名称
-                    //处理受理发送环节流程
-                    if (CommonConstants.XT_BUSINESS_SEND_ACCEPT.equals(businessCourseOld.getCurrentNodeCode())){
-                        //TODO 暂时写死 后期通过反射获取
-//                        Class clazz = XtApproveBusinessAccept.class;
-//                        clazz.getField(itemflowConfigOld.getCondition());
+                    this.analysisCoursePlus(sblshShort,businessCourseOld,itemflowConfigOld);
 
-                        XtApproveBusinessAccept businessAccept = businessAcceptService.getBaseMapper().selectOne(new QueryWrapper<XtApproveBusinessAccept>()
-                                .eq("SBLSH_SHORT",sblshShort));
-
-                        //获取下一级流程
-                        List<XtApproveItemflowConfig> itemflowConfigs = this.itemflowConfigService.getBaseMapper()
-                                .selectList(new QueryWrapper<XtApproveItemflowConfig>()
-                                        .eq("PARENT_ID",businessCourseOld.getCurrentNodeId()));
-
-                        if (itemflowConfigs!=null&&itemflowConfigs.size()>1){
-
-                            for (int i = 0; i < itemflowConfigs.size(); i++) {
-                                //判断流程中的值走那一步
-
-                                if(itemflowConfigs.get(i).getChildValue().equals(businessAccept.getYwlszt())){
-
-                                    XtApproveBusinessCourse businessCourseNew  = new XtApproveBusinessCourse();
-
-                                    businessCourseNew.setSeqId(UUID.randomUUID().toString());
-                                    businessCourseNew.setSblshShort(sblshShort);
-                                    businessCourseNew.setCurrentNodeId(itemflowConfigs.get(i).getSeqId());
-                                    businessCourseNew.setCurrentNodeCode(itemflowConfigs.get(i).getNodeCode());
-                                    businessCourseNew.setActive("1");
-
-                                    this.baseMapper.insert(businessCourseNew);
-                                    businessCourseOld.setModifyTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",new Date()));
-                                    businessCourseOld.setActive("0");
-                                    this.baseMapper.updateById(businessCourseOld);
-
-                                    break;
-                                }
-
-
-                            }
-                        }
-                    }
-                    //两补增加办结驳回，撤回申请流程
-                    else if (CommonConstants.XT_BUSINESS_SEND_DONE.equals(businessCourseOld.getCurrentNodeCode())){
-                        XtApproveBusinessDone businessDone = businessDoneService.getBaseMapper().selectOne(new QueryWrapper<XtApproveBusinessDone>()
-                                .eq("SBLSH_SHORT",sblshShort));
-
-                        //获取下一级流程
-                        List<XtApproveItemflowConfig> itemflowConfigs = this.itemflowConfigService.getBaseMapper()
-                                .selectList(new QueryWrapper<XtApproveItemflowConfig>()
-                                        .eq("PARENT_ID",businessCourseOld.getCurrentNodeId()));
-
-                        if (itemflowConfigs!=null &&itemflowConfigs.size()>0){
-                            for (int i = 0; i < itemflowConfigs.size(); i++) {
-                                //0：出证办结 1：退回办结 2：作废办结 3：删除办结 5：补正不来办结 6：准予许可 7：不予许可
-                                if(itemflowConfigs.get(i).getChildValue().contains(businessDone.getBjjgdm())) {
-
-                                    XtApproveBusinessCourse businessCourseNew = new XtApproveBusinessCourse();
-
-                                    businessCourseNew.setSeqId(UUID.randomUUID().toString());
-                                    businessCourseNew.setSblshShort(sblshShort);
-                                    businessCourseNew.setCurrentNodeId(itemflowConfigs.get(i).getSeqId());
-                                    businessCourseNew.setCurrentNodeCode(itemflowConfigs.get(i).getNodeCode());
-                                    businessCourseNew.setActive("1");
-
-                                    this.baseMapper.insert(businessCourseNew);
-                                    businessCourseOld.setModifyTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss", new Date()));
-                                    businessCourseOld.setActive("0");
-                                    this.baseMapper.updateById(businessCourseOld);
-                                    break;
-
-                                }
-                            }
-                        }
-
-
-
-                    }
                 }
             }else{
                 throw  new Exception("环节配置失败，初始化信息失败！");
@@ -331,4 +185,157 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
             throw e;
         }
     }
+    private void analysisCoursePlus(String sblshShort , XtApproveBusinessCourse businessCourseOld,XtApproveItemflowConfig itemflowConfigOld) throws Exception{
+        //如果下一个环节拿字段进行判断
+        if (CommonConstants.XT_ITEM_CONDITION_COLUMNS.equals(itemflowConfigOld.getConditionType())) {
+            //判断环节名称
+            //处理受理发送环节流程
+            if (CommonConstants.XT_BUSINESS_SEND_ACCEPT.equals(businessCourseOld.getCurrentNodeCode())) {
+                //TODO 暂时写死 后期通过反射获取
+//                        Class clazz = XtApproveBusinessAccept.class;
+//                        clazz.getField(itemflowConfigOld.getCondition());
+
+                XtApproveBusinessAccept businessAccept = businessAcceptService.getBaseMapper().selectOne(new QueryWrapper<XtApproveBusinessAccept>()
+                        .eq("SBLSH_SHORT", sblshShort));
+
+                //获取下一级流程
+                List<XtApproveItemflowConfig> itemflowConfigs = this.itemflowConfigService.getBaseMapper()
+                        .selectList(new QueryWrapper<XtApproveItemflowConfig>()
+                                .eq("PARENT_ID", businessCourseOld.getCurrentNodeId()));
+
+                if (itemflowConfigs != null && itemflowConfigs.size() > 1) {
+
+                    for (int i = 0; i < itemflowConfigs.size(); i++) {
+                        try {
+                            //判断流程中的值走那一步
+                            if (itemflowConfigs.get(i).getChildValue().equals(businessAccept.getYwlszt())) {
+                                this.saveCourse(sblshShort, itemflowConfigs.get(i), businessCourseOld);
+                                break;
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            throw e;
+                        }
+
+                    }
+                }
+            }
+            //两补增加办结驳回，撤回申请流程
+            else if (CommonConstants.XT_BUSINESS_SEND_DONE.equals(businessCourseOld.getCurrentNodeCode())) {
+                XtApproveBusinessDone businessDone = businessDoneService.getBaseMapper().selectOne(new QueryWrapper<XtApproveBusinessDone>()
+                        .eq("SBLSH_SHORT", sblshShort));
+
+                //获取下一级流程
+                List<XtApproveItemflowConfig> itemflowConfigs = this.itemflowConfigService.getBaseMapper()
+                        .selectList(new QueryWrapper<XtApproveItemflowConfig>()
+                                .eq("PARENT_ID", businessCourseOld.getCurrentNodeId()));
+
+                if (itemflowConfigs != null && itemflowConfigs.size() > 0) {
+                    for (int i = 0; i < itemflowConfigs.size(); i++) {
+                        //0：出证办结 1：退回办结 2：作废办结 3：删除办结 5：补正不来办结 6：准予许可 7：不予许可
+                        try {
+                            if (itemflowConfigs.get(i).getChildValue().contains(businessDone.getBjjgdm())) {
+                                this.saveCourse(sblshShort, itemflowConfigs.get(i), businessCourseOld);
+                                break;
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            throw e;
+                        }
+                    }
+                }
+            }
+        }else if (CommonConstants.XT_ITEM_CONDITION_SQL.equals(itemflowConfigOld.getConditionType())){
+            //获取物化表中的信息
+            Map<String , Object> item = itemflowConfigService.getImportantXtMessage(itemflowConfigOld,sblshShort);
+            //拿出sql语句
+            JSONObject itemJson = (JSONObject) item.get(CommonConstants.XT_BUSINESS_XML);
+            String tableName  =  itemflowConfigOld.getCondition();
+            //条件
+            String value  =   itemJson.get(tableName)!=null?itemJson.get(tableName).toString():"";
+            //构建一个挂起表
+            QueryWrapper<XtApproveBusinessSpecial> wrapper  = new QueryWrapper<>();
+
+            wrapper.eq(tableName,value);
+            List<XtApproveBusinessSpecial> specials =  businessSpecialService.getBaseMapper().selectList(wrapper);
+
+//            QueryWrapper<>
+            //调用查询代码块返回参数值
+//            Class<?> mapperClass = null;
+//
+//            try (org.apache.ibatis.session.SqlSession session = sqlSessionFactory.openSession()) {
+//                String namespace = "com.inspur.workinfo.mapper."+tableName+"Mapper"; // Mapper命名空间为"com.example.tableName"
+//
+//                // 动态加载Mapper接口
+//                mapperClass = Class.forName(namespace);
+//
+//                Object mapperInstance = session.getMapper(mapperClass);
+//
+//                if (mapperInstance instanceof BaseMapper) {
+//                    // 这里可以直接使用BaseMapper提供的CRUD等方法进行数据库操作
+//
+//                    QueryWrapper<Object> queryWrapper = new QueryWrapper<>();
+//                    List<Object> resultList = ((BaseMapper<Object>) mapperInstance).selectList(queryWrapper);
+//
+//                } else {
+//                    throw new RuntimeException("无效的Mapper接口！");
+//                }
+//            } catch (ClassNotFoundException e) {
+//                throw new RuntimeException("未找到指定的Mapper接口！", e);
+//            } finally {
+//                if (mapperClass != null && !mapperClass.equals(null)) {
+//                    // 释放资源
+//                    mapperClass = null;
+//                }
+//            }
+
+
+
+            //查询下一级流程
+            List<XtApproveItemflowConfig> itemflowConfigs = this.itemflowConfigService.getBaseMapper()
+                    .selectList(new QueryWrapper<XtApproveItemflowConfig>()
+                            .eq("PARENT_ID", businessCourseOld.getCurrentNodeId()));
+            //如果流程存在且大于0
+            if (itemflowConfigs!=null && itemflowConfigs.size()>0){
+                for (int i = 0; i <itemflowConfigs.size() ; i++) {
+                    try {
+                        //判断特殊环节表中如果有数据
+                        if (specials.size()==0&&Integer.parseInt(itemflowConfigs.get(i).getChildValue())==specials.size()){
+
+                            this.saveCourse(sblshShort,itemflowConfigs.get(i),businessCourseOld);
+
+                        }else {//特殊环节表中没有数据
+
+                            this.saveCourse(sblshShort,itemflowConfigs.get(i),businessCourseOld);
+
+                        }
+                        break;
+                    }catch (Exception e){
+                        e.printStackTrace();
+                        throw  e;
+                    }
+                }
+            }
+        }
+
+    }
+
+    @Transactional
+    public void saveCourse(String sblshShort,XtApproveItemflowConfig itemflowConfig, XtApproveBusinessCourse businessCourseOld) throws ParseException {
+        XtApproveBusinessCourse businessCourseNew = new XtApproveBusinessCourse();
+
+        businessCourseNew.setSeqId(UUID.randomUUID().toString());
+        businessCourseNew.setSblshShort(sblshShort);
+        businessCourseNew.setCurrentNodeId(itemflowConfig.getSeqId());
+        businessCourseNew.setCurrentNodeCode(itemflowConfig.getNodeCode());
+        businessCourseNew.setActive("1");
+
+        this.baseMapper.insert(businessCourseNew);
+        businessCourseOld.setModifyTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss", new Date()));
+        businessCourseOld.setActive("0");
+        this.baseMapper.updateById(businessCourseOld);
+
+    }
+
+
 }
