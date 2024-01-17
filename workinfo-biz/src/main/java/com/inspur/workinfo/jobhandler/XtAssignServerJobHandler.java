@@ -119,6 +119,8 @@ public class XtAssignServerJobHandler extends IJobHandler {
                                                     if (CommonConstants.API_SUCCESS.equals(res.getString("code"))) {
                                                         Map<String,Object> objectMap = new HashMap<>();
                                                         for (ApiOutputInfo outputInfo:apiOutputInfos){
+
+                                                            logger.error("@@@@@@@@@@@@@@@@@@@@@@@"+res.getString(outputInfo.getKey()));
                                                             objectMap.put(outputInfo.getKey(), res.getString(outputInfo.getKey()));
                                                         }
                                                         //并进入下一个流程

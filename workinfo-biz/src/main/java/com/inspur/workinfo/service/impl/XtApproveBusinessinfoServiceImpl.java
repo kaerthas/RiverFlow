@@ -75,6 +75,9 @@ public class XtApproveBusinessinfoServiceImpl extends ServiceImpl<XtApproveBusin
     @Autowired
     private XtApproveBusinessXmlConfigService xmlConfigService;
 
+    @Autowired
+    private XtApproveBusinessSpecialService businessSpecialService;
+
 
     /**
      * 根据业务受理编号获取业务申办，业务预受理，业务受理数据
@@ -232,18 +235,40 @@ public class XtApproveBusinessinfoServiceImpl extends ServiceImpl<XtApproveBusin
                                 if(StrUtil.isNotBlank(formJson.getString(colums[i]))){
                                     params.put(colums[i].toString(),formJson.getString(colums[i]));
                                 }else{
-                                    params.put(colums[i].toString(),"");
+                                    if (!"onlineApplyId".equals(xmlConfigs.get(i).getXmlCode())) {
+                                        params.put(colums[i].toString(), "");
+                                    }
                                 }
+                                if ("idcard".equals(colums[i])){
+                                    List<XtApproveBusinessSpecial> specials  = businessSpecialService.getBaseMapper().selectList(
+                                            new QueryWrapper<XtApproveBusinessSpecial>().eq("IDCARD",formJson.get(colums[i]))
+                                    );
+                                    if (specials!=null&&specials.size()>0){
+                                        params.put("onlineApplyId",specials.get(0).getOnlineApplyId());
+                                    }
+                                }
+
+
                             }else if("keyword".equals(xmlConfigs.get(i).getType())){
                                 //TODO 后续修改为可配置的关联关系
                                 params.put("keyword",xmlConfigs.get(i).getXmlCode());
                                 params.put("keywordvalue",applyAcceptData.getString("sblshShort"));
                             }
+//                            else if("custom".equals(xmlConfigs.get(i).getXmlType())){
+//                                params.put("custom",xmlConfigs.get(i).getXmlCode());
+//                                //将值遍历插入
+//                                if(StrUtil.isNotBlank(formJson.getString(colums[i]))){
+//                                    params.put("customvalue",formJson.getString(colums[i]));
+//                                }else{
+//                                    params.put("customvalue","");
+//                                }
+//                            }
 
                         }
                         //循环结束将字段名数组插入map
                         params.put("columns",colums);
                         //拼装完成后插入相关
+//                        xmlConfigService.selectXmlByCustomProvider(params);
                         xmlConfigService.insertXmlDataProvider(params);
                     }
 

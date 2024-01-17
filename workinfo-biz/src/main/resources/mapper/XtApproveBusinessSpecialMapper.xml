@@ -28,6 +28,7 @@
                         <result property="sblshShort" column="SBLSH_SHORT"/>
                         <result property="idcard" column="IDCARD"/>
                         <result property="apName" column="AP_NAME"/>
+                        <result property="onlineApplyId" column="ONLINE_APPLY_ID"/>
                         <result property="remark" column="REMARK"/>
                         <result property="createTime" column="CREATE_TIME"/>
             </resultMap>

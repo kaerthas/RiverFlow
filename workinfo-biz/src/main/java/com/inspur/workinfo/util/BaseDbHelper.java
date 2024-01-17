@@ -101,6 +101,7 @@ public class BaseDbHelper {
                         .append(" WHERE ").append(" 1=1 and ").append(params.get("keyword")+" = '"+ params.get("keywordValue")+"'");
                 log.error("@@"+sql.toString());
             }
+            System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!updateXml"+sql.toString());
             return sql.toString();
         }catch (Exception e){
             e.printStackTrace();

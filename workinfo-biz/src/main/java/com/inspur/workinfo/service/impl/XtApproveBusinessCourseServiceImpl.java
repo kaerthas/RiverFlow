@@ -246,11 +246,14 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                 }
             }
         }else if (CommonConstants.XT_ITEM_CONDITION_SQL.equals(itemflowConfigOld.getConditionType())){
+
             //获取物化表中的信息
             Map<String , Object> item = itemflowConfigService.getImportantXtMessage(itemflowConfigOld,sblshShort);
             //拿出sql语句
             JSONObject itemJson = (JSONObject) item.get(CommonConstants.XT_BUSINESS_XML);
             String tableName  =  itemflowConfigOld.getCondition();
+
+            log.error("SSSSSSSSSSSSSSSSSSSSSSS"+itemJson.toJSONString());
             //条件
             String value  =   itemJson.get(tableName)!=null?itemJson.get(tableName).toString():"";
             //构建一个挂起表
@@ -258,7 +261,7 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
 
             wrapper.eq(tableName,value);
             List<XtApproveBusinessSpecial> specials =  businessSpecialService.getBaseMapper().selectList(wrapper);
-
+            log.error("SSSSSSSSSSSSSSSSSSSSSSS"+specials.size());
 //            QueryWrapper<>
             //调用查询代码块返回参数值
 //            Class<?> mapperClass = null;
@@ -300,6 +303,10 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                 for (int i = 0; i <itemflowConfigs.size() ; i++) {
                     try {
                         //判断特殊环节表中如果有数据
+                        log.error("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"+Integer.parseInt(itemflowConfigs.get(i).getChildValue()));
+                        log.error("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"+specials.size());
+                        log.error("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"+(Integer.parseInt(itemflowConfigs.get(i).getChildValue())==specials.size()));
+
                         if (specials.size()==0&&Integer.parseInt(itemflowConfigs.get(i).getChildValue())==specials.size()){
 
                             this.saveCourse(sblshShort,itemflowConfigs.get(i),businessCourseOld);

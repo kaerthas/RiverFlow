@@ -97,17 +97,20 @@ public class XtCancelSubmitServeJobHandler extends IJobHandler {
                                     Object res =  result.getData();
                                     JSONObject resObj =   JSONObject.parseObject(res.toString());
                                     System.out.println("###"+resObj.toJSONString());
-                                    JSONObject jsonObject = (JSONObject) map.get(CommonConstants.XT_BUSINESS_XML);
+                                    if (CommonConstants.API_SUCCESS.equals(resObj.get("code"))) {
+                                        JSONObject jsonObject = (JSONObject) map.get(CommonConstants.XT_BUSINESS_XML);
 
-                                    //将参数保存到特殊环节表
-                                    XtApproveBusinessSpecial businessSpecial = new XtApproveBusinessSpecial();
-                                    businessSpecial.setIdcard(jsonObject.getString("IDCARD"));
-                                    businessSpecial.setSeqId(UUID.randomUUID().toString());
-                                    businessSpecial.setSblshShort(sblshShort);
+                                        //将参数保存到特殊环节表
+                                        XtApproveBusinessSpecial businessSpecial = new XtApproveBusinessSpecial();
+                                        businessSpecial.setIdcard(jsonObject.getString("IDCARD"));
+                                        businessSpecial.setSeqId(UUID.randomUUID().toString());
+                                        businessSpecial.setSblshShort(sblshShort);
+                                        businessSpecial.setOnlineApplyId(jsonObject.getString("ONLINEAPPLYID"));
 
-                                    businessSpecialService.saveOrUpdate(businessSpecial);
+                                        businessSpecialService.saveOrUpdate(businessSpecial);
 
-                                    businessCourseService.analysisCourse(sblshShort);
+                                        businessCourseService.analysisCourse(sblshShort);
+                                    }
                                 }else{
                                     logger.error("接口查询失败，撤销申请xtCancelSubmitServerTask！");
                                 }

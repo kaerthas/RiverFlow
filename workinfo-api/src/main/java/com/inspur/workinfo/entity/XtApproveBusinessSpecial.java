@@ -60,6 +60,13 @@ private static final long serialVersionUID = 1L;
     /**
      * 申请人姓名
      */
+    @ApiModelProperty(value="申请唯一id")
+    private String onlineApplyId;
+
+
+    /**
+     * 申请人姓名
+     */
     @ApiModelProperty(value="申请人姓名")
     private String apName;
 
