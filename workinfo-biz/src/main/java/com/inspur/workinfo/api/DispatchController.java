@@ -69,6 +69,8 @@ public class DispatchController{
 	@Autowired
 	private XtApproveItemflowConfigService itemflowConfigService;
 	@Autowired
+	private XtApproveItemItemflowService itemItemflowService;
+	@Autowired
 	private XtApproveBusinessCorrectionService businessCorrectionService;
 	@Autowired
 	private XtApproveBusinessCorrectMService businessCorrectMService;
@@ -138,20 +140,29 @@ public class DispatchController{
 					xtApproveBusinessinfo.setXzqhdm(xzqhdm);
 					xtApproveBusinessinfoService.save(xtApproveBusinessinfo);
 				}
-				//根据配置的流程信息，写入业务过程信息表
-				XtApproveItemflowConfig itemflowBean = itemflowConfigService.getBaseMapper()
-						.selectOne(new QueryWrapper<XtApproveItemflowConfig>()
-								.eq("PARENT_ID","#").eq("SXBM",sxbm));
-				if(itemflowBean==null){
-					throw new Exception("当前业务已成功推送，无需多次推送该业务！");
+				//查询关联关系表
+				List<XtApproveItemItemflow> itemItemflows =  itemItemflowService.getBaseMapper()
+						.selectList(new QueryWrapper<XtApproveItemItemflow>()
+								.eq("ITEM_SXBM",sxbm));
+				if (itemItemflows!=null && itemItemflows.size()==1) {
+					//根据配置的流程信息，写入业务过程信息表
+
+					XtApproveItemflowConfig itemflowBean = itemflowConfigService.getBaseMapper()
+							.selectOne(new QueryWrapper<XtApproveItemflowConfig>()
+									.eq("PARENT_ID", "#").eq("SXBM", itemItemflows.get(0).getItemflowSxbm()));
+					if (itemflowBean == null) {
+						throw new Exception("流程配置错误，无需多次推送该业务！");
+					}
+					XtApproveBusinessCourse courseBean = new XtApproveBusinessCourse();
+					courseBean.setSeqId(UUID.randomUUID().toString());
+					courseBean.setCurrentNodeCode(itemflowBean.getNodeCode());
+					courseBean.setCurrentNodeId(itemflowBean.getSeqId());
+					courseBean.setActive("1");//1表示激活状态
+					courseBean.setSblshShort(receiveNumber);
+					courseService.save(courseBean);//保存过程信息
+				}else{
+					throw new Exception("流程关联关系配置错误，请联系管理员！");
 				}
-				XtApproveBusinessCourse courseBean  = new XtApproveBusinessCourse();
-				courseBean.setSeqId(UUID.randomUUID().toString());
-				courseBean.setCurrentNodeCode(itemflowBean.getNodeCode());
-				courseBean.setCurrentNodeId(itemflowBean.getSeqId());
-				courseBean.setActive("1");//1表示激活状态
-				courseBean.setSblshShort(receiveNumber);
-				courseService.save(courseBean);//保存过程信息
 
 			}else{
 				//空方法
