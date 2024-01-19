@@ -48,7 +48,7 @@ private static final long serialVersionUID = 1L;
     /**
      * 单事项编码
      */
-    @ApiModelProperty(value="单事项编码")
+    @ApiModelProperty(value="模型id")
     private String sxbm;
     /**
      * 节点名称

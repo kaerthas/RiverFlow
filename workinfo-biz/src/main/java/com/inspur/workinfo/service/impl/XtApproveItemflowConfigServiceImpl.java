@@ -65,7 +65,7 @@ public class XtApproveItemflowConfigServiceImpl extends ServiceImpl<XtApproveIte
 
             //查询xml数据
             XtApproveItemConfig itemConfig  = itemConfigService.getOne(new QueryWrapper<XtApproveItemConfig>()
-                    .eq("SXBM",itemflowConfig.getSxbm()));
+                    .eq("SXBM",businessBase.getSxbm()));
             map.put(CommonConstants.XT_BUSINESS_ITEM,itemConfig);
             //根据模型id获取xmlData模板
             List<XtApproveBusinessXmlConfig> xmlConfigs  = businessXmlConfigService.getBaseMapper()

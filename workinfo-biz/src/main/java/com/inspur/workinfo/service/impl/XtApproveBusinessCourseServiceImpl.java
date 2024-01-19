@@ -58,6 +58,8 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
     private SqlSessionFactory sqlSessionFactory; // 注入SqlSessionFactory
     @Autowired
     private  XtApproveBusinessSpecialService businessSpecialService;
+    @Autowired
+    private XtApproveBusinessBaseService businessBaseService;
 
 
     @Override
@@ -150,27 +152,34 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                         this.baseMapper.updateById(businessCourseOld);
                         //回填相关物化表信息
                         //首先根据流程表获取xml配置
-                        XtApproveItemConfig itemConfig  = itemConfigService.getOne(new QueryWrapper<XtApproveItemConfig>()
-                                .eq("SXBM",itemflowConfigs.get(0).getSxbm()));
-                        //根据模型id获取xmlData模板
-                        List<XtApproveBusinessXmlConfig> xmlConfigs  = xmlConfigService.getBaseMapper()
-                                .selectList(new QueryWrapper<XtApproveBusinessXmlConfig>().eq("ITEM_ID",itemConfig.getItemId()));
-                        Map<String, Object> params = new HashMap<>();
-                        for (int j = 0; j < xmlConfigs.size(); j++) {
-                            if ("table".equals(xmlConfigs.get(j).getType())) {
-                                //将表名插入map
-                                params.put("tableName", xmlConfigs.get(j).getXmlCode());
-                            }else if ("keyword".equals(xmlConfigs.get(j).getType())) {
-                                //将条件插入
-                                params.put("keyword", xmlConfigs.get(j).getXmlCode());
-                                params.put("keywordValue", sblshShort);
+                        //获取事项编码
+                        XtApproveBusinessBase businessBase = businessBaseService
+                                .getOne(new QueryWrapper<XtApproveBusinessBase>().eq("SBLSH_SHORT",sblshShort));
+                        if (businessBase!=null) {
+                            XtApproveItemConfig itemConfig = itemConfigService.getOne(new QueryWrapper<XtApproveItemConfig>()
+                                    .eq("SXBM", businessBase.getSxbm()));
+                            //根据模型id获取xmlData模板
+                            List<XtApproveBusinessXmlConfig> xmlConfigs = xmlConfigService.getBaseMapper()
+                                    .selectList(new QueryWrapper<XtApproveBusinessXmlConfig>().eq("ITEM_ID", itemConfig.getItemId()));
+                            Map<String, Object> params = new HashMap<>();
+                            for (int j = 0; j < xmlConfigs.size(); j++) {
+                                if ("table".equals(xmlConfigs.get(j).getType())) {
+                                    //将表名插入map
+                                    params.put("tableName", xmlConfigs.get(j).getXmlCode());
+                                } else if ("keyword".equals(xmlConfigs.get(j).getType())) {
+                                    //将条件插入
+                                    params.put("keyword", xmlConfigs.get(j).getXmlCode());
+                                    params.put("keywordValue", sblshShort);
+                                }
                             }
-                        }
-                        params.put("columns", objectMap);
+                            params.put("columns", objectMap);
 
-                         xmlConfigService.updateXmlDataProvider(params);
+                            xmlConfigService.updateXmlDataProvider(params);
+                        }else {
+                            throw new Exception("基本信息表中数据不存在，办件编号为"+sblshShort);
+                        }
                     }else{
-                        throw new Exception("流程配置错误，事项itemid为"+itemflowConfigOld.getSxbm());
+                        throw new Exception("流程配置错误，流程id为"+itemflowConfigOld.getSeqId());
                     }
                 }else {
                     this.analysisCoursePlus(sblshShort,businessCourseOld,itemflowConfigOld);
