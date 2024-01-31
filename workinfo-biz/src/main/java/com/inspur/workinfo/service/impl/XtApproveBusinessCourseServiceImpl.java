@@ -262,7 +262,6 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
             JSONObject itemJson = (JSONObject) item.get(CommonConstants.XT_BUSINESS_XML);
             String tableName  =  itemflowConfigOld.getCondition();
 
-            log.error("SSSSSSSSSSSSSSSSSSSSSSS"+itemJson.toJSONString());
             //条件
             String value  =   itemJson.get(tableName)!=null?itemJson.get(tableName).toString():"";
             //构建一个挂起表
@@ -270,7 +269,11 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
 
             wrapper.eq(tableName,value);
             List<XtApproveBusinessSpecial> specials =  businessSpecialService.getBaseMapper().selectList(wrapper);
-            log.error("SSSSSSSSSSSSSSSSSSSSSSS"+specials.size());
+            int childValue = 0;//首次申报
+            if (specials.size()>0){
+                //再次申报
+                childValue = 1;
+            }
 //            QueryWrapper<>
             //调用查询代码块返回参数值
 //            Class<?> mapperClass = null;
@@ -312,20 +315,11 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                 for (int i = 0; i <itemflowConfigs.size() ; i++) {
                     try {
                         //判断特殊环节表中如果有数据
-                        log.error("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"+Integer.parseInt(itemflowConfigs.get(i).getChildValue()));
-                        log.error("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"+specials.size());
-                        log.error("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"+(Integer.parseInt(itemflowConfigs.get(i).getChildValue())==specials.size()));
 
-                        if (specials.size()==0&&Integer.parseInt(itemflowConfigs.get(i).getChildValue())==specials.size()){
-
+                        if (Integer.parseInt(itemflowConfigs.get(i).getChildValue())==childValue){
                             this.saveCourse(sblshShort,itemflowConfigs.get(i),businessCourseOld);
-
-                        }else {//特殊环节表中没有数据
-
-                            this.saveCourse(sblshShort,itemflowConfigs.get(i),businessCourseOld);
-
+                            break;
                         }
-                        break;
                     }catch (Exception e){
                         e.printStackTrace();
                         throw  e;
