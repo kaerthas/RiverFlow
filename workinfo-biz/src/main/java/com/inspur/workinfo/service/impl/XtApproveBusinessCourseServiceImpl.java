@@ -82,7 +82,8 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                     //如果流程没有设置条件直接进入下一个流程
                     List<XtApproveItemflowConfig> itemflowConfigs = this.itemflowConfigService.getBaseMapper()
                             .selectList(new QueryWrapper<XtApproveItemflowConfig>()
-                                    .eq("PARENT_ID",businessCourseOld.getCurrentNodeId()));
+                                    .eq("PARENT_ID",businessCourseOld.getCurrentNodeId())
+                                    .ne("CONDITION_TYPE",CommonConstants.XT_ITEM_CONDITION_ERROR));
                     //判断流程是否唯一
                     if(itemflowConfigs!=null&&itemflowConfigs.size()==1){
                         //新增环节信息
@@ -117,7 +118,7 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
     }
 
     @Override
-    public JSONObject analysisCourse(String sblshShort, Map<String,Object> objectMap) throws Exception {
+    public JSONObject analysisCourseSuccess(String sblshShort, Map<String,Object> objectMap) throws Exception {
         JSONObject result = new JSONObject();
         result.put("code", CommonConstants.API_SUCCESS);
         result.put("error", "	请求成功！");
@@ -134,7 +135,8 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                     //如果流程没有设置条件直接进入下一个流程
                     List<XtApproveItemflowConfig> itemflowConfigs = this.itemflowConfigService.getBaseMapper()
                             .selectList(new QueryWrapper<XtApproveItemflowConfig>()
-                                    .eq("PARENT_ID",businessCourseOld.getCurrentNodeId()));
+                                    .eq("PARENT_ID",businessCourseOld.getCurrentNodeId())
+                            .ne("CONDITION_TYPE",CommonConstants.XT_ITEM_CONDITION_ERROR));
                     //判断流程是否唯一
                     if(itemflowConfigs!=null&&itemflowConfigs.size()==1){
                         //新增环节信息
@@ -194,6 +196,69 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
             throw e;
         }
     }
+
+    @Override
+    @Transactional
+    public JSONObject analysisCourseError(String sblshShort,JSONObject res) throws Exception {
+        JSONObject result = new JSONObject();
+        result.put("code", CommonConstants.API_SUCCESS);
+        result.put("error", "	请求成功！");
+        try {
+
+            XtApproveBusinessCourse businessCourseOld = this.baseMapper.selectOne(new QueryWrapper<XtApproveBusinessCourse>()
+                    .eq("ACTIVE","1")
+                    .eq("SBLSH_SHORT",sblshShort));
+            if (businessCourseOld!=null){
+                //查询当前环节流程配置
+                XtApproveItemflowConfig itemflowConfigOld = this.itemflowConfigService.getBaseMapper()
+                        .selectById(businessCourseOld.getCurrentNodeId());
+                if (StrUtil.isBlank(itemflowConfigOld.getCondition())){
+                    //如果流程没有设置条件直接进入下一个流程
+                    List<XtApproveItemflowConfig> itemflowConfigs = this.itemflowConfigService.getBaseMapper()
+                            .selectList(new QueryWrapper<XtApproveItemflowConfig>()
+                                    .eq("PARENT_ID",businessCourseOld.getCurrentNodeId())
+                            .eq("CONDITION_TYPE",CommonConstants.XT_ITEM_CONDITION_ERROR));
+                    //判断流程是否唯一
+                    if(itemflowConfigs!=null&&itemflowConfigs.size()==1) {
+                        XtApproveBusinessBase businessBase = businessBaseService.getBaseMapper()
+                                .selectOne(new QueryWrapper<XtApproveBusinessBase>().eq("SBLSH_SHORT",sblshShort));
+                        if (businessBase!=null) {
+                            XtApproveBusinessAccept businessAccept = new XtApproveBusinessAccept();
+
+                            businessAccept.setSeqId(UUID.randomUUID().toString().replace("-", ""));//主键
+                            businessAccept.setSxbm(businessBase.getSxbm());
+                            businessAccept.setSblshShort(sblshShort);
+                            businessAccept.setYwlsmc("系统平台管理员");
+                            businessAccept.setYwlszt("0");//0位为不予受理，1为受理
+                            businessAccept.setYwslyj(res.getString("Data").substring(0, 200));//受理意见
+                            businessAccept.setYwslbmbm(businessBase.getBmzzjgdm());
+                            businessAccept.setYwslbmmc(businessBase.getBmmc());
+                            businessAccept.setYwslqhbm(businessBase.getXzqhdm());
+//                                                        accept.setYwslqhmc(businessBase.get);
+                            businessAccept.setYwslsj(new Date());
+                            businessAcceptService.getBaseMapper().insert(businessAccept);
+                        }else{
+                            throw new Exception("办件信息不完整!申报流水号为"+sblshShort);
+
+                        }
+
+                        //新增环节信息
+                        this.saveCourse(sblshShort, itemflowConfigs.get(0), businessCourseOld);
+                        //保存受理信息
+                    }else{
+                            throw new Exception("流程配置错误，流程id为"+itemflowConfigOld.getSeqId());
+                    }
+                }
+            }else{
+                throw  new Exception("环节配置失败，初始化信息失败！");
+            }
+            return result;
+        }catch (Exception e){
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
     private void analysisCoursePlus(String sblshShort , XtApproveBusinessCourse businessCourseOld,XtApproveItemflowConfig itemflowConfigOld) throws Exception{
         //如果下一个环节拿字段进行判断
         if (CommonConstants.XT_ITEM_CONDITION_COLUMNS.equals(itemflowConfigOld.getConditionType())) {

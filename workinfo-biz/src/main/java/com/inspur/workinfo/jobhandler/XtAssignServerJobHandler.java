@@ -24,6 +24,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @JobHandler(value = "xtAssignServerJobHandler")
 @Component
@@ -124,11 +126,15 @@ public class XtAssignServerJobHandler extends IJobHandler {
                                                             objectMap.put(outputInfo.getKey(), res.getString(outputInfo.getKey()));
                                                         }
                                                         //并进入下一个流程
-                                                        this.businessCourseService.analysisCourse(sblshshort,objectMap);
+                                                        this.businessCourseService.analysisCourseSuccess(sblshshort,objectMap);
 
                                                         //中间状态既不修改也不做处理，下次调用依旧处理
                                                     } else {
-                                                        //TODO 通知查看是否对接短信或者如何
+                                                        //保存到受理信息表，回推不予受理状态给一件事系统
+                                                        //创建受理信息表
+                                                        //查询基本表信息
+                                                        this.businessCourseService.analysisCourseError(sblshshort,res);
+
                                                     }
                                                 }else {
                                                     //判断res中封装值
@@ -141,7 +147,11 @@ public class XtAssignServerJobHandler extends IJobHandler {
 
                                                         //中间状态既不修改也不做处理，下次调用依旧处理
                                                     } else {
-                                                        //TODO 通知查看是否对接短信或者如何
+
+                                                        //保存到受理信息表，回推不予受理状态给一件事系统
+                                                        //创建受理信息表
+                                                        //查询基本表信息
+                                                        this.businessCourseService.analysisCourseError(sblshshort,res);
                                                     }
                                                 }
 
@@ -217,6 +227,18 @@ public class XtAssignServerJobHandler extends IJobHandler {
             }
     }
 
-
+//    public static void main(String[] args) {
+//        String str = "Hello 你好 World!笨蛋";
+//
+//        str=str.substring(0,5);
+//
+//        // 定义正则表达式，匹配所有的中文字符
+//        Pattern pattern = Pattern.compile("[\\u4e00-\\u9fa5]+");
+//        Matcher matcher = pattern.matcher(str);
+//        System.out.println("str"+str);
+//        while (matcher.find()) {
+//            System.out.print(matcher.group());
+//        }
+//    }
 
 }

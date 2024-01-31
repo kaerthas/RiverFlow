@@ -190,5 +190,6 @@ public interface CommonConstants {
 	//流程条件
 	String XT_ITEM_CONDITION_COLUMNS="0";
 	String XT_ITEM_CONDITION_SQL ="1";
+	String XT_ITEM_CONDITION_ERROR="2";
 
 }
