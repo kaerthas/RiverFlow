@@ -166,20 +166,20 @@ public class XtApproveBusinessinfoServiceImpl extends ServiceImpl<XtApproveBusin
                 //个人存入人员信息
                 if("0".equals(serviceObj)){
                     businessBase.setServiceObj(serviceObj);
-                    businessBase.setGrName(personData.getString("NAME"));
-                    businessBase.setGrIdcardno(personData.getString("IDCARDNO"));
-                    businessBase.setGrIdentitytype(personData.getString("IDENTITYTYPE"));
-                    businessBase.setGrLinkphone(personData.getString("LINKPHONE"));
+                    businessBase.setGrName(personData.getString("name"));
+                    businessBase.setGrIdcardno(personData.getString("idcardno"));
+                    businessBase.setGrIdentitytype(personData.getString("identitytype"));
+                    businessBase.setGrLinkphone(personData.getString("linkphone"));
                 }
                 //法人存入法人信息
                 if("1".equals(serviceObj)){
                     businessBase.setServiceObj(serviceObj);
-                    businessBase.setQyOrgName(companyData.getString("ORGNAME"));
-                    businessBase.setQyOrgCode(companyData.getString("ORGCODE"));
-                    businessBase.setQyHandlerName(companyData.getString("HANDLERNAME"));
-                    businessBase.setQyHandlerPhone(companyData.getString("HANDLERPHONE"));
-                    businessBase.setQyHandlerId(companyData.getString("HANDLERID"));
-                    businessBase.setQyHandlerIdtype(companyData.getString("HANDLERIDTYPE"));
+                    businessBase.setQyOrgName(companyData.getString("orgname"));
+                    businessBase.setQyOrgCode(companyData.getString("orgcode"));
+                    businessBase.setQyHandlerName(companyData.getString("handlername"));
+                    businessBase.setQyHandlerPhone(companyData.getString("handlerphone"));
+                    businessBase.setQyHandlerId(companyData.getString("handlerid"));
+                    businessBase.setQyHandlerIdtype(companyData.getString("handleridtype"));
                 }
                 xtApproveBusinessBaseService.saveOrUpdate(businessBase);
                 /*******************************************保存邮寄信息表*********************************************/

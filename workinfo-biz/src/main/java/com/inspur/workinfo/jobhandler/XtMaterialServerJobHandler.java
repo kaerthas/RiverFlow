@@ -204,8 +204,9 @@ public class XtMaterialServerJobHandler extends IJobHandler {
 
 
                     }
-                    isflag=true;
+
                 }
+                isflag=true;
             }catch (Exception e){
                 e.printStackTrace();
             }finally {

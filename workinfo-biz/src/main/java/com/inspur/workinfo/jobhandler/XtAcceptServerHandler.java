@@ -70,18 +70,21 @@ public class XtAcceptServerHandler extends IJobHandler {
                                 .eq("IS_USED", "0"));
                 if (businessinfoList != null && businessinfoList.getTotal() > 0) {
                     //流方式循环调用相关接口
-                    businessinfoList.getRecords().stream().forEach(details -> {
+                    for (int i = 0; i <businessinfoList.getRecords().size() ; i++) {
 
                         try {
                             JSONObject callParams = new JSONObject();
-                            callParams.put("sblshShort", details.getSblshShort());
-                            callParams.put("sxbm", details.getSxbm());
+                            XtApproveBusinessinfo businessinfo =  businessinfoList.getRecords().get(i);
+                            String sblshShort  = businessinfoList.getRecords().get(i).getSblshShort();
+                            String sxbm        = businessinfoList.getRecords().get(i).getSxbm();
+                            callParams.put("sblshShort", sblshShort);
+                            callParams.put("sxbm",  sxbm);
                             //创建接口调 用记录表
-                            approveCallService.createCallBean(details.getSblshShort(),
+                            approveCallService.createCallBean( businessinfoList.getRecords().get(i).getSblshShort(),
                                     propertyConfig.getDispatchUrl(), callParams.toJSONString(), "协同调度中心", "POST", "61002");
 
 
-                            JSONObject busiApplyJson = this.businessInfoService.getBusinessApplyData(details.getSblshShort(), details.getSxbm());
+                            JSONObject busiApplyJson = this.businessInfoService.getBusinessApplyData(sblshShort, sxbm);
                             String applyXmlStr = "";
                             if (CommonConstants.API_SUCCESS.equals(busiApplyJson.getString("code"))) {
                                 applyXmlStr = busiApplyJson.getString("xmlStr");
@@ -90,13 +93,13 @@ public class XtAcceptServerHandler extends IJobHandler {
                             }
                             //分析数据办件信息字段，需要创建协同办件基本表XtApproveBusinessBase
                             //3.解析数据业务申办，预受理，受理信息
-                            JSONObject applyJsonData = this.businessInfoService.analysisApplyData(details.getSxbm(), applyXmlStr);
+                            JSONObject applyJsonData = this.businessInfoService.analysisApplyData(sxbm, applyXmlStr);
                             if (!CommonConstants.API_SUCCESS.equals(applyJsonData.getString("code"))) {
                                 throw new Exception("解析业务申办，预受理，受理数据失败！  " + applyJsonData.getString("error"));
                             }
 
                             //4.根据token和受理编码获取业务申请材料数据信息
-                            JSONObject busiApplyMaterialJson = this.businessInfoService.getBusiApplyMaterial(details.getSblshShort(), details.getSxbm(), "0");
+                            JSONObject busiApplyMaterialJson = this.businessInfoService.getBusiApplyMaterial(sblshShort, sxbm, "0");
                             //5.解析业务申请材料数据
                             String materialXmlStr = "";
                             if (CommonConstants.API_SUCCESS.equals(busiApplyMaterialJson.getString("code"))) {
@@ -104,32 +107,31 @@ public class XtAcceptServerHandler extends IJobHandler {
                             } else {
                                 throw new Exception("获取受理信息失败！  " + busiApplyMaterialJson.getString("error"));
                             }
-                            JSONObject materialJsonData = this.businessInfoService.analysisMaterial(materialXmlStr, details.getSblshShort());
+                            JSONObject materialJsonData = this.businessInfoService.analysisMaterial(materialXmlStr, sblshShort);
                             if (!CommonConstants.API_SUCCESS.equals(materialJsonData.getString("code"))) {
                                 throw new Exception("解析材料数据失败！  " + materialJsonData.getString("error"));
                             }
                             //6.处理流程，保存环节信息
                             //先查询环节信息 激活的ACTIVE
-                            JSONObject courseJsonData = this.courseService.analysisCourse(details.getSblshShort());
+                            JSONObject courseJsonData = this.courseService.analysisCourse(sblshShort);
                             if (!CommonConstants.API_SUCCESS.equals(courseJsonData.getString("code"))) {
                                 throw new Exception("保存过程信息失败！" + courseJsonData.getString("error"));
                             }
 
                             //7.最终处理is_used为1
-                            details.setIsUsed("1");
-                            businessInfoService.saveOrUpdate(details);
+                            businessinfo.setIsUsed("1");
+                            businessInfoService.saveOrUpdate(businessinfo);
 
 
                         } catch (Exception e) {
-
+                            e.printStackTrace();
                             //如果捕获到异常直接跳过，进入下次循环
-                            return;
+                            continue;
 
                         }
-                    });
-                    isok = true;
-
+                    }
                 }
+                isok = true;
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {

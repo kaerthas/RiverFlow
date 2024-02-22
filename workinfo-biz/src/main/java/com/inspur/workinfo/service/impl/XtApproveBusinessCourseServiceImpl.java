@@ -27,6 +27,7 @@ import com.inspur.workinfo.entity.*;
 import com.inspur.workinfo.mapper.XtApproveBusinessCourseMapper;
 import com.inspur.workinfo.service.*;
 import com.inspur.workinfo.util.DateUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,7 @@ import java.util.*;
  * @author yunho code generator
  * @date 2023-07-12 11:06:40
  */
+@Slf4j
 @Service
 public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBusinessCourseMapper, XtApproveBusinessCourse> implements XtApproveBusinessCourseService {
 
@@ -230,7 +232,12 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                             businessAccept.setSblshShort(sblshShort);
                             businessAccept.setYwlsmc("系统平台管理员");
                             businessAccept.setYwlszt("0");//0位为不予受理，1为受理
-                            businessAccept.setYwslyj(res.getString("Data").substring(0, 200));//受理意见
+                            if (StrUtil.isNotBlank(res.getString("message"))) {
+                                log.error("#############################"+res.getString("message"));
+                                businessAccept.setYwslyj( res.getString("message").length()>200? res.getString("message").substring(0, 200) : res.getString("message"));//受理意见
+                            }else {
+                                businessAccept.setYwslyj("");
+                            }
                             businessAccept.setYwslbmbm(businessBase.getBmzzjgdm());
                             businessAccept.setYwslbmmc(businessBase.getBmmc());
                             businessAccept.setYwslqhbm(businessBase.getXzqhdm());

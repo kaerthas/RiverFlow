@@ -22,6 +22,7 @@ print("############################")
       result.put("code",Status)
       result.put("msg",Desc)
       result.put("data",Data)
+      result.put("message",Data)
     }
   }else{
 
@@ -29,6 +30,7 @@ print("############################")
       result.put("code",100)
       result.put("msg","服务降级，请稍后尝试")
       result.put("data","")
+      result.put("message",Data)
 
   }
 

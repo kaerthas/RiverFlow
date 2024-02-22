@@ -60,7 +60,7 @@ public class XtAcceptServerTask {
      *
      */
 //    @Scheduled(cron = "0 */1 * * * ? ")
-//    @Scheduled(cron = "0 */10 * * * ? ")
+//    @Scheduled(cron = "0 */1 * * * ? ")
     public void websocket() throws Exception {
         log.info("【推送消息XtAcceptServerTask】开始执行：{}", DateUtil.formatDateTime(new Date()));
         String uuid = UUID.randomUUID().toString();

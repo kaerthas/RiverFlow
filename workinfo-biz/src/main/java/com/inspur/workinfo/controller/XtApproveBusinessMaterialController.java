@@ -41,6 +41,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.util.List;
 
 
 /**
@@ -130,34 +131,38 @@ public class XtApproveBusinessMaterialController {
         QueryWrapper wrapper  = new QueryWrapper();
         wrapper.eq("SBLSH_SHORT",projectNo);
         wrapper.eq("STUFF_SEQ",materialCode);
-        XtApproveBusinessMaterial businessMaterial =  xtApproveBusinessMaterialService.getOne(wrapper);
-        if (businessMaterial!=null){
-           String url  =  businessMaterial.getAttachBody();
-            HttpClient client = new HttpClient();
-            client.getHttpConnectionManager().getParams().setConnectionTimeout(5000);
-            GetMethod getMethod = new GetMethod(url);
-            try {
-                client.executeMethod(getMethod);
-            } catch (HttpException e1) {
-                e1.printStackTrace();
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-            InputStream is = null;
-            try {
-                is = getMethod.getResponseBodyAsStream();
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-            ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
-            byte[] buffer = new byte[1024];
-            int length;
-            while ((length = is.read(buffer)) != -1) {
-                arrayOutputStream.write(buffer, 0, length);
-            }
+        wrapper.eq("ATTACH_NAME",materialName);
+        ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int length;
+        List<XtApproveBusinessMaterial> businessMaterials=  xtApproveBusinessMaterialService.getBaseMapper().selectList(wrapper);
+        if (businessMaterials!=null&& businessMaterials.size()==1) {
+            for (XtApproveBusinessMaterial businessMaterial :
+                    businessMaterials) {
+                String url  =  businessMaterial.getAttachBody();
+                HttpClient client = new HttpClient();
+                client.getHttpConnectionManager().getParams().setConnectionTimeout(5000);
+                GetMethod getMethod = new GetMethod(url);
+                try {
+                    client.executeMethod(getMethod);
+                } catch (HttpException e1) {
+                    e1.printStackTrace();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+                InputStream is = null;
+                try {
+                    is = getMethod.getResponseBodyAsStream();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
 
-            // 将 ByteArrayOutputStream 的数据转换为 byte[] 数组
-            byte[] bytes = arrayOutputStream.toByteArray();
+                while ((length = is.read(buffer)) != -1) {
+                    arrayOutputStream.write(buffer, 0, length);
+                }
+
+                // 将 ByteArrayOutputStream 的数据转换为 byte[] 数组
+                byte[] bytes = arrayOutputStream.toByteArray();
 
 //            if (materialName.contains("png")){
 //                response.setContentType("image/jpeg");
@@ -165,25 +170,26 @@ public class XtApproveBusinessMaterialController {
 //                response.setContentType("application/octet-stream");
 //            }
 
-            response.setHeader("Content-Disposition", "attachment; filename=\"" +java.net.URLEncoder.encode(materialName, "UTF-8")  + "\"");
-            // 获取 HttpServletResponse 的 OutputStream
-            OutputStream outputStream = response.getOutputStream();
+                response.setHeader("Content-Disposition", "attachment; filename=\"" +java.net.URLEncoder.encode(materialName, "UTF-8")  + "\"");
+                // 获取 HttpServletResponse 的 OutputStream
+                OutputStream outputStream = response.getOutputStream();
 
 // 创建一个 BufferedOutputStream 对象，用于缓存 OutputStream
-            BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
+                BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
 
 // 将 byte 数据写入 BufferedOutputStream
-            bufferedOutputStream.write(bytes);
+                bufferedOutputStream.write(bytes);
 
 // 刷新 BufferedOutputStream，将缓冲区的数据写入 OutputStream
-            bufferedOutputStream.flush();
+                bufferedOutputStream.flush();
 
 // 关闭 BufferedOutputStream 和 OutputStream
-            bufferedOutputStream.close();
-            outputStream.close();
+                bufferedOutputStream.close();
+                outputStream.close();
+
+            }
 
         }
-
     }
 
 }

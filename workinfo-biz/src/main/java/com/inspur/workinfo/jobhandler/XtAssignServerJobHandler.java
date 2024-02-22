@@ -230,7 +230,7 @@ public class XtAssignServerJobHandler extends IJobHandler {
 //    public static void main(String[] args) {
 //        String str = "Hello 你好 World!笨蛋";
 //
-//        str=str.substring(0,5);
+//        str=str.substring(0,5200);
 //
 //        // 定义正则表达式，匹配所有的中文字符
 //        Pattern pattern = Pattern.compile("[\\u4e00-\\u9fa5]+");
