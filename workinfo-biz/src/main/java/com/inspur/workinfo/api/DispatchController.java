@@ -171,7 +171,9 @@ public class DispatchController{
 			return result;
 		}catch (Exception e){
 			e.printStackTrace();
-			xtApproveBusinessinfoService.removeById(xtApproveBusinessinfo.getSeqId());
+			if (xtApproveBusinessinfo!=null&&StrUtil.isNotBlank(xtApproveBusinessinfo.getSeqId())) {
+				xtApproveBusinessinfoService.removeById(xtApproveBusinessinfo.getSeqId());
+			}
 			JSONObject jsonObject =new JSONObject();
 			jsonObject.put("msg",e.getMessage());
 			result.put("C-Response-Desc", "fail");
