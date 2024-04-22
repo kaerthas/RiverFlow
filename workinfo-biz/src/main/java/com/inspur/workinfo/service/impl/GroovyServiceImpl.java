@@ -26,20 +26,27 @@ import com.inspur.workinfo.entity.PreApasinfo;
 import com.inspur.workinfo.mapper.PreApasinfoMapper;
 
 import com.inspur.workinfo.service.GroovyService;
+import com.inspur.workinfo.util.RedisCache;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.DigestUtils;
 
-
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 @Slf4j
 @Service
 public class GroovyServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinfo> implements GroovyService {
 
+    private static final Map<String,Script> cache = new ConcurrentHashMap<>();
+
     public JSONObject invokeScript(String scriptString, String args)throws Exception{
         JSONObject result = new JSONObject();
+        GroovyShell groovyShell = new GroovyShell();
         try {
             scriptString = "package groovy\n" +
                     "import groovy.json.JsonSlurper  \n"+
@@ -58,11 +65,15 @@ public class GroovyServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinf
                     "def GroovyScript(String args){" +
                         scriptString +
                     "}";
-
-            GroovyShell groovyShell = new GroovyShell();
             //装载解析脚本代码
-
-            Script script = groovyShell.parse(scriptString);
+            String scriptMd5 = DigestUtils.md5DigestAsHex(scriptString.getBytes());
+            Script script;
+            if (cache.get(scriptMd5)!=null){
+               script = cache.get(scriptMd5);
+            }else{
+                script = groovyShell.parse(scriptString);
+                cache.put(scriptMd5,script);
+            }
             result = (JSONObject) script.invokeMethod("GroovyScript",new Object[]{args});
         }catch (Exception e){
             log.error(e.getMessage(),e);
