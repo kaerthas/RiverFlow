@@ -213,6 +213,7 @@ public class XtAssignServerJobHandler extends IJobHandler {
                 }
             }catch (Exception e){
                 e.printStackTrace();
+                logger.error(e.getMessage(),e);
             }finally {
                 redisCache.deleteObject(CommonConstants.XT_BUSINESS_ASSIGN_REDIS);
 

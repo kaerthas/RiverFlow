@@ -126,6 +126,7 @@ public class XtAcceptServerHandler extends IJobHandler {
                         } catch (Exception e) {
                             e.printStackTrace();
                             //如果捕获到异常直接跳过，进入下次循环
+                            logger.error(e.getMessage(),e);
                             continue;
 
                         }
@@ -134,6 +135,7 @@ public class XtAcceptServerHandler extends IJobHandler {
                 isok = true;
             } catch (Exception e) {
                 e.printStackTrace();
+                logger.error(e.getMessage(),e);
             } finally {
                 redisCache.deleteObject(CommonConstants.XT_BUSINESS_INFO_REDIS);
             }
