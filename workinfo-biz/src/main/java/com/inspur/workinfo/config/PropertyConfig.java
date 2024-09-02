@@ -35,6 +35,14 @@ public class PropertyConfig {
     private String dispatchTenancyId;
     private String dispatchUrl;
 
+    /**
+     * 数浙相关配置
+     * */
+    private String gatewayUrl;
+    private String gatewayAppId ;
+    private String gatewaySercret;
+    private String gatewayKeyId;
+
 
     /**
      * 网盘相关配置
