@@ -33,5 +33,8 @@
                         <result property="isUsed" column="IS_USED"/>
                         <result property="createTime" column="CREATE_TIME"/>
                         <result property="modifyTime" column="MODIFY_TIME"/>
+                        <result property="businessInfo" column="BUSINESS_INFO"/>
+                        <result property="bizType" column="BIZ_TYPE"/>
+                        <result property="appId" column="APP_ID"/>
             </resultMap>
 </mapper>

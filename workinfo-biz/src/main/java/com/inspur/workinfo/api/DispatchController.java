@@ -14,6 +14,7 @@ import com.inspur.workinfo.service.*;
 
 import com.inspur.workinfo.service.impl.XtApproveBusinessCourseServiceImpl;
 import com.inspur.workinfo.util.DateUtils;
+import com.inspur.workinfo.util.HttpUtil;
 import com.inspur.workinfo.util.R;
 import io.swagger.annotations.Api;
 import lombok.AllArgsConstructor;
@@ -37,6 +38,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLDecoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -289,6 +292,40 @@ public class DispatchController{
 			return resultBody;
 		}
 	}
+
+	@SuppressWarnings("unchecked")
+	@RequestMapping(value = "/jaspyt/test",method = RequestMethod.POST)
+	public R test(@RequestParam("word") String word){
+
+	String next = "https://zwfw.shaanxi.gov.cn/sx/icity/chain/qa/index?regionCode=610102000000&modelCode=A0008&loginSuccess=1&code=506b43ab030344eb8b4f611bbf63f063&sysType=0&loginType=0&client_id=000000001";
+String redirect_uri  ="xxx";
+	//log.info("登录回调方法login接收到的参数：renew："+renew + "  || flag:"+flag
+	//		+ "  || next:"+next + "  || loginSuccess:"+loginSuccess + "  || code:"+code);
+
+	URLEncodeUtils.encodeURL(next);
+	String checkurl = "";
+		try {
+		checkurl = new URL(next).toString();
+	}
+		catch (MalformedURLException e) {
+		checkurl = URLEncodeUtils.decodeURL(next);
+	}
+
+
+
+
+
+
+
+
+		String renewurl = "http://sssss:8080/" + "/sysauthserver/authorize?hide_login=true&client_id=" + "000000001"
+				+ "&response_type=code&redirect_uri=";
+		renewurl += URLEncodeUtils.encodeURL(redirect_uri + "?goto=" + URLEncodeUtils.encodeURL(next));
+		//log.info("登录回调方法login,进入loginSuccess=1的判断中，重定向地址："+renewurl);
+		return R.ok(renewurl);
+
+	}
+
 
 
 	@SuppressWarnings("unchecked")

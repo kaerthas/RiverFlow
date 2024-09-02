@@ -271,7 +271,9 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
         if (CommonConstants.XT_ITEM_CONDITION_COLUMNS.equals(itemflowConfigOld.getConditionType())) {
             //判断环节名称
             //处理受理发送环节流程
-            if (CommonConstants.XT_BUSINESS_SEND_ACCEPT.equals(businessCourseOld.getCurrentNodeCode())) {
+            //受理信息不推受理，直接推办结接口完成办结
+            if (CommonConstants.XT_BUSINESS_SEND_ACCEPT.equals(businessCourseOld.getCurrentNodeCode())
+                    || CommonConstants.XT_BUSINESS_GET_ACCEPT.equals(businessCourseOld.getCurrentNodeCode())) {
                 //TODO 暂时写死 后期通过反射获取
 //                        Class clazz = XtApproveBusinessAccept.class;
 //                        clazz.getField(itemflowConfigOld.getCondition());
@@ -326,6 +328,7 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                     }
                 }
             }
+
         }else if (CommonConstants.XT_ITEM_CONDITION_SQL.equals(itemflowConfigOld.getConditionType())){
 
             //获取物化表中的信息

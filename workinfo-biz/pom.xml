@@ -152,6 +152,53 @@
             <artifactId>xxl-job-core</artifactId>
             <version>2.1.1-SNAPSHOT</version>
         </dependency>
+        <!--集成垃圾数浙sdk-->
+        <dependency>
+            <groupId>sx_api_1</groupId><!--可随意-->
+            <artifactId>sxs_api</artifactId><!--可随意-->
+            <version>3.3.1</version><!--对应jar相应版本（不知道可随意）-->
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/atg-sdk-java-RELEASE20240806112713-source.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>sx_api_2</groupId><!--可随意-->
+            <artifactId>sxs_api</artifactId><!--可随意-->
+            <version>3.3.1</version><!--对应jar相应版本（不知道可随意）-->
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/atg-sdk-java-RELEASE20240806112713.jar</systemPath>
+        </dependency>
+
+
+        <!-- Jackson核心 -->
+        <!--<dependency>-->
+            <!--<groupId>com.fasterxml.jackson.core</groupId>-->
+            <!--<artifactId>jackson-core</artifactId>-->
+            <!--<version>2.13.1</version>-->
+        <!--</dependency>-->
+
+        <!--&lt;!&ndash; Jackson注解 &ndash;&gt;-->
+        <!--<dependency>-->
+            <!--<groupId>com.fasterxml.jackson.core</groupId>-->
+            <!--<artifactId>jackson-annotations</artifactId>-->
+            <!--<version>2.13.1</version>-->
+        <!--</dependency>-->
+
+        <!--&lt;!&ndash; Jackson数据绑定 &ndash;&gt;-->
+        <!--<dependency>-->
+            <!--<groupId>com.fasterxml.jackson.core</groupId>-->
+            <!--<artifactId>jackson-databind</artifactId>-->
+            <!--<version>2.13.1</version>-->
+        <!--</dependency>-->
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>1.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>3.0.1</version>
+        </dependency>
 
     </dependencies>
     <build>
@@ -160,6 +207,17 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>2.3.1.RELEASE</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
+                    <compilerArguments>
+                        <extdirs>${project.basedir}/lib</extdirs>
+                    </compilerArguments>
+                </configuration>
             </plugin>
         </plugins>
     </build>

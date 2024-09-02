@@ -87,4 +87,19 @@ private static final long serialVersionUID = 1L;
      */
     @ApiModelProperty(value="修改时间")
     private Date modifyTime;
+    /**
+     * 数浙接口入参
+     * **/
+    @ApiModelProperty(value = "数浙接口入参")
+    private String businessInfo;
+    /**
+     * 业务类型
+     * **/
+    @ApiModelProperty(value = "业务类型")
+    private String bizType;
+    /**
+     * 数浙系统分配
+     * **/
+    @ApiModelProperty(value = "appId")
+    private String appId;//数浙系统分配
     }

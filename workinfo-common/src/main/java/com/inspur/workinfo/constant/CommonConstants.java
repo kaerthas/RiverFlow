@@ -149,7 +149,7 @@ public interface CommonConstants {
 	String XT_BUSINESS_SEND_ACCEPT_REDIS = "xt:businesssendaccept";
 	String XT_BUSINESS_SEND_OUTCOME_REDIS = "xt:businesssendoutcome";
 	String XT_BUSINESS_SEND_NEED_CORRECTION_REDIS = "xt:businesssendneedcorrection";
-
+	String XT_BUSINESS_SEND_DONE_ACCEPT_NEW_REDIS = "xt:businesssenddoneaccept:new";
 	String XT_BUSINESS_APPROVE = "APPROVE";
 	String XT_BUSINESS_ASSIGN  = "ASSIGN";
 	String XT_BUSINESS_MATERIAL = "MATERIAL";
@@ -158,6 +158,7 @@ public interface CommonConstants {
 
 	String XT_BUSINESS_GET_OUTCOME  = "GETOUTCOME";
 	String XT_BUSINESS_GET_ACCEPT = "GETACCEPT";
+	String XT_BUSINESS_GET_ACCEPT_NEW = "GETACCEPTNEW";
 	String XT_BUSINESS_GET_DONE    = "GETDONE";
 	String XT_BUISNESS_CANCEL_SUBMIT = "CANCELSUBMIT";
 	String XT_BUSINESS_GET_NEED_CORRECTION = "GETNEEDCORRECTION";
@@ -168,7 +169,7 @@ public interface CommonConstants {
 	String XT_BUSINESS_SEND_ACCEPT = "SENDACCEPT";
 	String XT_BUSINESS_SEND_OUTCOME = "SENDOUTCOME";
 	String XT_BUSINESS_SEND_NEED_CORRECTION ="SENDNEEDCORRECTION";
-
+	String XT_BUSINESS_SEND_DONE_NEW = "SENDDONENEW";
 	//分发脚本入参 固定key
 	String XT_BUSINESS_BASE = "businessBase"; //JSONOBJECT
 	String XT_BUSINESS_XML  = "businessXML";//JSONOBJECT
@@ -192,4 +193,29 @@ public interface CommonConstants {
 	String XT_ITEM_CONDITION_SQL ="1";
 	String XT_ITEM_CONDITION_ERROR="2";
 
+
+	/***
+	 * 对接数浙标识
+	 * **/
+	String ATG_SUCCESS = "S";
+	String ATG_FAIL = "F";
+	String ATG_UNKNOW = "U";
+
+	String ATG_CODE_SUCCESS="G-TRD-BIZ-SUCCESS";//	服务成功
+	String ATG_CODE_FAIL  = "G-TRD-BIZ-SYSTEM_ERROR"; 	//系统错误
+
+	String XT_BUSINESS_INFO_NEW_REDIS = "xt:businessinfo:new";
+	String XT_BUSINESS_ASSIGN_NEW_REDIS = "xt:businessassign:new";
+	String XT_BUSINESS_MATERIAL_NEW_REDIS = "xt:businessmaterial:new";
+
+	String XT_BUSINESS_GET_ACCEPT_NEW_REDIS  = "xt:businessgetaccept:new";
+	String XT_BUSINESS_GET_DONE_NEW_REDIS = "xt:businessgetdone:new";
+	String XT_BUSINESS_GET_OUTCOME_NEW_REDIS = "xt:businessgetoutcome:new";
+	String XT_BUSINESS_GET_NEED_CORRECTION_NEW_REDIS = "xt:businessgetneedcorrection:new";
+	String XT_BUSINESS_CANCEL_SUBMIT_NEW_REDIS = "xt:businesscancelsubmit:new";
+
+	String XT_BUSINESS_SEND_DONE_NEW_REDIS = "xt:businesssenddone:new";
+	String XT_BUSINESS_SEND_ACCEPT_NEW_REDIS = "xt:businesssendaccept:new";
+	String XT_BUSINESS_SEND_OUTCOME_NEW_REDIS = "xt:businesssendoutcome:new";
+	String XT_BUSINESS_SEND_NEED_NEW_CORRECTION_REDIS = "xt:businesssendneedcorrection:new";
 }

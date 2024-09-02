@@ -27,6 +27,9 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/****
+ *分发代码可以复用
+ * *****/
 @JobHandler(value = "xtAssignServerJobHandler")
 @Component
 @Slf4j

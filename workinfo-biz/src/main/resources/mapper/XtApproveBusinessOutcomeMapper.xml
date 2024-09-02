@@ -24,12 +24,12 @@
 <mapper namespace="com.inspur.workinfo.mapper.XtApproveBusinessOutcomeMapper">
 
   <resultMap id="xtApproveBusinessOutcomeMap" type="com.inspur.workinfo.entity.XtApproveBusinessOutcome">
-                  <id property="seqId" column="SEQ_ID"/>
-                        <result property="wjlx" column="WJLX"/>
-                        <result property="attachName" column="ATTACH_NAME"/>
-                        <result property="attachBody" column="ATTACH_BODY"/>
-                        <result property="attachPath" column="ATTACH_PATH"/>
-                        <result property="sblshShort" column="SBLSH_SHORT"/>
-                        <result property="createTime" column="CREATE_TIME"/>
-            </resultMap>
+        <id property="seqId" column="SEQ_ID"/>
+        <result property="wjlx" column="WJLX"/>
+        <result property="attachName" column="ATTACH_NAME"/>
+        <result property="attachBody" column="ATTACH_BODY"/>
+        <result property="attachPath" column="ATTACH_PATH"/>
+        <result property="sblshShort" column="SBLSH_SHORT"/>
+        <result property="createTime" column="CREATE_TIME"/>
+  </resultMap>
 </mapper>
