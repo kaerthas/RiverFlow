@@ -91,6 +91,18 @@ public class APIGetTokenJobHandler extends IJobHandler {
                     }
                 }
             }
+            //删除redis缓存
+            redisCache.deleteObject(CommonConstants.XT_BUSINESS_INFO_REDIS);
+            redisCache.deleteObject(CommonConstants.XT_BUSINESS_ASSIGN_REDIS);
+            redisCache.deleteObject(CommonConstants.XT_BUSINESS_MATERIAL_REDIS);
+            redisCache.deleteObject(CommonConstants.XT_BUSINESS_GET_ACCEPT_REDIS);
+            redisCache.deleteObject(CommonConstants.XT_BUSINESS_GET_DONE_REDIS);
+            redisCache.deleteObject(CommonConstants.XT_BUSINESS_GET_OUTCOME_REDIS);
+            redisCache.deleteObject(CommonConstants.XT_BUSINESS_CANCEL_SUBMIT_REDIS);
+            redisCache.deleteObject(CommonConstants.XT_BUSINESS_SEND_DONE_REDIS);
+            redisCache.deleteObject(CommonConstants.XT_BUSINESS_SEND_ACCEPT_REDIS);
+            redisCache.deleteObject(CommonConstants.XT_BUSINESS_SEND_OUTCOME_REDIS);
+            redisCache.deleteObject(CommonConstants.XT_BUSINESS_SEND_NEED_CORRECTION_REDIS);
             isok =true;
         }catch (Exception e){
             e.printStackTrace();

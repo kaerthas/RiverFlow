@@ -83,8 +83,8 @@ public class XtAssignServerJobHandler extends IJobHandler {
                                 .eq("CURRENT_NODE_CODE",CommonConstants.XT_BUSINESS_ASSIGN));
                 if(businessCourse!=null){
                     for (int i = 0; i <businessCourse.getRecords().size() ; i++) {
+                        String sblshshort = businessCourse.getRecords().get(i).getSblshShort();
                         try {
-                            String sblshshort = businessCourse.getRecords().get(i).getSblshShort();
                             String currentNodeId = businessCourse.getRecords().get(i).getCurrentNodeId();
                             //1.根据当前流程获取节点配置的信息
                             XtApproveItemflowConfig xtApproveItemflowConfig = itemflowConfigService.getById(currentNodeId);
@@ -204,6 +204,8 @@ public class XtAssignServerJobHandler extends IJobHandler {
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
+                            logger.error("流水号"+sblshshort);
+                            logger.error(e.getMessage(),e);
                             continue;
                         }
                     }
@@ -214,6 +216,7 @@ public class XtAssignServerJobHandler extends IJobHandler {
                 }
             }catch (Exception e){
                 e.printStackTrace();
+                logger.error(e.getMessage(),e);
             }finally {
                 redisCache.deleteObject(CommonConstants.XT_BUSINESS_ASSIGN_REDIS);
 
