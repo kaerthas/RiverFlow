@@ -106,6 +106,11 @@ private static final long serialVersionUID = 1L;
      */
     @ApiModelProperty(value="网盘ID或证照唯一标识")
     private String attachPath;
+    /**
+     * base64
+     */
+    @ApiModelProperty(value="文件base64编码")
+    private String base64;
 //    /**
 //     * 交换状态
 //     */

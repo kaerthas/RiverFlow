@@ -39,7 +39,10 @@ import java.net.Proxy;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -730,8 +733,13 @@ public class HttpClientUtils {
 				Proxy.Type var10002 = Proxy.Type.DIRECT;
 				Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyIP, proxyPort));
 				if (url.contains("https")) {
+					logger.error("使用代理模式https");
 					HttpsURLConnection httpsConn = (HttpsURLConnection)urlPath.openConnection(proxy);
-					httpsConn.setHostnameVerifier(DO_NOT_VERIFY);
+					//设置SSL
+					httpsConn.setSSLSocketFactory(getSsf());
+					logger.error("设置SSL");
+					//设置主机验证程序
+					httpsConn.setHostnameVerifier((s, sslSession) -> true);
 					conn = httpsConn;
 				} else {
 					conn = (HttpURLConnection)urlPath.openConnection(proxy);
@@ -1065,6 +1073,37 @@ public class HttpClientUtils {
 			logger.error(e.getMessage(),e);
 		}
 		return responseContent;
+	}
+
+	private static SSLSocketFactory getSsf() {
+		SSLContext ctx = null;
+		try {
+			ctx = SSLContext.getInstance("TLS");
+			ctx.init(new KeyManager[0],
+					new TrustManager[]{new HttpClientUtils.DefaultTrustManager()},
+					new SecureRandom());
+		} catch (Exception e) {
+			log.error(e.getMessage(),e);
+		}
+		assert ctx != null;
+		return ctx.getSocketFactory();
+	}
+
+	private static final class DefaultTrustManager implements X509TrustManager {
+		@Override
+		public void checkClientTrusted(X509Certificate[] chain, String authType)
+				throws CertificateException {
+		}
+
+		@Override
+		public void checkServerTrusted(X509Certificate[] chain, String authType)
+				throws CertificateException {
+		}
+
+		@Override
+		public X509Certificate[] getAcceptedIssuers() {
+			return null;
+		}
 	}
 
 }

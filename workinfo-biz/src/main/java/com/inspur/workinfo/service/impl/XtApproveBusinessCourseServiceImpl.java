@@ -120,6 +120,7 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
     }
 
     @Override
+    @Transactional
     public JSONObject analysisCourseSuccess(String sblshShort, Map<String,Object> objectMap) throws Exception {
         JSONObject result = new JSONObject();
         result.put("code", CommonConstants.API_SUCCESS);

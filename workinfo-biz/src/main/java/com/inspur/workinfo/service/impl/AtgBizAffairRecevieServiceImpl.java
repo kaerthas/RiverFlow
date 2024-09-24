@@ -25,6 +25,7 @@ import com.inspur.workinfo.entity.*;
 import com.inspur.workinfo.service.*;
 import com.inspur.workinfo.util.DateUtils;
 import com.inspur.workinfo.util.HttpClientUtils;
+import com.inspur.workinfo.util.UploadUtil;
 import com.inspur.workinfo.util.XmlHandleUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.dom4j.Document;
@@ -335,6 +336,8 @@ public class AtgBizAffairRecevieServiceImpl implements AtgBizAffairRecevieServic
                                 material.setAttachType(attachName.substring(attachName.lastIndexOf(".") + 1));
                             }
                             material.setAttachPath(suffInfoList.getJSONObject(i).getString("attachPath"));
+                            String base64 = UploadUtil.getBase64ByFilePath(suffInfoList.getJSONObject(i).getString("attachPath"));
+                            material.setBase64(base64);
                             materials.add(material);
                         }
                         materialService.saveBatch(materials, materials.size());
