@@ -62,8 +62,6 @@ public class UploadUtil {
 //	}
 
 	public static String getBase64ByFilePath(String filePath){
-		log.error("downloadUrl:" +filePath);
-
 		String base64 ="";
 		try {
 			URL url = new URL(filePath);
@@ -72,7 +70,6 @@ public class UploadUtil {
 			InputStream inputStream = conn.getInputStream(); // 通过输入流获得文档数据
 			byte[] getData = readInputStream(inputStream); // 获得文档的二进制数据
 			 base64= Base64.getEncoder().encodeToString(getData);
-			log.error("getBase64ByFilePath:" +base64);
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		}catch (IOException e){

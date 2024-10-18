@@ -314,31 +314,41 @@ public class AtgBizAffairRecevieServiceImpl implements AtgBizAffairRecevieServic
                         List<XtApproveBusinessMaterial> materials = new ArrayList<>();
 
                         for (int i = 0; i < suffInfoList.size(); i++) {
-                            XtApproveBusinessMaterial material = new XtApproveBusinessMaterial();
-                            material.setSeqId(java.util.UUID.randomUUID().toString());
-                            material.setSblshShort(projId);//业务办理编号
-
-                            material.setStuffSeq(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("stuffUniId")) ? suffInfoList.getJSONObject(i).getString("stuffUniId") : "");//事项中心材料唯一编码
-
-                            material.setClmc(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("stuffName")) ? suffInfoList.getJSONObject(i).getString("stuffName") : "");//材料名称
-
-                            material.setWjlx(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("stuffType")) ? suffInfoList.getJSONObject(i).getString("stuffType") : "");
-
-                            material.setCllx(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("fetchMode")) ? suffInfoList.getJSONObject(i).getString("fetchMode") : "");//材料类型
-
-                            material.setClsl(Integer.valueOf(suffInfoList.getJSONObject(i).getString("stuffNum")));//材料数量
                             String attachName = suffInfoList.getJSONObject(i).getString("attachName");
-                            material.setAttachName(attachName);//材料标准名称
-                            //                        material.setAttachId(suffInfoList.getJSONObject(i).getString("attachId"));
-                            material.setRemark(suffInfoList.getJSONObject(i).getString("memo"));
-                            material.setAttachBody(suffInfoList.getJSONObject(i).getString("attachPath"));//存储路径
-                            if (StrUtil.isNotBlank(attachName) && attachName.contains(".")) {
-                                material.setAttachType(attachName.substring(attachName.lastIndexOf(".") + 1));
+                            if(attachName!= null && attachName != "") {
+                                List<String> attachNameList = Arrays.asList(attachName.split(";"));
+                                String attachPath = suffInfoList.getJSONObject(i).getString("attachPath");
+                                List<String> attachPathList = Arrays.asList(attachPath.split(";"));
+                                for (int j = 0; j < attachNameList.size(); j++) {
+                                    XtApproveBusinessMaterial material = new XtApproveBusinessMaterial();
+                                    material.setSeqId(java.util.UUID.randomUUID().toString());
+                                    material.setSblshShort(projId);//业务办理编号
+
+                                    material.setStuffSeq(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("stuffUniId")) ? suffInfoList.getJSONObject(i).getString("stuffUniId") : "");//事项中心材料唯一编码
+
+                                    material.setClmc(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("stuffName")) ? suffInfoList.getJSONObject(i).getString("stuffName") : "");//材料名称
+
+                                    material.setWjlx(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("stuffType")) ? suffInfoList.getJSONObject(i).getString("stuffType") : "");
+
+                                    material.setCllx(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("fetchMode")) ? suffInfoList.getJSONObject(i).getString("fetchMode") : "");//材料类型
+
+                                    material.setClsl(Integer.valueOf(suffInfoList.getJSONObject(i).getString("stuffNum")));//材料数量
+
+                                    String attachNameSingle = attachNameList.get(j);
+                                    material.setAttachName(attachNameSingle);//材料标准名称
+                                    //                        material.setAttachId(suffInfoList.getJSONObject(i).getString("attachId"));
+                                    material.setRemark(suffInfoList.getJSONObject(i).getString("memo"));
+                                    if (StrUtil.isNotBlank(attachNameSingle) && attachNameSingle.contains(".")) {
+                                        material.setAttachType(attachNameSingle.substring(attachNameSingle.lastIndexOf(".") + 1));
+                                    }
+
+                                    material.setAttachBody(attachPathList.get(j));//存储路径
+                                    material.setAttachPath(attachPathList.get(j));
+                                    String base64 = UploadUtil.getBase64ByFilePath(attachPathList.get(j));
+                                    material.setBase64(base64);
+                                    materials.add(material);
+                                }
                             }
-                            material.setAttachPath(suffInfoList.getJSONObject(i).getString("attachPath"));
-                            String base64 = UploadUtil.getBase64ByFilePath(suffInfoList.getJSONObject(i).getString("attachPath"));
-                            material.setBase64(base64);
-                            materials.add(material);
                         }
                         materialService.saveBatch(materials, materials.size());
                     }
