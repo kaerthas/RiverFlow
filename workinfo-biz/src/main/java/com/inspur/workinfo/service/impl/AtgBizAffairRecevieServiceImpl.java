@@ -691,7 +691,7 @@ public class AtgBizAffairRecevieServiceImpl implements AtgBizAffairRecevieServic
             affairFinishRequest.setDeptName(businessAccept.getYwslbmmc());//部门名称
             affairFinishRequest.setResult("07");//办结结果代码 10：办结 09：作废办结。13：退件。07：不予受理。
             affairFinishRequest.setResultDesc(businessAccept.getYwslyj());
-            affairFinishRequest.setMemo("你的申请已办结");
+            affairFinishRequest.setMemo(StrUtil.isNotBlank(businessAccept.getYwslyj())?businessAccept.getYwslyj():"您的申请已办结");
             affairFinishRequest.setOperatorName(businessAccept.getYwslbmbm());
             affairFinishRequest.setOperatorUid(businessAccept.getSeqId());
             affairFinishRequest.setResultCode("");//默认传空

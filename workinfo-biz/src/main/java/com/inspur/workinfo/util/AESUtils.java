@@ -1,6 +1,7 @@
 package com.inspur.workinfo.util;
 
 
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -295,10 +296,13 @@ public class AESUtils {
 	 * @return
              * @throws Exception
 	 */
-    public static String getSign(String sid,String rid,String rtime,String appsecret){
+    public static String getSign(String sid,String rid,String rtime,String appsecret) throws Exception{
         String result=null;
         try{
             Mac hmacSha256 = Mac.getInstance("HmacSHA256");
+            if(StrUtil.isBlank(appsecret)){
+                throw new Exception("未刷新appsercret，请执行apigetToken执行任务");
+            }
             byte[] keyBytes = appsecret.getBytes("UTF-8");
             hmacSha256.init(new SecretKeySpec(keyBytes, 0, keyBytes.length, "HmacSHA256"));
             String inputString = sid + rid + rtime;
@@ -306,6 +310,7 @@ public class AESUtils {
             result = new String(Base64.encodeBase64(hmacSha256Bytes), "UTF-8");
         }catch(Exception e){
             e.printStackTrace();
+            throw e;
         }
         return result;
     }
