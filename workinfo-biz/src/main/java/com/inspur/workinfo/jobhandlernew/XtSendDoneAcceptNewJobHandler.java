@@ -78,7 +78,7 @@ public class XtSendDoneAcceptNewJobHandler extends IJobHandler {
             }catch (Exception e){
                 e.printStackTrace();
             }finally {
-                redisCache.deleteObject(CommonConstants.XT_BUSINESS_SEND_DONE_NEW_REDIS);
+                redisCache.deleteObject(CommonConstants.XT_BUSINESS_SEND_ACCEPT_NEW_REDIS);
 
             }
         }else{
