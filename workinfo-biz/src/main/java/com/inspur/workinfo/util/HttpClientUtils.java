@@ -926,16 +926,16 @@ public class HttpClientUtils {
 					HttpHost target = new HttpHost(ip, port,
 							"https");
 					logger.error("使用代理模式,host:" + propertyConfig.getHttpProxyIP() +",port:"+ propertyConfig.getHttpPort());
-					requestConfig = RequestConfig.custom().setSocketTimeout(10000)
-							.setConnectTimeout(10000)
-							.setConnectionRequestTimeout(10000).setProxy(new HttpHost(propertyConfig.getHttpProxyIP(),Integer.valueOf(propertyConfig.getHttpPort()),"HTTPS")).build();//设置请求和传输超时时间
+					requestConfig = RequestConfig.custom().setSocketTimeout(5000)
+							.setConnectTimeout(3000)
+							.setConnectionRequestTimeout(5000).setProxy(new HttpHost(propertyConfig.getHttpProxyIP(),Integer.valueOf(propertyConfig.getHttpPort()),"HTTPS")).build();//设置请求和传输超时时间
 					httpPost.setConfig(requestConfig);
 					SSLClient client = new SSLClient();
 					response = client.execute(target,httpPost);
 				}else{
-					requestConfig = RequestConfig.custom().setSocketTimeout(10000)
-							.setConnectTimeout(10000)
-							.setConnectionRequestTimeout(10000).build();//设置请求和传输超时时间
+					requestConfig = RequestConfig.custom().setSocketTimeout(5000)
+							.setConnectTimeout(3000)
+							.setConnectionRequestTimeout(5000).build();//设置请求和传输超时时间
 					httpPost.setConfig(requestConfig);
 					SSLClient client = new SSLClient();
 					response = client.execute(httpPost);
@@ -951,16 +951,16 @@ public class HttpClientUtils {
 							"http");
 					logger.error("使用代理模式,host:" + propertyConfig.getHttpProxyIP() +",port:"+ propertyConfig.getHttpPort());
 
-					requestConfig = RequestConfig.custom().setSocketTimeout(10000)
-							.setConnectTimeout(10000)
-							.setConnectionRequestTimeout(10000).setProxy(new HttpHost(propertyConfig.getHttpProxyIP(),Integer.valueOf(propertyConfig.getHttpPort()),"HTTP")).build();//设置请求和传输超时时间
+					requestConfig = RequestConfig.custom().setSocketTimeout(5000)
+							.setConnectTimeout(3000)
+							.setConnectionRequestTimeout(5000).setProxy(new HttpHost(propertyConfig.getHttpProxyIP(),Integer.valueOf(propertyConfig.getHttpPort()),"HTTP")).build();//设置请求和传输超时时间
 					httpPost.setConfig(requestConfig);
 					response = httpclient.execute(target,httpPost);
 				}else{
 
-					requestConfig = RequestConfig.custom().setSocketTimeout(-1)
-							.setConnectTimeout(-1)
-							.setConnectionRequestTimeout(-1).build();//设置请求和传输超时时间
+					requestConfig = RequestConfig.custom().setSocketTimeout(5000)
+							.setConnectTimeout(3000)
+							.setConnectionRequestTimeout(5000).build();//设置请求和传输超时时间
 					httpPost.setConfig(requestConfig);
 					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 					logger.error("######################中残推送交换时间开始"+sdf.format(new Date()));
