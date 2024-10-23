@@ -67,7 +67,7 @@ public class XtSendAcceptServerNewJobHandler extends IJobHandler {
             //如果是空的先将数据插入
             redisCache.setCacheObject(CommonConstants.XT_BUSINESS_SEND_ACCEPT_NEW_REDIS,uuid);
             try{
-                Page page = new Page();
+                Page page = new Page(1,50);
                 IPage<XtApproveBusinessCourse> businessCourseOld = businessCourseService.getBaseMapper()
                         .selectPage(page, new QueryWrapper<XtApproveBusinessCourse>()
                                 .eq("ACTIVE","1")

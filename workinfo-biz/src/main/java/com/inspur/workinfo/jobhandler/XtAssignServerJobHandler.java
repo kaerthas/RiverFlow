@@ -76,7 +76,7 @@ public class XtAssignServerJobHandler extends IJobHandler {
 
             try{
                 //获取环节Code为 Assign的流程数据 每次处理10条数据
-                Page page = new Page();
+                Page page = new Page(1,400);
                 IPage<XtApproveBusinessCourse> businessCourse = businessCourseService.getBaseMapper()
                         .selectPage(page, new QueryWrapper<XtApproveBusinessCourse>()
                                 .eq("ACTIVE","1")

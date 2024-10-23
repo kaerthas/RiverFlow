@@ -69,7 +69,7 @@ public class XtCancelSubmitServeJobHandler extends IJobHandler {
             log.info("xt_business_cancel_submit 开始执行：{}", DateUtil.formatDateTime(new Date()));
             redisCache.setCacheObject(CommonConstants.XT_BUSINESS_CANCEL_SUBMIT_REDIS,uuid);
             try{
-                Page page = new Page();
+                Page page = new Page(1,100);
                 //获取需要撤销的程序
                 IPage<XtApproveBusinessCourse> businessCourseOld = businessCourseService.getBaseMapper()
                         .selectPage(page, new QueryWrapper<XtApproveBusinessCourse>()

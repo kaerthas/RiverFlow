@@ -74,7 +74,7 @@ public class XtGetAcceptServerJobHandler extends IJobHandler {
             log.info("xt_business_get_accept 开始执行：{}", DateUtil.formatDateTime(new Date()));
             redisCache.setCacheObject(CommonConstants.XT_BUSINESS_GET_ACCEPT_REDIS,uuid);
             try{
-                Page page = new Page(1,100);
+                Page page = new Page(1,400);
                 IPage<XtApproveBusinessCourse> businessCourseOld = businessCourseService.getBaseMapper()
                         .selectPage(page, new QueryWrapper<XtApproveBusinessCourse>()
                                 .eq("ACTIVE","1")

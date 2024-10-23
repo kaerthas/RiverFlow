@@ -73,7 +73,7 @@ public class XtMaterialServerJobHandler extends IJobHandler {
             //如果是空的先将数据插入
             redisCache.setCacheObject(CommonConstants.XT_BUSINESS_MATERIAL_REDIS,uuid);
             try {
-                Page page = new Page();
+                Page page = new Page(1,200);
                 //1获取流程为材料类型的环节信息
                 IPage<XtApproveBusinessCourse> businessCourse = courseService.getBaseMapper()
                         .selectPage(page, new QueryWrapper<XtApproveBusinessCourse>()
