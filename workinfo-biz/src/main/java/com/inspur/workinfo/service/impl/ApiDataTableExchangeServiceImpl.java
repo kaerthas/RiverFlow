@@ -129,6 +129,7 @@ public class ApiDataTableExchangeServiceImpl extends ServiceImpl<ApiDataTableExc
             return result;
         }catch (Exception e){
             e.printStackTrace();
+            logger.error(e.getMessage(),e);
             result.put("code", CommonConstants.API_FAIL);
             result.put("error",e.getMessage());
             return result;

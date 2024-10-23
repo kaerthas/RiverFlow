@@ -64,7 +64,8 @@ public class XtAcceptServerHandler extends IJobHandler {
             //如果是空的先将数据插入
             redisCache.setCacheObject(CommonConstants.XT_BUSINESS_INFO_REDIS, uuid);
             try {
-                Page page = new Page();
+                Page page = new Page(1,100);
+
                 IPage<XtApproveBusinessinfo> businessinfoList = businessInfoService.getBaseMapper()
                         .selectPage(page, new QueryWrapper<XtApproveBusinessinfo>()
                                 .eq("IS_USED", "0"));
