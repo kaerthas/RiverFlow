@@ -61,18 +61,26 @@ public class XtSendDoneServeNewJobHandler  extends IJobHandler {
                         .selectPage(page, new QueryWrapper<XtApproveBusinessCourse>()
                                 .eq("ACTIVE","1")
                                 .eq("CURRENT_NODE_CODE",CommonConstants.XT_BUSINESS_SEND_DONE));
-                businessCourseOld.getRecords().stream().forEach(detail->{
-                    //1.查询当前数据是否已经交换到accept表中
-                    XtApproveBusinessDone businessAcceptBean = businessDoneService.getOne(new QueryWrapper<XtApproveBusinessDone>()
-                            .eq("SBLSH_SHORT",detail.getSblshShort()));
-                    if (businessAcceptBean!=null){
-                        //2.调用协同61004接口推送受理信息
-                        JSONObject acceptData  =  affairRecevieService.sendBusinessFinish(businessAcceptBean);
-                    }else{
-                        logger.error("暂时未接收到办结信息！流水号为{}",detail.getSblshShort());
-                        return ;
+                for (int i = 0; i <businessCourseOld.getRecords().size() ; i++) {
+                    String sblshShort  = businessCourseOld.getRecords().get(i).getSblshShort();
+
+                    try {
+
+                        //1.查询当前数据是否已经交换到accept表中
+                        XtApproveBusinessDone businessAcceptBean = businessDoneService.getOne(new QueryWrapper<XtApproveBusinessDone>()
+                                .eq("SBLSH_SHORT",sblshShort));
+                        if (businessAcceptBean!=null){
+                            //2.调用协同61004接口推送受理信息
+                            JSONObject acceptData  =  affairRecevieService.sendBusinessFinish(businessAcceptBean);
+                        }else{
+                            logger.error("暂时未接收到办结信息！流水号为{}",sblshShort);
+                        }
+                    }catch (Exception e){
+                        e.printStackTrace();
+                        logger.error("推送办结信息失败！流水号为{}",sblshShort);
+                        continue;
                     }
-                });
+                }
                 isflag=true;
             }catch (Exception e){
                 logger.error(e.getMessage(),e);

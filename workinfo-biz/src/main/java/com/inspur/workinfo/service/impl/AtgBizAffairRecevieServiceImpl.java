@@ -398,7 +398,7 @@ public class AtgBizAffairRecevieServiceImpl implements AtgBizAffairRecevieServic
             AtgBizAffairAcceptRequest affairAcceptRequest   = new AtgBizAffairAcceptRequest();
             affairAcceptRequest.setProjId(businessAccept.getSblshShort());//办件编号
             affairAcceptRequest.setMemo(businessAccept.getYwslyj());//业务处理意见
-            affairAcceptRequest.setAreaCode(businessAccept.getYwslqhbm());//办理区划
+
             affairAcceptRequest.setGmtAccept(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",businessAccept.getYwslsj()));//业务受理时间
             affairAcceptRequest.setAppId(gatewayAppId);
             //TODO 没有相关必填字段
@@ -406,7 +406,14 @@ public class AtgBizAffairRecevieServiceImpl implements AtgBizAffairRecevieServic
             affairAcceptRequest.setOperatorName("审批人员");//业务部门操作人员名称
             affairAcceptRequest.setPromiseTime(null);//承诺办结时间
             affairAcceptRequest.setDeptCode(businessAccept.getYwslbmbm());//业务部门代码
-            affairAcceptRequest.setDeptName(businessAccept.getYwslqhmc());//业务部门名称
+            affairAcceptRequest.setDeptName(businessAccept.getYwslbmmc());//业务部门名称
+            //获取区划信息
+            XtApproveItemItemflow itemItemflow  = itemItemflowService.getOne(new QueryWrapper<XtApproveItemItemflow>().eq("ITEM_SXBM",businessAccept.getSxbm()));
+            if (itemItemflow!=null){
+                affairAcceptRequest.setAreaCode(itemItemflow.getRegionCode());//办理区划
+            }else{
+                throw new Exception("事项关联表配置错误，请联系管理员!");
+            }
             //组装调用记录信息
             callBean.setBsnum(businessAccept.getSblshShort());
             callBean.setCalledSystemAddr(gatewayUrl);
@@ -499,8 +506,8 @@ public class AtgBizAffairRecevieServiceImpl implements AtgBizAffairRecevieServic
             affairFinishRequest.setResult("6".equals(businessDone.getBjjgdm())?"10":"07");
             affairFinishRequest.setResultDesc(businessDone.getBjjgms());
             affairFinishRequest.setMemo("你的申请已办结");
-            affairFinishRequest.setOperatorName(businessDone.getSprxm());
-            affairFinishRequest.setOperatorUid(businessDone.getSprdm());
+            affairFinishRequest.setOperatorName(StrUtil.isNotBlank(businessDone.getSprxm())?businessDone.getSprxm():"审批人");
+            affairFinishRequest.setOperatorUid(StrUtil.isNotBlank(businessDone.getSprdm())?businessDone.getSprdm():UUID.randomUUID().toString().replace("-",""));
             affairFinishRequest.setResultCode("");//默认传空
 
 
@@ -685,7 +692,7 @@ public class AtgBizAffairRecevieServiceImpl implements AtgBizAffairRecevieServic
             AtgBizAffairFinishRequest affairFinishRequest = new AtgBizAffairFinishRequest();
             affairFinishRequest.setProjId(businessAccept.getSblshShort());
             affairFinishRequest.setAppId(gatewayAppId);
-            affairFinishRequest.setAreaCode(businessAccept.getYwslqhbm());//获取区划信息
+
             affairFinishRequest.setGmtService(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(businessAccept.getYwslsj()));
             affairFinishRequest.setDeptCode(businessAccept.getYwslbmbm());//部门编码
             affairFinishRequest.setDeptName(businessAccept.getYwslbmmc());//部门名称
@@ -695,7 +702,12 @@ public class AtgBizAffairRecevieServiceImpl implements AtgBizAffairRecevieServic
             affairFinishRequest.setOperatorName(businessAccept.getYwslbmbm());
             affairFinishRequest.setOperatorUid(businessAccept.getSeqId());
             affairFinishRequest.setResultCode("");//默认传空
-
+            XtApproveItemItemflow itemItemflow  = itemItemflowService.getOne(new QueryWrapper<XtApproveItemItemflow>().eq("ITEM_SXBM",businessAccept.getSxbm()));
+            if (itemItemflow!=null){
+                affairFinishRequest.setAreaCode(itemItemflow.getRegionCode());//办理区划
+            }else{
+                throw new Exception("事项关联表配置错误，请联系管理员!");
+            }
 
 
             //组装调用记录信息
