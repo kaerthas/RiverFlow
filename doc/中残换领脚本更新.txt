@@ -1,0 +1,96 @@
+def result =  new JSONObject()
+ def businessXML  = JSONObject.parseObject(args).get("businessXML")
+ def businessItem  = JSONObject.parseObject(args).get("businessItem")
+ def businessFile = JSONObject.parseObject(args).get("businessFile")
+ def businessBase = JSONObject.parseObject(args).get("businessBase")
+ def date = new Date(businessBase.get("sbsj"))
+ def dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+ def formattedsbsj = dateFormat.format(date)
+ def writer = new StringWriter()
+    def builder = new MarkupBuilder(writer)
+    builder.mkp.xmlDeclaration(version: "1.0", encoding: "UTF-8")
+    builder.ApproveDataInfo{
+       Region(businessBase.get("xzqhdm").substring(0,6))
+     BusinessType("0")
+     BusinessInfo{
+       ApplyInfo{
+      ProjectNo(businessBase.get("sblshShort"))
+      CataLogCode(businessItem.get("catalogcode"))
+      TaskCode(businessItem.get("taskcode"))
+      TaskHandleItem(businessItem.get("taskhandleitem"))
+	  if("5".equals(businessXML.get("SQLX"))){
+		TaskName("残疾人证到期换证")
+	  }else if("4".equals(businessXML.get("SQLX"))){
+		TaskName("残疾人证残损换新")
+	  }else if("6".equals(businessXML.get("SQLX"))){
+		TaskName("残疾人证资料更新")
+	  }
+      ApplyerName(businessXML.get("NAME"))
+      ApplyerType("1")
+      ApplyerPageType("111")
+      ApplyerPageCode(businessXML.get("IDCARD"))
+      ContactName(businessXML.get("NAME"))
+      ContactType("111")
+      ContactCode(businessXML.get("IDCARD"))
+      ContactMobile(businessXML.get("CON_PHONE"))
+      ApplyDate(formattedsbsj)
+      ApplyType("2")
+      DeliverType("0")
+      Address("")
+      ProjectType("2")
+      SystemNo("00647")
+      FormData{
+		   if("5".equals(businessXML.get("SQLX"))){
+			sx("5")
+		  }else if("4".equals(businessXML.get("SQLX"))){
+			sx("4")
+		  }else if("6".equals(businessXML.get("SQLX"))){
+			sx("6")
+		  }else {
+		   sx("4")
+		  }
+      blfs_type("wssb")
+      cdpf_renzheng_version{
+      idcard(businessXML.get("IDCARD"))
+      name(businessXML.get("NAME"))
+      nation(businessXML.get("NATION"))
+      education(businessXML.get("EDUCATION"))
+      marital(businessXML.get("MARITAL"))
+      residence(businessXML.get("RESIDENCE"))
+      con_phone(businessXML.get("CON_PHONE"))
+      con_tel(StrUtil.isNotBlank(businessXML.get("CON_TEL"))?businessXML.get("CON_TEL"):"")
+	  if("6".equals(businessXML.get("SQLX"))){
+		area_code(StrUtil.isNotBlank(businessXML.get("area_code"))?businessXML.get("area_code"):"")
+		domicile_area(StrUtil.isNotBlank(businessXML.get("domicile_area"))?businessXML.get("domicile_area"):"")
+	  }  
+      residence_code(businessXML.get("RESIDENCE_CODE"))
+      residence_area(businessXML.get("RESIDENCE_AREA"))
+      guard_name(StrUtil.isNotBlank(businessXML.get("GUARD_NAME"))?businessXML.get("GUARD_NAME"):"")
+      relation(StrUtil.isNotBlank(businessXML.get("RELATION"))?businessXML.get("RELATION"):"")
+      guard_phone(StrUtil.isNotBlank(businessXML.get("GUARD_PHONE"))?businessXML.get("GUARD_PHONE"):"")
+      guard_contelphone(StrUtil.isNotBlank(businessXML.get("GUARD_CONTELPHONE"))?businessXML.get("GUARD_CONTELPHONE"):"")
+      }
+      }
+     }
+     MaterialData {
+      for(i=0;i<businessFile.size();i++){
+      Material{
+        ProjectNo(businessBase.get("sblshShort"))
+			if("self.38010234".equals(businessFile.getJSONObject(i).get("stuffSeq"))){
+				MaterialName("残疾人照片")
+			}else{
+			MaterialName("申请材料")
+			}
+        MaterialCode(businessFile.getJSONObject(i).get("stuffSeq"))
+        GetType("2")
+        MaterialAttachName(StrUtil.isNotBlank(businessFile.getJSONObject(i).get("attachName"))?businessFile.getJSONObject(i).get("attachName"):"")
+        MaterialAttachPath(StrUtil.isNotBlank(businessFile.getJSONObject(i).get("attachBody"))?businessFile.getJSONObject(i).get("attachBody"):"")
+        SystemNo("00647")
+      }
+      }
+     }
+     }
+    }
+    String xml = writer.toString()
+    result.put("xmlInfo",xml)
+    return result
