@@ -17,6 +17,7 @@
 package com.inspur.workinfo.service.impl;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.crypto.SecureUtil;
 import cn.hutool.json.XML;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
@@ -35,9 +36,11 @@ import com.inspur.workinfo.util.RedisCache;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import sun.security.provider.MD5;
 
 import java.text.ParseException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static com.inspur.workinfo.constant.CommonConstants.*;
 
@@ -145,6 +148,12 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                 }else{
                     //根据反参定义直接处理
                     result = JSONObject.parseObject(info);
+                }
+                //判断接口是否需要缓存数据
+                String isNeedCache = apiServiceCatalog.getIsNeedCache();
+                if ("1".equals(isNeedCache)){//如果需要缓存，将缓存数据存入
+                    String key  = SecureUtil.md5(apiId+param);
+                    redisCache.setCacheObject(key,info,3, TimeUnit.DAYS);
                 }
                 return R.ok(result);
             }else {
@@ -275,9 +284,6 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                 header.putAll(getChildrenNode(id,key,apiInputInfoListAll,headers));
             }
 
-
-
-
             if("JSON".equals(requestType)) {
                 return serviceHandle(apiId,param.toString(),header,"");
             }else if("XML".equals(requestType)){
@@ -383,6 +389,20 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                     header = groovyService.invokeScript(scriptContent,header.toString());
                 }
             }
+            //判断接口是否缓存
+            String isNeedCache = apiServiceCatalog.getIsNeedCache();
+            if("1".equals(isNeedCache)){//需要被缓存
+                //对接口参数进行编码处理，作为缓存的key存入
+                String key = SecureUtil.md5(apiId+param.toString());
+                //得到key去redis中判断是否存在返参，如果存在则返回，不存在向下执行
+                String  info  = redisCache.getCacheObject(key);
+                if (!StrUtil.isEmpty(info)){//判断缓存中是否有相关信息
+                    JSONObject result = JSONObject.parseObject(info);
+                    return R.ok(result);
+                }
+
+            }
+
 
             if("JSON".equals(requestType)) {
                 //将SCRIPT 动态填充到

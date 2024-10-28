@@ -48,5 +48,6 @@
                         <result property="originalUrl" column="ORIGINAL_URL"/>
                         <result property="requestMode" column="REQUEST_MODE"/>
                         <result property="isInternet" column="IS_INTERNET"/>
+                        <result property="isNeedCache" column="IS_NEED_CACHE"/>
             </resultMap>
 </mapper>
