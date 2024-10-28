@@ -96,20 +96,20 @@ public class XtAssignServerJobHandler extends IJobHandler {
                                         //获取入参信息
                                         //创建接口记录相关代码
                                         ApiServiceCatalog apiServiceCatalog = apiServiceCatalogService.getById(xtApproveItemflowConfig.getApiId());
-                                        ApproveCall callBean  =  new ApproveCall();
-                                        ApproveCallResult callResultBean = new ApproveCallResult();
-                                        String callId  = UUID.randomUUID().toString().replace("-","");
-                                        callBean.setBsnum(sblshshort);//获取token接口不存在
-                                        callBean.setCalledSystemAddr(apiServiceCatalog.getUrl());
-                                        callBean.setCalledSystemCode("");
-                                        callBean.setCallId(callId);
-                                        callBean.setCalledSystemName(apiServiceCatalog.getName());
-                                        callBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",new Date()));
+//                                        ApproveCall callBean  =  new ApproveCall();
+//                                        ApproveCallResult callResultBean = new ApproveCallResult();
+//                                        String callId  = UUID.randomUUID().toString().replace("-","");
+//                                        callBean.setBsnum(sblshshort);//获取token接口不存在
+//                                        callBean.setCalledSystemAddr(apiServiceCatalog.getUrl());
+//                                        callBean.setCalledSystemCode("");
+//                                        callBean.setCallId(callId);
+//                                        callBean.setCalledSystemName(apiServiceCatalog.getName());
+//                                        callBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss",new Date()));
 
 
                                         Map<String, Object > map   = itemflowConfigService.getImportantXtMessage(xtApproveItemflowConfig,sblshshort);
                                         if (map!=null){
-                                            callBean.setParameterValue(new Gson().toJson(map));
+//                                            callBean.setParameterValue(new Gson().toJson(map));
                                             //TODO 接口调用 为完成
                                             R result = apiInputInfoService.getServiceByMap(xtApproveItemflowConfig.getApiId(),map,sblshshort);
                                             //result判断固定参数为 code msg data
@@ -159,31 +159,31 @@ public class XtAssignServerJobHandler extends IJobHandler {
                                                 }
 
                                                 //接口调用记录处理
-                                                callResultBean.setResultValue(res.toJSONString());
-                                                callResultBean.setCalledSystemName(callBean.getCalledSystemName());
-                                                callResultBean.setCalledSystemAddr(callBean.getCalledSystemAddr());
-                                                callResultBean.setCallState(res.getString("code"));
-                                                callResultBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss", new Date()));
-                                                callResultBean.setCallId(callId);
-                                                callBean.setCallState(res.getString("code"));
-
-                                                callResultBean.setSeqId(UUID.randomUUID().toString().replace("-", ""));
+//                                                callResultBean.setResultValue(res.toJSONString());
+//                                                callResultBean.setCalledSystemName(callBean.getCalledSystemName());
+//                                                callResultBean.setCalledSystemAddr(callBean.getCalledSystemAddr());
+//                                                callResultBean.setCallState(res.getString("code"));
+//                                                callResultBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss", new Date()));
+//                                                callResultBean.setCallId(callId);
+//                                                callBean.setCallState(res.getString("code"));
+//
+//                                                callResultBean.setSeqId(UUID.randomUUID().toString().replace("-", ""));
                                             }else{
                                                 //JSONObject res = (JSONObject) result.getData();
                                                 //接口调用记录处理
-                                                callResultBean.setResultValue(result.getMsg());
-                                                callResultBean.setCalledSystemName(callBean.getCalledSystemName());
-                                                callResultBean.setCalledSystemAddr(callBean.getCalledSystemAddr());
-                                                callResultBean.setCallState(CommonConstants.API_FAIL);
-                                                callResultBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss", new Date()));
-                                                callResultBean.setCallId(callId);
-                                                callBean.setCallState(CommonConstants.API_FAIL);
-
-                                                callResultBean.setSeqId(UUID.randomUUID().toString().replace("-", ""));
+//                                                callResultBean.setResultValue(result.getMsg());
+//                                                callResultBean.setCalledSystemName(callBean.getCalledSystemName());
+//                                                callResultBean.setCalledSystemAddr(callBean.getCalledSystemAddr());
+//                                                callResultBean.setCallState(CommonConstants.API_FAIL);
+//                                                callResultBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss", new Date()));
+//                                                callResultBean.setCallId(callId);
+//                                                callBean.setCallState(CommonConstants.API_FAIL);
+//
+//                                                callResultBean.setSeqId(UUID.randomUUID().toString().replace("-", ""));
 
                                             }
-                                            approveCallService.saveOrUpdate(callBean);
-                                            approveCallResultService.saveOrUpdate(callResultBean);
+//                                            approveCallService.saveOrUpdate(callBean);
+//                                            approveCallResultService.saveOrUpdate(callResultBean);
 
                                         }else{
                                             logger.error("办件信息不完整！事项编码为"+xtApproveItemflowConfig.getSxbm());

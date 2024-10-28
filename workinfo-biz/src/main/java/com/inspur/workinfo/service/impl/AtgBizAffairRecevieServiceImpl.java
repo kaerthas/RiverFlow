@@ -149,215 +149,217 @@ public class AtgBizAffairRecevieServiceImpl implements AtgBizAffairRecevieServic
             //第一步根据是事项编码查询，事项垂管id
             XtApproveItemConfig xtApproveItemConfig = xtApproveItemConfigService.getOne(new QueryWrapper<XtApproveItemConfig>()
                     .eq("sxbm",sxbm));
+            if(xtApproveItemConfig!=null) {
+                String itemId = xtApproveItemConfig.getItemId();
+                String serviceObj = xtApproveItemConfig.getServiceObj();
+                if (StrUtil.isNotBlank(itemId)) {
+                    //开始分析
+                    JSONObject applyJsonData = (JSONObject) JSONObject.parse(businessInfo);
+                    if (applyJsonData != null) {
+                        String projId = applyJsonData.getString("projId");//办件编号
+                        String matterCode = applyJsonData.getString("matterCode");//事项编码
+                        String deptCode = applyJsonData.getString("deptCode");//部门编码
+                        String bizType = applyJsonData.getString("bizType");//业务类型
+                        String affairType = applyJsonData.getString("affairType");//办件类型
+                        String relBizId = applyJsonData.getString("relBizId");//下一个业务标识
+                        ApplicantVO applicantVO = objectMapper.readValue(applyJsonData //办件人信息
+                                .getJSONObject("applicantVO").toJSONString(), ApplicantVO.class);
+                        String projectName = applyJsonData.getString("projectName");//事项名称
+                        String projectNature = applyJsonData.getString("projectNature");//项目性质
+                        String recvDeptCode = applyJsonData.getString("recvDeptCode");//收件部门编码
+                        String recvDeptName = applyJsonData.getString("recvDeptName");//收件部门名称
+                        String execDeptOrgCode = applyJsonData.getString("execDeptOrgCode");//统一社会信用代码
+                        String applyOrigin = applyJsonData.getString("applyOrigin");//申报来源
+                        String approveType = applyJsonData.getString("approveType");//审批性质
+                        String recvUserType = applyJsonData.getString("recvUserType");//创建用户类型
+                        String recvUserId = applyJsonData.getString("recvUserId");//用户唯一标识
+                        String recvUserName = applyJsonData.getString("recvUserName");//用户名称
 
-            String  itemId  = xtApproveItemConfig.getItemId();
-            String  serviceObj = xtApproveItemConfig.getServiceObj();
-            if (StrUtil.isNotBlank(itemId)){
-                //开始分析
-                JSONObject  applyJsonData  = (JSONObject) JSONObject.parse(businessInfo);
-                if(applyJsonData!=null) {
-                    String projId = applyJsonData.getString("projId");//办件编号
-                    String matterCode = applyJsonData.getString("matterCode");//事项编码
-                    String deptCode = applyJsonData.getString("deptCode");//部门编码
-                    String bizType = applyJsonData.getString("bizType");//业务类型
-                    String affairType = applyJsonData.getString("affairType");//办件类型
-                    String relBizId = applyJsonData.getString("relBizId");//下一个业务标识
-                    ApplicantVO applicantVO = objectMapper.readValue(applyJsonData //办件人信息
-                            .getJSONObject("applicantVO").toJSONString(), ApplicantVO.class);
-                    String projectName = applyJsonData.getString("projectName");//事项名称
-                    String projectNature = applyJsonData.getString("projectNature");//项目性质
-                    String recvDeptCode = applyJsonData.getString("recvDeptCode");//收件部门编码
-                    String recvDeptName = applyJsonData.getString("recvDeptName");//收件部门名称
-                    String execDeptOrgCode = applyJsonData.getString("execDeptOrgCode");//统一社会信用代码
-                    String applyOrigin = applyJsonData.getString("applyOrigin");//申报来源
-                    String approveType = applyJsonData.getString("approveType");//审批性质
-                    String recvUserType = applyJsonData.getString("recvUserType");//创建用户类型
-                    String recvUserId = applyJsonData.getString("recvUserId");//用户唯一标识
-                    String recvUserName = applyJsonData.getString("recvUserName");//用户名称
+                        String affFormInfo = applyJsonData.getString("affFormInfo");//表单信息
 
-                    String affFormInfo = applyJsonData.getString("affFormInfo");//表单信息
-
-                    JSONArray suffInfoList = applyJsonData.getJSONArray("suffInfoList");//材料信息
-                    String memo = applyJsonData.getString("memo");//办件摘要
-                    Date gmtApply = applyJsonData.getString("gmtApply") != null ? new Date(applyJsonData.getString("gmtApply")) : null;
-                    //办件申请时间
-                    String appId = applyJsonData.getString("appId");//统一分配应用id
-                    String areaCode = applyJsonData.getString("areaCode");//收件部门行政区划
-                    JSONObject extInfo = applyJsonData.getJSONObject("extInfo");
-
-
-                    HallVO hallVO = applyJsonData.getJSONObject("hallVO") != null ? objectMapper.readValue(applyJsonData.getJSONObject("hallVO").toJSONString(), HallVO.class) : null;
-
-                    //                PickUpAddressInfoVO pickUpAddressInfoVO = objectMapper.readValue(applyJsonData.getJSONObject("pickUpAddressInfoVO").toJSONString(),PickUpAddressInfoVO.class);
+                        JSONArray suffInfoList = applyJsonData.getJSONArray("suffInfoList");//材料信息
+                        String memo = applyJsonData.getString("memo");//办件摘要
+                        Date gmtApply = applyJsonData.getString("gmtApply") != null ? new Date(applyJsonData.getString("gmtApply")) : null;
+                        //办件申请时间
+                        String appId = applyJsonData.getString("appId");//统一分配应用id
+                        String areaCode = applyJsonData.getString("areaCode");//收件部门行政区划
+                        JSONObject extInfo = applyJsonData.getJSONObject("extInfo");
 
 
-                    //第二步 插入基本信息表，批次表，调用定时调用批次表 分发配置表redis 组装模型
-                    //创建基本信息表  applyAcceptData
-                    // TODO 后续应该按照接口对返回参数进行可配置，目前对接协同写死
-                    /*******************************************保存基本表*********************************************/
-                    XtApproveBusinessBase businessBase = new XtApproveBusinessBase();
-                    String baseInfoId = java.util.UUID.randomUUID().toString();
+                        HallVO hallVO = applyJsonData.getJSONObject("hallVO") != null ? objectMapper.readValue(applyJsonData.getJSONObject("hallVO").toJSONString(), HallVO.class) : null;
 
-                    businessBase.setSeqId(baseInfoId);//绑定其他业务信息
-                    businessBase.setSblshShort(projId);
-                    businessBase.setSxbm(sxbm);
-                    businessBase.setSxmc(projectName);
-                    businessBase.setSxqxbm("");
-                    businessBase.setXzqhdm(areaCode);
-                    businessBase.setBmmc(recvDeptName);
-                    businessBase.setBmzzjgdm(recvDeptCode);
-                    businessBase.setYwly(applyOrigin);//业务来源
-                    businessBase.setSbsj(gmtApply);
+                        //                PickUpAddressInfoVO pickUpAddressInfoVO = objectMapper.readValue(applyJsonData.getJSONObject("pickUpAddressInfoVO").toJSONString(),PickUpAddressInfoVO.class);
 
 
-                    //个人存入人员信息
-                    if ("0".equals(serviceObj)) {
-                        businessBase.setServiceObj(serviceObj);
-                        businessBase.setGrName(applicantVO.getApplyName());
-                        businessBase.setGrIdcardno(applicantVO.getApplyCardNo());
-                        businessBase.setGrIdentitytype(applicantVO.getApplyCardType());
-                        businessBase.setGrLinkphone(applicantVO.getApplyTelNo());
-                    }
-                    //法人存入法人信息
-                    if ("1".equals(serviceObj)) {
-                        businessBase.setServiceObj(serviceObj);
-                        businessBase.setQyOrgName(applicantVO.getLegalMan());
-                        businessBase.setQyOrgCode(applicantVO.getLegalCardNo());
-                        businessBase.setQyHandlerName(applicantVO.getContactName());
-                        businessBase.setQyHandlerPhone(applicantVO.getContactTelNo());
-                        businessBase.setQyHandlerId(applicantVO.getContactCardNo());
-                        businessBase.setQyHandlerIdtype(applicantVO.getContactCardType());
-                    }
-                    xtApproveBusinessBaseService.saveOrUpdate(businessBase);
-                    /*******************************************保存邮寄信息表*********************************************/
-                    if (extInfo != null && extInfo.getJSONObject("deliveryInfo") != null) {
-                        JSONObject toAddress = extInfo.getJSONObject("deliveryInfo").getJSONObject("toAddress");
-                        XtApproveBusinessEmail businessEmail = new XtApproveBusinessEmail();
+                        //第二步 插入基本信息表，批次表，调用定时调用批次表 分发配置表redis 组装模型
+                        //创建基本信息表  applyAcceptData
+                        // TODO 后续应该按照接口对返回参数进行可配置，目前对接协同写死
+                        /*******************************************保存基本表*********************************************/
+                        XtApproveBusinessBase businessBase = new XtApproveBusinessBase();
+                        String baseInfoId = java.util.UUID.randomUUID().toString();
 
-                        businessEmail.setSeqId(java.util.UUID.randomUUID().toString());
-                        businessEmail.setBaseInfoId(baseInfoId);
-                        //                    businessEmail.setMailType(toAddress.getString("mailType"));
-                        businessEmail.setSendMailAddress(toAddress.getString("address"));
-                        businessEmail.setSendMailPostCode(toAddress.getString("postCode"));
-                        businessEmail.setSendMailName(toAddress.getString("name"));
-                        businessEmail.setSendMailProvince(toAddress.getString("provinceName"));
-                        businessEmail.setSendMailCity(toAddress.getString("cityName"));
-                        businessEmail.setSendMailCounty(toAddress.getString("districtName"));
-                        businessEmail.setSendMailPhone(toAddress.getString("phone"));
-                        xtApproveBusinessEmailService.saveOrUpdate(businessEmail);
-                    }
+                        businessBase.setSeqId(baseInfoId);//绑定其他业务信息
+                        businessBase.setSblshShort(projId);
+                        businessBase.setSxbm(sxbm);
+                        businessBase.setSxmc(projectName);
+                        businessBase.setSxqxbm("");
+                        businessBase.setXzqhdm(areaCode);
+                        businessBase.setBmmc(recvDeptName);
+                        businessBase.setBmzzjgdm(recvDeptCode);
+                        businessBase.setYwly(applyOrigin);//业务来源
+                        businessBase.setSbsj(gmtApply);
 
 
-                    //处理表单信息并动态保存
-                    if (StrUtil.isNotBlank(affFormInfo)) {//表单字段不为空
-                        JSONObject formJson = (JSONObject) JSONObject.parse(affFormInfo);
+                        //个人存入人员信息
+                        if ("0".equals(serviceObj)) {
+                            businessBase.setServiceObj(serviceObj);
+                            businessBase.setGrName(applicantVO.getApplyName());
+                            businessBase.setGrIdcardno(applicantVO.getApplyCardNo());
+                            businessBase.setGrIdentitytype(applicantVO.getApplyCardType());
+                            businessBase.setGrLinkphone(applicantVO.getApplyTelNo());
+                        }
+                        //法人存入法人信息
+                        if ("1".equals(serviceObj)) {
+                            businessBase.setServiceObj(serviceObj);
+                            businessBase.setQyOrgName(applicantVO.getLegalMan());
+                            businessBase.setQyOrgCode(applicantVO.getLegalCardNo());
+                            businessBase.setQyHandlerName(applicantVO.getContactName());
+                            businessBase.setQyHandlerPhone(applicantVO.getContactTelNo());
+                            businessBase.setQyHandlerId(applicantVO.getContactCardNo());
+                            businessBase.setQyHandlerIdtype(applicantVO.getContactCardType());
+                        }
+                        xtApproveBusinessBaseService.saveOrUpdate(businessBase);
+                        /*******************************************保存邮寄信息表*********************************************/
+                        if (extInfo != null && extInfo.getJSONObject("deliveryInfo") != null) {
+                            JSONObject toAddress = extInfo.getJSONObject("deliveryInfo").getJSONObject("toAddress");
+                            XtApproveBusinessEmail businessEmail = new XtApproveBusinessEmail();
 
-                        if (formJson != null) {//判断有表单数据
-                            //不对接产品表单按数据存库
-                            List<XtApproveBusinessXmlConfig> xmlConfigs = xmlConfigService.getBaseMapper().selectList(new QueryWrapper<XtApproveBusinessXmlConfig>()
-                                    .eq("ITEM_ID", itemId));
-                            Map<String, Object> params = new HashMap<>();
-                            String[] colums = new String[xmlConfigs.size()];
-                            for (int i = 0; i < xmlConfigs.size(); i++) {
-                                if ("table".equals(xmlConfigs.get(i).getType())) {
-                                    //将表名插入map
-                                    params.put("tableName", xmlConfigs.get(i).getXmlCode());
-                                } else if ("column".equals(xmlConfigs.get(i).getType())) {
-                                    //将字段插入数组
-                                    colums[i] = xmlConfigs.get(i).getXmlCode();
-                                    //将值遍历插入
-                                    if (StrUtil.isNotBlank(formJson.getString(colums[i]))) {
-                                        params.put(colums[i].toString(), formJson.getString(colums[i]));
-                                    } else {
-                                        if (!"onlineApplyId".equals(xmlConfigs.get(i).getXmlCode())) {
-                                            params.put(colums[i].toString(), "");
-                                        }
-                                    }
-                                    if ("idcard".equals(colums[i])) {
-                                        List<XtApproveBusinessSpecial> specials = businessSpecialService.getBaseMapper().selectList(
-                                                new QueryWrapper<XtApproveBusinessSpecial>().eq("IDCARD", formJson.get(colums[i]))
-                                        );
-                                        if (specials != null && specials.size() > 0) {
-                                            params.put("onlineApplyId", specials.get(0).getOnlineApplyId());
-                                        }
-                                    }
-
-
-                                } else if ("keyword".equals(xmlConfigs.get(i).getType())) {
-                                    //TODO 后续修改为可配置的关联关系
-                                    params.put("keyword", xmlConfigs.get(i).getXmlCode());
-                                    params.put("keywordvalue", projId);
-                                }
-                                //                            else if("custom".equals(xmlConfigs.get(i).getXmlType())){
-                                //                                params.put("custom",xmlConfigs.get(i).getXmlCode());
-                                //                                //将值遍历插入
-                                //                                if(StrUtil.isNotBlank(formJson.getString(colums[i]))){
-                                //                                    params.put("customvalue",formJson.getString(colums[i]));
-                                //                                }else{
-                                //                                    params.put("customvalue","");
-                                //                                }
-                                //                            }
-
-                            }
-                            //循环结束将字段名数组插入map
-                            params.put("columns", colums);
-                            //拼装完成后插入相关
-                            //                        xmlConfigService.selectXmlByCustomProvider(params);
-                            xmlConfigService.insertXmlDataProvider(params);
+                            businessEmail.setSeqId(java.util.UUID.randomUUID().toString());
+                            businessEmail.setBaseInfoId(baseInfoId);
+                            //                    businessEmail.setMailType(toAddress.getString("mailType"));
+                            businessEmail.setSendMailAddress(toAddress.getString("address"));
+                            businessEmail.setSendMailPostCode(toAddress.getString("postCode"));
+                            businessEmail.setSendMailName(toAddress.getString("name"));
+                            businessEmail.setSendMailProvince(toAddress.getString("provinceName"));
+                            businessEmail.setSendMailCity(toAddress.getString("cityName"));
+                            businessEmail.setSendMailCounty(toAddress.getString("districtName"));
+                            businessEmail.setSendMailPhone(toAddress.getString("phone"));
+                            xtApproveBusinessEmailService.saveOrUpdate(businessEmail);
                         }
 
-                    }
-                    /**********************************保存材料信息表**************************************/
-                    if (!suffInfoList.isEmpty()) {
-                        //保存材料信息
-                        //创建一个材料的list
-                        List<XtApproveBusinessMaterial> materials = new ArrayList<>();
 
-                        for (int i = 0; i < suffInfoList.size(); i++) {
-                            String attachName = suffInfoList.getJSONObject(i).getString("attachName");
-                            if(attachName!= null && attachName != "") {
-                                List<String> attachNameList = Arrays.asList(attachName.split(";"));
-                                String attachPath = suffInfoList.getJSONObject(i).getString("attachPath");
-                                List<String> attachPathList = Arrays.asList(attachPath.split(";"));
-                                for (int j = 0; j < attachNameList.size(); j++) {
-                                    XtApproveBusinessMaterial material = new XtApproveBusinessMaterial();
-                                    material.setSeqId(java.util.UUID.randomUUID().toString());
-                                    material.setSblshShort(projId);//业务办理编号
+                        //处理表单信息并动态保存
+                        if (StrUtil.isNotBlank(affFormInfo)) {//表单字段不为空
+                            JSONObject formJson = (JSONObject) JSONObject.parse(affFormInfo);
 
-                                    material.setStuffSeq(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("stuffUniId")) ? suffInfoList.getJSONObject(i).getString("stuffUniId") : "");//事项中心材料唯一编码
+                            if (formJson != null) {//判断有表单数据
+                                //不对接产品表单按数据存库
+                                List<XtApproveBusinessXmlConfig> xmlConfigs = xmlConfigService.getBaseMapper().selectList(new QueryWrapper<XtApproveBusinessXmlConfig>()
+                                        .eq("ITEM_ID", itemId));
+                                Map<String, Object> params = new HashMap<>();
+                                String[] colums = new String[xmlConfigs.size()];
+                                for (int i = 0; i < xmlConfigs.size(); i++) {
+                                    if ("table".equals(xmlConfigs.get(i).getType())) {
+                                        //将表名插入map
+                                        params.put("tableName", xmlConfigs.get(i).getXmlCode());
+                                    } else if ("column".equals(xmlConfigs.get(i).getType())) {
+                                        //将字段插入数组
+                                        colums[i] = xmlConfigs.get(i).getXmlCode();
+                                        //将值遍历插入
+                                        if (StrUtil.isNotBlank(formJson.getString(colums[i]))) {
+                                            params.put(colums[i].toString(), formJson.getString(colums[i]));
+                                        } else {
+                                            if (!"onlineApplyId".equals(xmlConfigs.get(i).getXmlCode())) {
+                                                params.put(colums[i].toString(), "");
+                                            }
+                                        }
+                                        if ("idcard".equals(colums[i])) {
+                                            List<XtApproveBusinessSpecial> specials = businessSpecialService.getBaseMapper().selectList(
+                                                    new QueryWrapper<XtApproveBusinessSpecial>().eq("IDCARD", formJson.get(colums[i]))
+                                            );
+                                            if (specials != null && specials.size() > 0) {
+                                                params.put("onlineApplyId", specials.get(0).getOnlineApplyId());
+                                            }
+                                        }
 
-                                    material.setClmc(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("stuffName")) ? suffInfoList.getJSONObject(i).getString("stuffName") : "");//材料名称
 
-                                    material.setWjlx(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("stuffType")) ? suffInfoList.getJSONObject(i).getString("stuffType") : "");
-
-                                    material.setCllx(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("fetchMode")) ? suffInfoList.getJSONObject(i).getString("fetchMode") : "");//材料类型
-
-                                    material.setClsl(Integer.valueOf(suffInfoList.getJSONObject(i).getString("stuffNum")));//材料数量
-
-                                    String attachNameSingle = attachNameList.get(j);
-                                    material.setAttachName(attachNameSingle);//材料标准名称
-                                    //                        material.setAttachId(suffInfoList.getJSONObject(i).getString("attachId"));
-                                    material.setRemark(suffInfoList.getJSONObject(i).getString("memo"));
-                                    if (StrUtil.isNotBlank(attachNameSingle) && attachNameSingle.contains(".")) {
-                                        material.setAttachType(attachNameSingle.substring(attachNameSingle.lastIndexOf(".") + 1));
+                                    } else if ("keyword".equals(xmlConfigs.get(i).getType())) {
+                                        //TODO 后续修改为可配置的关联关系
+                                        params.put("keyword", xmlConfigs.get(i).getXmlCode());
+                                        params.put("keywordvalue", projId);
                                     }
+                                    //                            else if("custom".equals(xmlConfigs.get(i).getXmlType())){
+                                    //                                params.put("custom",xmlConfigs.get(i).getXmlCode());
+                                    //                                //将值遍历插入
+                                    //                                if(StrUtil.isNotBlank(formJson.getString(colums[i]))){
+                                    //                                    params.put("customvalue",formJson.getString(colums[i]));
+                                    //                                }else{
+                                    //                                    params.put("customvalue","");
+                                    //                                }
+                                    //                            }
 
-                                    material.setAttachBody(attachPathList.get(j));//存储路径
-                                    material.setAttachPath(attachPathList.get(j));
-                                    String base64 = UploadUtil.getBase64ByFilePath(attachPathList.get(j));
-                                    material.setBase64(base64);
-                                    materials.add(material);
+                                }
+                                //循环结束将字段名数组插入map
+                                params.put("columns", colums);
+                                //拼装完成后插入相关
+                                //                        xmlConfigService.selectXmlByCustomProvider(params);
+                                xmlConfigService.insertXmlDataProvider(params);
+                            }
+
+                        }
+                        /**********************************保存材料信息表**************************************/
+                        if (!suffInfoList.isEmpty()) {
+                            //保存材料信息
+                            //创建一个材料的list
+                            List<XtApproveBusinessMaterial> materials = new ArrayList<>();
+
+                            for (int i = 0; i < suffInfoList.size(); i++) {
+                                String attachName = suffInfoList.getJSONObject(i).getString("attachName");
+                                if (attachName != null && attachName != "") {
+                                    List<String> attachNameList = Arrays.asList(attachName.split(";"));
+                                    String attachPath = suffInfoList.getJSONObject(i).getString("attachPath");
+                                    List<String> attachPathList = Arrays.asList(attachPath.split(";"));
+                                    for (int j = 0; j < attachNameList.size(); j++) {
+                                        XtApproveBusinessMaterial material = new XtApproveBusinessMaterial();
+                                        material.setSeqId(java.util.UUID.randomUUID().toString());
+                                        material.setSblshShort(projId);//业务办理编号
+
+                                        material.setStuffSeq(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("stuffUniId")) ? suffInfoList.getJSONObject(i).getString("stuffUniId") : "");//事项中心材料唯一编码
+
+                                        material.setClmc(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("stuffName")) ? suffInfoList.getJSONObject(i).getString("stuffName") : "");//材料名称
+
+                                        material.setWjlx(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("stuffType")) ? suffInfoList.getJSONObject(i).getString("stuffType") : "");
+
+                                        material.setCllx(StrUtil.isNotBlank(suffInfoList.getJSONObject(i).getString("fetchMode")) ? suffInfoList.getJSONObject(i).getString("fetchMode") : "");//材料类型
+
+                                        material.setClsl(Integer.valueOf(suffInfoList.getJSONObject(i).getString("stuffNum")));//材料数量
+
+                                        String attachNameSingle = attachNameList.get(j);
+                                        material.setAttachName(attachNameSingle);//材料标准名称
+                                        //                        material.setAttachId(suffInfoList.getJSONObject(i).getString("attachId"));
+                                        material.setRemark(suffInfoList.getJSONObject(i).getString("memo"));
+                                        if (StrUtil.isNotBlank(attachNameSingle) && attachNameSingle.contains(".")) {
+                                            material.setAttachType(attachNameSingle.substring(attachNameSingle.lastIndexOf(".") + 1));
+                                        }
+
+                                        material.setAttachBody(attachPathList.get(j));//存储路径
+                                        material.setAttachPath(attachPathList.get(j));
+                                        String base64 = UploadUtil.getBase64ByFilePath(attachPathList.get(j));
+                                        material.setBase64(base64);
+                                        materials.add(material);
+                                    }
                                 }
                             }
+                            materialService.saveBatch(materials, materials.size());
                         }
-                        materialService.saveBatch(materials, materials.size());
                     }
+
+
+                } else {
+                    throw new Exception("请联系管理员，获取事项垂管id为空！");
                 }
-
-
-
             }else{
-                throw new Exception("请联系管理员，获取事项垂管id为空！");
+                throw new Exception("请联系管理员，获取事项配置错误！事项编码为:"+sxbm);
             }
 
             return result;
