@@ -66,7 +66,7 @@ public class APIGetTokenTask {
                                    .eq("TYPE",CommonConstants.API_INPUT_NORMAL));
                    Map<String , Object> map   =   new HashMap<>();
                    apiInputInfos.stream().forEach(n->
-                        map.put(n.getKey(),n.getValue())
+                        map.put(n.getInputKey(),n.getInputValue())
                    );
                    //包括后台脚本处理
                    R jsonObject = inputInfoService.getServiceByMap(apiServiceCatalog.getId(),map,"");
@@ -81,7 +81,7 @@ public class APIGetTokenTask {
                         for (ApiOutputInfo apiOutputInfo:
                         apiOutputInfos) {
 
-                            redisCache.setCacheObject(CommonConstants.BACK_END_PROJECT+"_"+apiServiceCatalog.getId()+"_"+apiOutputInfo.getKey(), res.get(apiOutputInfo.getKey()),Integer.valueOf(getRemainSecondsOneDay(new Date())+""), TimeUnit.SECONDS);
+                            redisCache.setCacheObject(CommonConstants.BACK_END_PROJECT+"_"+apiServiceCatalog.getId()+"_"+apiOutputInfo.getOutputKey(), res.get(apiOutputInfo.getOutputKey()),Integer.valueOf(getRemainSecondsOneDay(new Date())+""), TimeUnit.SECONDS);
 
                         }
                    }

@@ -49,7 +49,7 @@ private static final long serialVersionUID = 1L;
      * $column.comments
      */
     @ApiModelProperty(value="$column.comments")
-    private String name;
+    private String catalogName;
     /**
      * $column.comments
      */
@@ -124,7 +124,7 @@ private static final long serialVersionUID = 1L;
      * 0已保存，1待审核，2已上线，3已下线，4已驳回，9已删除
      */
     @ApiModelProperty(value="0已保存，1待审核，2已上线，3已下线，4已驳回，9已删除")
-    private String status;
+    private String catalogStatus;
     /**
      * $column.comments
      */

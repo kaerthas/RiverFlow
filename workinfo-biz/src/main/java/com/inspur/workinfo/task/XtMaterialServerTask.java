@@ -102,7 +102,7 @@ public class XtMaterialServerTask {
                                                 callBean.setCalledSystemAddr(apiServiceCatalog.getUrl());
                                                 callBean.setCalledSystemCode(materialList.get(j).getStuffSeq());
                                                 callBean.setCallId(callId);
-                                                callBean.setCalledSystemName(apiServiceCatalog.getName());
+                                                callBean.setCalledSystemName(apiServiceCatalog.getCatalogName());
                                                 callBean.setCallTime(DateUtils.formatDate("yyyy-MM-dd HH:mm:ss", new Date()));
 
                                                 try {

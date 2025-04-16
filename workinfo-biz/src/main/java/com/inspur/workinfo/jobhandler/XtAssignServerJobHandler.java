@@ -125,8 +125,8 @@ public class XtAssignServerJobHandler extends IJobHandler {
                                                         Map<String,Object> objectMap = new HashMap<>();
                                                         for (ApiOutputInfo outputInfo:apiOutputInfos){
 
-                                                            logger.error("@@@@@@@@@@@@@@@@@@@@@@@"+res.getString(outputInfo.getKey()));
-                                                            objectMap.put(outputInfo.getKey(), res.getString(outputInfo.getKey()));
+                                                            logger.error("@@@@@@@@@@@@@@@@@@@@@@@"+res.getString(outputInfo.getOutputKey()));
+                                                            objectMap.put(outputInfo.getOutputKey(), res.getString(outputInfo.getOutputKey()));
                                                         }
                                                         //并进入下一个流程
                                                         this.businessCourseService.analysisCourseSuccess(sblshshort,objectMap);

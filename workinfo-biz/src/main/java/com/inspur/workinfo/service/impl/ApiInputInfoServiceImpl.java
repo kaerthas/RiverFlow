@@ -194,10 +194,10 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                 for(ApiInputInfo apiInputInfo:apiInputInfoListNormal){
                     //首先判断是否为常数
                     if ("1".equals(apiInputInfo.getIsConstant())){
-                        paramIn.put(apiInputInfo.getKey(),apiInputInfo.getValue());
+                        paramIn.put(apiInputInfo.getInputKey(),apiInputInfo.getInputValue());
                     }else{
                         if (param!=null) {
-                            paramIn.put(apiInputInfo.getKey(), param.getString(apiInputInfo.getKey()));
+                            paramIn.put(apiInputInfo.getInputKey(), param.getString(apiInputInfo.getInputKey()));
                         }
                     }
                 }
@@ -213,17 +213,17 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                     //首先判断是否为常数
                     if ("1".equals(apiInputInfo.getIsConstant())){
                         //在判断是否绑定缓存中的数据
-                        if (StrUtil.isBlank(apiInputInfo.getValue())&&StrUtil.isNotBlank(apiInputInfo.getTokenApiId())){
+                        if (StrUtil.isBlank(apiInputInfo.getInputValue())&&StrUtil.isNotBlank(apiInputInfo.getTokenApiId())){
 
-                            headerIn.put(apiInputInfo.getKey(),redisCache.getCacheObject(BACK_END_PROJECT+"_"+apiInputInfo.getTokenApiId()+"_"+apiInputInfo.getKey()));
+                            headerIn.put(apiInputInfo.getInputKey(),redisCache.getCacheObject(BACK_END_PROJECT+"_"+apiInputInfo.getTokenApiId()+"_"+apiInputInfo.getInputKey()));
                         }else{
 
-                            headerIn.put(apiInputInfo.getKey(),apiInputInfo.getValue());
+                            headerIn.put(apiInputInfo.getInputKey(),apiInputInfo.getInputValue());
                         }
 
                     }else{
                         if (header!=null) {
-                            headerIn.put(apiInputInfo.getKey(), header.getString(apiInputInfo.getKey()));
+                            headerIn.put(apiInputInfo.getInputKey(), header.getString(apiInputInfo.getInputKey()));
                         }
                     }
 
@@ -267,7 +267,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
             JSONObject param = new JSONObject();
             for(int i = 0;i<apiInputInfoList.size();i++){
                 String id = apiInputInfoList.get(i).getId();
-                String key = apiInputInfoList.get(i).getKey();
+                String key = apiInputInfoList.get(i).getInputKey();
                 param.fluentPutAll(getChildrenNode(id,key,apiInputInfoListAll,params));
             }
 
@@ -280,7 +280,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
             Map<String,Object> header = new HashMap<>();
             for(int i = 0;i<apiInputInfoListHeader.size();i++){
                 String id = apiInputInfoListHeader.get(i).getId();
-                String key = apiInputInfoListHeader.get(i).getKey();
+                String key = apiInputInfoListHeader.get(i).getInputKey();
                 header.putAll(getChildrenNode(id,key,apiInputInfoListAll,headers));
             }
 
@@ -316,7 +316,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
             if (parentId.equals(apiInputInfo.getParentId())) {
                 // 递归获取子节点下的子节点，即设置树控件中的children
                 flag = false;
-                JSONObject child = getChildrenNode(apiInputInfo.getId(),apiInputInfo.getKey(), paramList,value);
+                JSONObject child = getChildrenNode(apiInputInfo.getId(),apiInputInfo.getInputKey(), paramList,value);
                 baseParams.fluentPutAll(child);
             }
         }
@@ -351,8 +351,8 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
             List<ApiInputInfo> apiInputInfoListHeader = apiInputInfoService.list(queryWrapperHeader);
             Map<String,Object> headerParam = new HashMap<>();
             for(int i = 0;i<apiInputInfoListHeader.size();i++){
-                String value = apiInputInfoListHeader.get(i).getValue();
-                String key = apiInputInfoListHeader.get(i).getKey();
+                String value = apiInputInfoListHeader.get(i).getInputValue();
+                String key = apiInputInfoListHeader.get(i).getInputKey();
                 String tokenApiId = apiInputInfoListHeader.get(i).getTokenApiId();
                 headerParam.put(key,value);
                 if(!StringUtils.isEmpty(tokenApiId)){
@@ -375,7 +375,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                 for (int k = 0; k <apiInputInfoListParams.size() ; k++) {
                     //判断是否为常量,常量则放入
                     if ("1".equals(apiInputInfoListParams.get(k).getIsConstant()))
-                        param.put(apiInputInfoListParams.get(k).getKey(),apiInputInfoListParams.get(k).getValue());
+                        param.put(apiInputInfoListParams.get(k).getInputKey(),apiInputInfoListParams.get(k).getInputValue());
                 }
             }
 
@@ -417,7 +417,7 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                 List<ApiInputInfo> inputInfolist =  apiInputInfoService.list(queryWrapper);
                 if(inputInfolist!=null&&inputInfolist.size()==1){
 
-                    String xml  = param.getString(inputInfolist.get(0).getKey());
+                    String xml  = param.getString(inputInfolist.get(0).getInputKey());
 
                     return serviceHandle(apiId,xml,header,bsNum);
                 }else{

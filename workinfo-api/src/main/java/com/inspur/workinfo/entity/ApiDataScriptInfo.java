@@ -115,5 +115,5 @@ private static final long serialVersionUID = 1L;
      * 状态 0删除 1正常
      */
     @ApiModelProperty(value="状态 0删除 1正常")
-    private String status;
+    private String scriptStatus;
     }

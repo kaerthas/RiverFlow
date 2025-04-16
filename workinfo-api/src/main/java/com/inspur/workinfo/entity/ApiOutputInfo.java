@@ -49,12 +49,12 @@ private static final long serialVersionUID = 1L;
      * 键值
      */
     @ApiModelProperty(value="键值")
-    private String key;
+    private String outputKey;
     /**
      * 键值含义
      */
     @ApiModelProperty(value="键值含义")
-    private String name;
+    private String  outputName;
     /**
      * $column.comments
      */

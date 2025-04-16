@@ -49,7 +49,7 @@ private static final long serialVersionUID = 1L;
      * 键值
      */
     @ApiModelProperty(value="键值")
-    private String key;
+    private String inputKey;
     /**
      * 上层参数ID
      */
@@ -84,7 +84,7 @@ private static final long serialVersionUID = 1L;
      * 键值含义
      */
     @ApiModelProperty(value="键值含义")
-    private String name;
+    private String inputName;
     /**
      * 是否必填1是0否
      */
@@ -93,6 +93,6 @@ private static final long serialVersionUID = 1L;
 
 
     @ApiModelProperty(value="默认值")
-    private String value;
+    private String inputValue;
     }
 
