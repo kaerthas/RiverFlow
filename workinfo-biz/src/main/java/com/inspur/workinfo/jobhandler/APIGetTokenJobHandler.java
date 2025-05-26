@@ -84,9 +84,9 @@ public class APIGetTokenJobHandler extends IJobHandler {
                         //计算过期时间然后处理
                         for (ApiOutputInfo apiOutputInfo:
                                 apiOutputInfos) {
-
-                            redisCache.setCacheObject(CommonConstants.BACK_END_PROJECT+"_"+apiServiceCatalog.getId()+"_"+apiOutputInfo.getOutputKey(), res.get(apiOutputInfo.getOutputKey()),Integer.valueOf(getRemainSecondsOneDay(new Date())+""), TimeUnit.SECONDS);
-
+                            //redisCache.setCacheObject(CommonConstants.BACK_END_PROJECT+"_"+apiServiceCatalog.getId()+"_"+apiOutputInfo.getOutputKey(), res.get(apiOutputInfo.getOutputKey()),Integer.valueOf(getRemainSecondsOneDay(new Date())+""), TimeUnit.SECONDS);
+                            //token 2小时过期
+                            redisCache.setCacheObject(CommonConstants.BACK_END_PROJECT+"_"+apiServiceCatalog.getId()+"_"+apiOutputInfo.getOutputKey(), res.get(apiOutputInfo.getOutputKey()),Integer.valueOf(2), TimeUnit.HOURS);
                         }
                     }
                 }
@@ -106,6 +106,10 @@ public class APIGetTokenJobHandler extends IJobHandler {
             isok =true;
         }catch (Exception e){
             e.printStackTrace();
+            XxlJobLogger.log("【获取消息APIGetTokenTask】报错"+e.getMessage());
+            for (StackTraceElement element : e.getStackTrace()) {
+                XxlJobLogger.log(element.toString());
+            }
         }finally {
 
         }

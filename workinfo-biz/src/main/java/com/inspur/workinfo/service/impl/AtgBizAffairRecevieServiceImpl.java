@@ -344,8 +344,6 @@ public class AtgBizAffairRecevieServiceImpl implements AtgBizAffairRecevieServic
 
                                         material.setAttachBody(attachPathList.get(j));//存储路径
                                         material.setAttachPath(attachPathList.get(j));
-                                        String base64 = UploadUtil.getBase64ByFilePath(attachPathList.get(j));
-                                        material.setBase64(base64);
                                         materials.add(material);
                                     }
                                 }

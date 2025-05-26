@@ -33,6 +33,7 @@ import com.inspur.workinfo.util.DateUtils;
 import com.inspur.workinfo.util.HttpClientUtils;
 import com.inspur.workinfo.util.R;
 import com.inspur.workinfo.util.RedisCache;
+import com.xxl.job.core.log.XxlJobLogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -113,6 +114,8 @@ public class ApiInputInfoServiceImpl extends ServiceImpl<ApiInputInfoMapper, Api
                     if ("FORM".equals(method)) {
                         info = HttpClientUtils.sendFormPostWithHeader(url,JSON.parseObject(param),header,isInternet);
 
+                    }else if ("GET".equals(method)) {
+                        info = HttpClientUtils.sendGetWithHeader(url,JSONObject.parseObject(param),header,isInternet);
                     }else if ("POST".equals(method)) {
                         info = HttpClientUtils.sendPostWithHeader(url,param,header,isInternet);
                     }

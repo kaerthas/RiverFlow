@@ -95,7 +95,7 @@ private static final long serialVersionUID = 1L;
      * 条件关键字
      */
     @ApiModelProperty(value="条件关键字")
-    private String condition;
+    private String conditionName;
     /**
      * 下级条件值
      */

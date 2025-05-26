@@ -62,6 +62,7 @@ public class GroovyServiceImpl extends ServiceImpl<PreApasinfoMapper, PreApasinf
                     "import groovy.xml.Namespace\n" +
                     "import groovy.xml.QName\n"+
                     "import groovy.xml.XmlUtil\n"+
+                    "import com.inspur.workinfo.util.TokenSignUtils\n"+
                     "def GroovyScript(String args){" +
                         scriptString +
                     "}";

@@ -80,7 +80,7 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                 //查询当前环节流程配置
                 XtApproveItemflowConfig itemflowConfigOld = this.itemflowConfigService.getBaseMapper()
                         .selectById(businessCourseOld.getCurrentNodeId());
-                if (StrUtil.isBlank(itemflowConfigOld.getCondition())){
+                if (StrUtil.isBlank(itemflowConfigOld.getConditionName())){
                     //如果流程没有设置条件直接进入下一个流程
                     List<XtApproveItemflowConfig> itemflowConfigs = this.itemflowConfigService.getBaseMapper()
                             .selectList(new QueryWrapper<XtApproveItemflowConfig>()
@@ -134,7 +134,7 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                 //查询当前环节流程配置
                 XtApproveItemflowConfig itemflowConfigOld = this.itemflowConfigService.getBaseMapper()
                         .selectById(businessCourseOld.getCurrentNodeId());
-                if (StrUtil.isBlank(itemflowConfigOld.getCondition())){
+                if (StrUtil.isBlank(itemflowConfigOld.getConditionName())){
                     //如果流程没有设置条件直接进入下一个流程
                     List<XtApproveItemflowConfig> itemflowConfigs = this.itemflowConfigService.getBaseMapper()
                             .selectList(new QueryWrapper<XtApproveItemflowConfig>()
@@ -215,7 +215,7 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                 //查询当前环节流程配置
                 XtApproveItemflowConfig itemflowConfigOld = this.itemflowConfigService.getBaseMapper()
                         .selectById(businessCourseOld.getCurrentNodeId());
-                if (StrUtil.isBlank(itemflowConfigOld.getCondition())){
+                if (StrUtil.isBlank(itemflowConfigOld.getConditionName())){
                     //如果流程没有设置条件直接进入下一个流程
                     List<XtApproveItemflowConfig> itemflowConfigs = this.itemflowConfigService.getBaseMapper()
                             .selectList(new QueryWrapper<XtApproveItemflowConfig>()
@@ -277,7 +277,7 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
                     || CommonConstants.XT_BUSINESS_GET_ACCEPT.equals(businessCourseOld.getCurrentNodeCode())) {
                 //TODO 暂时写死 后期通过反射获取
 //                        Class clazz = XtApproveBusinessAccept.class;
-//                        clazz.getField(itemflowConfigOld.getCondition());
+//                        clazz.getField(itemflowConfigOld.getConditionName());
 
                 XtApproveBusinessAccept businessAccept = businessAcceptService.getBaseMapper().selectOne(new QueryWrapper<XtApproveBusinessAccept>()
                         .eq("SBLSH_SHORT", sblshShort));
@@ -336,7 +336,7 @@ public class XtApproveBusinessCourseServiceImpl extends ServiceImpl<XtApproveBus
             Map<String , Object> item = itemflowConfigService.getImportantXtMessage(itemflowConfigOld,sblshShort);
             //拿出sql语句
             JSONObject itemJson = (JSONObject) item.get(CommonConstants.XT_BUSINESS_XML);
-            String tableName  =  itemflowConfigOld.getCondition();
+            String tableName  =  itemflowConfigOld.getConditionName();
 
             //条件
             String value  =   itemJson.get(tableName)!=null?itemJson.get(tableName).toString():"";
