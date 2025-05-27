@@ -8,7 +8,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.inspur.workinfo.config.PropertyConfig;
 import com.inspur.workinfo.constant.CommonConstants;
+import com.inspur.workinfo.entity.XtApproveBusinessCourse;
 import com.inspur.workinfo.entity.XtApproveBusinessinfo;
+import com.inspur.workinfo.entity.XtApproveItemflowConfig;
 import com.inspur.workinfo.service.*;
 import com.inspur.workinfo.util.RedisCache;
 import com.xxl.job.core.biz.model.ReturnT;
@@ -22,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 @JobHandler(value = "xtAcceptServerNewHandler")
@@ -41,6 +44,8 @@ public class XtAcceptServerNewHandler extends IJobHandler {
     private RedisCache redisCache;
     @Autowired
     PropertyConfig propertyConfig;
+    @Autowired
+    XtApproveItemflowConfigService xtApproveItemflowConfigService;
     @Override
     public ReturnT<String> execute(String param) throws Exception {
         // XxlJobLogger.log("Job 001 start timemark:"+new Date());
@@ -66,6 +71,29 @@ public class XtAcceptServerNewHandler extends IJobHandler {
                             String sblshShort  = businessinfoList.getRecords().get(i).getSblshShort();
                             String sxbm        = businessinfoList.getRecords().get(i).getSxbm();
                             String businessInfo = businessinfoList.getRecords().get(i).getBusinessInfo();
+
+                            //存在数据冗余问题，先查流程，流程出现问题就不解析
+                            XtApproveBusinessCourse businessCourseOld = this.courseService.getBaseMapper().selectOne(new QueryWrapper<XtApproveBusinessCourse>()
+                                    .eq("ACTIVE","1")
+                                    .eq("SBLSH_SHORT",sblshShort));
+                            if (businessCourseOld==null){
+                                throw new Exception("环节配置失败，初始化信息失败！");
+                            }else {
+                                XtApproveItemflowConfig itemflowConfigOld = this.xtApproveItemflowConfigService.getBaseMapper()
+                                        .selectById(businessCourseOld.getCurrentNodeId());
+                                if (StrUtil.isBlank(itemflowConfigOld.getConditionName())) {
+                                    //如果流程没有设置条件直接进入下一个流程
+                                    List<XtApproveItemflowConfig> itemflowConfigs = this.xtApproveItemflowConfigService.getBaseMapper()
+                                            .selectList(new QueryWrapper<XtApproveItemflowConfig>()
+                                                    .eq("PARENT_ID", businessCourseOld.getCurrentNodeId())
+                                                    .ne("CONDITION_TYPE", CommonConstants.XT_ITEM_CONDITION_ERROR));
+                                    //判断流程是否唯一
+                                    if (itemflowConfigs != null && itemflowConfigs.size() == 1) {
+                                    }else {
+                                        throw new Exception("流程配置错误，事项itemid为"+itemflowConfigOld.getSxbm());
+                                    }
+                                }
+                            }
 
                             //分析数据办件信息字段，需要创建协同办件基本表XtApproveBusinessBase
                             //1.解析数据业务businessInfo中信息存到相关库表结构中
