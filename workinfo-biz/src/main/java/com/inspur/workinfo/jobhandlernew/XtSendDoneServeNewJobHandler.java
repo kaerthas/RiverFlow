@@ -56,29 +56,36 @@ public class XtSendDoneServeNewJobHandler  extends IJobHandler {
             //如果是空的先将数据插入
             redisCache.setCacheObject(CommonConstants.XT_BUSINESS_SEND_DONE_NEW_REDIS,uuid);
             try{
-                Page page = new Page(1,50);
-                IPage<XtApproveBusinessCourse> businessCourseOld = businessCourseService.getBaseMapper()
-                        .selectPage(page, new QueryWrapper<XtApproveBusinessCourse>()
-                                .eq("ACTIVE","1")
-                                .eq("CURRENT_NODE_CODE",CommonConstants.XT_BUSINESS_SEND_DONE));
-                for (int i = 0; i <businessCourseOld.getRecords().size() ; i++) {
-                    String sblshShort  = businessCourseOld.getRecords().get(i).getSblshShort();
+                int limit = 50;//限定每次查询的数量
+                QueryWrapper<XtApproveBusinessCourse> queryWrapper = new QueryWrapper<XtApproveBusinessCourse>()
+                        .eq("ACTIVE", "1")
+                        .eq("CURRENT_NODE_CODE", CommonConstants.XT_BUSINESS_SEND_DONE);
+                int XtApproveBusinessCoursesCount = businessCourseService.count(queryWrapper);
+                int XtApproveBusinessCoursesPageCount = XtApproveBusinessCoursesCount/limit;
+                for(int j = 1;j<XtApproveBusinessCoursesPageCount+2;j++) {
 
-                    try {
+                    Page page = new Page(j, limit);
+                    IPage<XtApproveBusinessCourse> businessCourseOld = businessCourseService.getBaseMapper()
+                            .selectPage(page,queryWrapper);
+                    for (int i = 0; i < businessCourseOld.getRecords().size(); i++) {
+                        String sblshShort = businessCourseOld.getRecords().get(i).getSblshShort();
 
-                        //1.查询当前数据是否已经交换到accept表中
-                        XtApproveBusinessDone businessAcceptBean = businessDoneService.getOne(new QueryWrapper<XtApproveBusinessDone>()
-                                .eq("SBLSH_SHORT",sblshShort));
-                        if (businessAcceptBean!=null){
-                            //2.调用协同61004接口推送受理信息
-                            JSONObject acceptData  =  affairRecevieService.sendBusinessFinish(businessAcceptBean);
-                        }else{
-                            logger.error("暂时未接收到办结信息！流水号为{}",sblshShort);
+                        try {
+
+                            //1.查询当前数据是否已经交换到accept表中
+                            XtApproveBusinessDone businessAcceptBean = businessDoneService.getOne(new QueryWrapper<XtApproveBusinessDone>()
+                                    .eq("SBLSH_SHORT", sblshShort));
+                            if (businessAcceptBean != null) {
+                                //2.调用协同61004接口推送受理信息
+                                JSONObject acceptData = affairRecevieService.sendBusinessFinish(businessAcceptBean);
+                            } else {
+                                logger.error("暂时未接收到办结信息！流水号为{}", sblshShort);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            logger.error("推送办结信息失败！流水号为{}", sblshShort);
+                            continue;
                         }
-                    }catch (Exception e){
-                        e.printStackTrace();
-                        logger.error("推送办结信息失败！流水号为{}",sblshShort);
-                        continue;
                     }
                 }
                 isflag=true;

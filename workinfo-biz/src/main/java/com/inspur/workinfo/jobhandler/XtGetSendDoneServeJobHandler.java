@@ -80,63 +80,70 @@ public class XtGetSendDoneServeJobHandler extends IJobHandler {
             //如果是空的先将数据插入
             redisCache.setCacheObject(CommonConstants.XT_BUSINESS_GET_DONE_REDIS,uuid);
             try{
-                Page page = new Page(1,400);
-                IPage<XtApproveBusinessCourse> businessCourseOld = businessCourseService.getBaseMapper()
-                        .selectPage(page, new QueryWrapper<XtApproveBusinessCourse>()
-                                .eq("ACTIVE","1")
-                                .eq("CURRENT_NODE_CODE",CommonConstants.XT_BUSINESS_GET_DONE));
-                for(int i = 0;i<businessCourseOld.getRecords().size(); i++) {
-                    XtApproveBusinessCourse detail = businessCourseOld.getRecords().get(i);
-                    try {
+                int limit = 400;//限定每次查询的数量
+                QueryWrapper<XtApproveBusinessCourse> queryWrapper = new QueryWrapper<XtApproveBusinessCourse>()
+                        .eq("ACTIVE", "1")
+                        .eq("CURRENT_NODE_CODE", CommonConstants.XT_BUSINESS_GET_DONE);
+                int XtApproveBusinessCoursesCount = businessCourseService.count(queryWrapper);
+                int XtApproveBusinessCoursesPageCount = XtApproveBusinessCoursesCount/limit;
+                for(int j = 1;j<XtApproveBusinessCoursesPageCount+2;j++) {
+
+                    Page page = new Page(j, limit);
+                    IPage<XtApproveBusinessCourse> businessCourseOld = businessCourseService.getBaseMapper()
+                            .selectPage(page, queryWrapper);
+                    for (int i = 0; i < businessCourseOld.getRecords().size(); i++) {
+                        XtApproveBusinessCourse detail = businessCourseOld.getRecords().get(i);
+                        try {
 //                businessCourseOld.getRecords().stream().forEach(detail->{
-                        //1.查询当前流程绑定的相关接口，或者数据库表
-                        XtApproveItemflowConfig itemflowConfig = itemflowConfigService.getById(detail.getCurrentNodeId());
-                        //判断流程是否存在
-                        if (itemflowConfig != null) {
-                            //判断是否绑定接口
-                            if ("0".equals(itemflowConfig.getExchangeType())) {
+                            //1.查询当前流程绑定的相关接口，或者数据库表
+                            XtApproveItemflowConfig itemflowConfig = itemflowConfigService.getById(detail.getCurrentNodeId());
+                            //判断流程是否存在
+                            if (itemflowConfig != null) {
+                                //判断是否绑定接口
+                                if ("0".equals(itemflowConfig.getExchangeType())) {
 
-                                //Map作为请求进度的默认入参
+                                    //Map作为请求进度的默认入参
 
-                                try {
-                                    Map<String, Object> map = itemflowConfigService.getImportantXtMessage(itemflowConfig, detail.getSblshShort());
+                                    try {
+                                        Map<String, Object> map = itemflowConfigService.getImportantXtMessage(itemflowConfig, detail.getSblshShort());
 
-                                    R result = apiInputInfoService.getServiceByMap(itemflowConfig.getApiId(), map, detail.getSblshShort());
-                                    if (result.getCode() == 0) {//0表示成功
-                                        Object res = result.getData();
-                                        JSONObject resObj = JSONObject.parseObject(res.toString());
-                                        businessDoneService.saveFormApi(resObj, detail.getSblshShort());
-                                    } else {
-                                        logger.error("接口查询失败，获取消息XtGetAcceptServerTask失败！");
+                                        R result = apiInputInfoService.getServiceByMap(itemflowConfig.getApiId(), map, detail.getSblshShort());
+                                        if (result.getCode() == 0) {//0表示成功
+                                            Object res = result.getData();
+                                            JSONObject resObj = JSONObject.parseObject(res.toString());
+                                            businessDoneService.saveFormApi(resObj, detail.getSblshShort());
+                                        } else {
+                                            logger.error("接口查询失败，获取消息XtGetAcceptServerTask失败！");
+                                        }
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
                                     }
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
 
 
-                            } else {//判断是否绑定数据库表
-                                //获取绑定关系表对应
-                                //抽出通用方法
-                                JSONObject dataExchangeObj = apiDataTableExchangeService.analysisDataExchange(itemflowConfig, detail.getSblshShort());
-                                if (!CommonConstants.API_SUCCESS.equals(dataExchangeObj.getString("code"))) {
-                                    logger.error("查询失败，获取消息XtGetSendDoneServeTask失败！");
-                                } else {
-                                    List<Map<String, Object>> list = (List<Map<String, Object>>) dataExchangeObj.get("data");
-                                    String tableId = (String) dataExchangeObj.get("tableId");
-                                    //数据保存结果信息表 下一环节为发送结果物
-                                    businessDoneService.saveFromTable(list, detail, tableId);
+                                } else {//判断是否绑定数据库表
+                                    //获取绑定关系表对应
+                                    //抽出通用方法
+                                    JSONObject dataExchangeObj = apiDataTableExchangeService.analysisDataExchange(itemflowConfig, detail.getSblshShort());
+                                    if (!CommonConstants.API_SUCCESS.equals(dataExchangeObj.getString("code"))) {
+                                        logger.error("查询失败，获取消息XtGetSendDoneServeTask失败！");
+                                    } else {
+                                        List<Map<String, Object>> list = (List<Map<String, Object>>) dataExchangeObj.get("data");
+                                        String tableId = (String) dataExchangeObj.get("tableId");
+                                        //数据保存结果信息表 下一环节为发送结果物
+                                        businessDoneService.saveFromTable(list, detail, tableId);
+                                    }
                                 }
+                            } else {
+                                logger.error("当前流程不存在请联系管理员处理");
                             }
-                        } else {
-                            logger.error("当前流程不存在请联系管理员处理");
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                            logger.error("流水号：" + detail.getSblshShort());
+                            logger.error(ex.getMessage(), ex);
+                            continue;
                         }
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                        logger.error("流水号："+detail.getSblshShort());
-                        logger.error(ex.getMessage(),ex);
-                        continue;
-                    }
 //                });
+                    }
                 }
                 isok =true;
             }catch (Exception e){

@@ -10,6 +10,7 @@ import com.inspur.workinfo.config.PropertyConfig;
 import com.inspur.workinfo.constant.CommonConstants;
 import com.inspur.workinfo.entity.XtApproveBusinessAccept;
 import com.inspur.workinfo.entity.XtApproveBusinessCourse;
+import com.inspur.workinfo.entity.XtApproveBusinessinfo;
 import com.inspur.workinfo.service.*;
 import com.inspur.workinfo.util.RedisCache;
 import com.xxl.job.core.biz.model.ReturnT;
@@ -67,27 +68,33 @@ public class XtSendAcceptServerNewJobHandler extends IJobHandler {
             //如果是空的先将数据插入
             redisCache.setCacheObject(CommonConstants.XT_BUSINESS_SEND_ACCEPT_NEW_REDIS,uuid);
             try{
-                Page page = new Page(1,50);
-                IPage<XtApproveBusinessCourse> businessCourseOld = businessCourseService.getBaseMapper()
-                        .selectPage(page, new QueryWrapper<XtApproveBusinessCourse>()
-                                .eq("ACTIVE","1")
-                                .eq("CURRENT_NODE_CODE",CommonConstants.XT_BUSINESS_SEND_ACCEPT));
-                for (int i = 0; i <businessCourseOld.getRecords().size() ; i++) {
-                    try{
-                        String sblshShort  = businessCourseOld.getRecords().get(i).getSblshShort();
-                        //1.查询当前数据是否已经交换到accept表中
-                        XtApproveBusinessAccept businessAcceptBean = businessAcceptService.getOne(new QueryWrapper<XtApproveBusinessAccept>()
-                                .eq("SBLSH_SHORT",sblshShort));
-                        if (businessAcceptBean!=null){
-                            //调用数浙相关接口完成受理信息的调用
-                            JSONObject acceptData  =  affairRecevieService.sendBusinessAccept(businessAcceptBean);
-                        }else{
-                            throw new Exception("暂时未接收到受理信息！流水号为"+sblshShort);
+                int limit = 50;//限定每次查询的数量
+                QueryWrapper<XtApproveBusinessCourse> queryWrapper = new QueryWrapper<XtApproveBusinessCourse>()
+                        .eq("ACTIVE","1")
+                        .eq("CURRENT_NODE_CODE",CommonConstants.XT_BUSINESS_SEND_ACCEPT);
+                int XtApproveBusinessCoursesCount = businessCourseService.count(queryWrapper);
+                int XtApproveBusinessCoursesPageCount = XtApproveBusinessCoursesCount/limit;
+                for(int j = 1;j<XtApproveBusinessCoursesPageCount+2;j++) {
+                    Page page = new Page(j, limit);
+                    IPage<XtApproveBusinessCourse> businessCourseOld = businessCourseService.getBaseMapper()
+                            .selectPage(page, queryWrapper);
+                    for (int i = 0; i < businessCourseOld.getRecords().size(); i++) {
+                        try {
+                            String sblshShort = businessCourseOld.getRecords().get(i).getSblshShort();
+                            //1.查询当前数据是否已经交换到accept表中
+                            XtApproveBusinessAccept businessAcceptBean = businessAcceptService.getOne(new QueryWrapper<XtApproveBusinessAccept>()
+                                    .eq("SBLSH_SHORT", sblshShort));
+                            if (businessAcceptBean != null) {
+                                //调用数浙相关接口完成受理信息的调用
+                                JSONObject acceptData = affairRecevieService.sendBusinessAccept(businessAcceptBean);
+                            } else {
+                                throw new Exception("暂时未接收到受理信息！流水号为" + sblshShort);
+                            }
+                        } catch (Exception e) {
+                            logger.error("推送受理信息报错" + e.getMessage());
+                            e.printStackTrace();
+                            continue;
                         }
-                    }catch (Exception e){
-                        logger.error("推送受理信息报错"+e.getMessage());
-                        e.printStackTrace();
-                        continue;
                     }
                 }
                 isflag = true;

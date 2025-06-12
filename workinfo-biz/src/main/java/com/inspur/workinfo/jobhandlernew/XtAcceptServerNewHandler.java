@@ -58,67 +58,74 @@ public class XtAcceptServerNewHandler extends IJobHandler {
             //如果是空的先将数据插入
             redisCache.setCacheObject(CommonConstants.XT_BUSINESS_INFO_NEW_REDIS, uuid);
             try {
-                Page page = new Page(1,400);
-                IPage<XtApproveBusinessinfo> businessinfoList = businessInfoService.getBaseMapper()
-                        .selectPage(page, new QueryWrapper<XtApproveBusinessinfo>()
-                                .eq("IS_USED", "0"));
-                if (businessinfoList != null && businessinfoList.getTotal() > 0) {
-                    //流方式循环调用相关接口
-                    for (int i = 0; i <businessinfoList.getRecords().size() ; i++) {
 
-                        try {
-                            XtApproveBusinessinfo businessinfo =  businessinfoList.getRecords().get(i);
-                            String sblshShort  = businessinfoList.getRecords().get(i).getSblshShort();
-                            String sxbm        = businessinfoList.getRecords().get(i).getSxbm();
-                            String businessInfo = businessinfoList.getRecords().get(i).getBusinessInfo();
+                int limit = 400;//限定每次查询的数量
+                QueryWrapper<XtApproveBusinessinfo> queryWrapper = new QueryWrapper<XtApproveBusinessinfo>()
+                        .eq("IS_USED", "0");
+                int xtApproveBusinessinfosCount = businessInfoService.count(queryWrapper);
+                int xtApproveBusinessinfossPageCount = xtApproveBusinessinfosCount/limit;
+                for(int j = 1;j<xtApproveBusinessinfossPageCount+2;j++) {
+                    Page page = new Page(j, limit);
+                    IPage<XtApproveBusinessinfo> businessinfoList = businessInfoService.getBaseMapper()
+                            .selectPage(page, queryWrapper);
+                    if (businessinfoList != null && businessinfoList.getTotal() > 0) {
+                        //流方式循环调用相关接口
+                        for (int i = 0; i < businessinfoList.getRecords().size(); i++) {
 
-                            //存在数据冗余问题，先查流程，流程出现问题就不解析
-                            XtApproveBusinessCourse businessCourseOld = this.courseService.getBaseMapper().selectOne(new QueryWrapper<XtApproveBusinessCourse>()
-                                    .eq("ACTIVE","1")
-                                    .eq("SBLSH_SHORT",sblshShort));
-                            if (businessCourseOld==null){
-                                throw new Exception("环节配置失败，初始化信息失败！");
-                            }else {
-                                XtApproveItemflowConfig itemflowConfigOld = this.xtApproveItemflowConfigService.getBaseMapper()
-                                        .selectById(businessCourseOld.getCurrentNodeId());
-                                if (StrUtil.isBlank(itemflowConfigOld.getConditionName())) {
-                                    //如果流程没有设置条件直接进入下一个流程
-                                    List<XtApproveItemflowConfig> itemflowConfigs = this.xtApproveItemflowConfigService.getBaseMapper()
-                                            .selectList(new QueryWrapper<XtApproveItemflowConfig>()
-                                                    .eq("PARENT_ID", businessCourseOld.getCurrentNodeId())
-                                                    .ne("CONDITION_TYPE", CommonConstants.XT_ITEM_CONDITION_ERROR));
-                                    //判断流程是否唯一
-                                    if (itemflowConfigs != null && itemflowConfigs.size() == 1) {
-                                    }else {
-                                        throw new Exception("流程配置错误，事项itemid为"+itemflowConfigOld.getSxbm());
+                            try {
+                                XtApproveBusinessinfo businessinfo = businessinfoList.getRecords().get(i);
+                                String sblshShort = businessinfoList.getRecords().get(i).getSblshShort();
+                                String sxbm = businessinfoList.getRecords().get(i).getSxbm();
+                                String businessInfo = businessinfoList.getRecords().get(i).getBusinessInfo();
+
+                                //存在数据冗余问题，先查流程，流程出现问题就不解析
+                                XtApproveBusinessCourse businessCourseOld = this.courseService.getBaseMapper().selectOne(new QueryWrapper<XtApproveBusinessCourse>()
+                                        .eq("ACTIVE", "1")
+                                        .eq("SBLSH_SHORT", sblshShort));
+                                if (businessCourseOld == null) {
+                                    throw new Exception("环节配置失败，初始化信息失败！");
+                                } else {
+                                    XtApproveItemflowConfig itemflowConfigOld = this.xtApproveItemflowConfigService.getBaseMapper()
+                                            .selectById(businessCourseOld.getCurrentNodeId());
+                                    if (StrUtil.isBlank(itemflowConfigOld.getConditionName())) {
+                                        //如果流程没有设置条件直接进入下一个流程
+                                        List<XtApproveItemflowConfig> itemflowConfigs = this.xtApproveItemflowConfigService.getBaseMapper()
+                                                .selectList(new QueryWrapper<XtApproveItemflowConfig>()
+                                                        .eq("PARENT_ID", businessCourseOld.getCurrentNodeId())
+                                                        .ne("CONDITION_TYPE", CommonConstants.XT_ITEM_CONDITION_ERROR));
+                                        //判断流程是否唯一
+                                        if (itemflowConfigs != null && itemflowConfigs.size() == 1) {
+                                        } else {
+                                            throw new Exception("流程配置错误，事项itemid为" + itemflowConfigOld.getSxbm());
+                                        }
                                     }
                                 }
+
+                                //分析数据办件信息字段，需要创建协同办件基本表XtApproveBusinessBase
+                                //1.解析数据业务businessInfo中信息存到相关库表结构中
+                                JSONObject applyJsonData = affairRecevieService.analysisApplyData(sxbm, businessInfo);
+                                if (!CommonConstants.API_SUCCESS.equals(applyJsonData.getString("code"))) {
+                                    throw new Exception("解析业务申办，预受理，受理数据失败！  " + applyJsonData.getString("error"));
+                                }
+
+                                //2.处理流程，保存环节信息
+                                //先查询环节信息 激活的ACTIVE
+                                JSONObject courseJsonData = this.courseService.analysisCourse(sblshShort);
+                                if (!CommonConstants.API_SUCCESS.equals(courseJsonData.getString("code"))) {
+                                    throw new Exception("保存过程信息失败！" + courseJsonData.getString("error"));
+                                }
+
+                                //3.最终处理is_used为1
+                                businessinfo.setIsUsed("1");
+                                businessInfoService.saveOrUpdate(businessinfo);
+
+
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                //如果捕获到异常直接跳过，进入下次循环
+                                continue;
+
                             }
-
-                            //分析数据办件信息字段，需要创建协同办件基本表XtApproveBusinessBase
-                            //1.解析数据业务businessInfo中信息存到相关库表结构中
-                            JSONObject applyJsonData = affairRecevieService.analysisApplyData(sxbm, businessInfo);
-                            if (!CommonConstants.API_SUCCESS.equals(applyJsonData.getString("code"))) {
-                                throw new Exception("解析业务申办，预受理，受理数据失败！  " + applyJsonData.getString("error"));
-                            }
-
-                            //2.处理流程，保存环节信息
-                            //先查询环节信息 激活的ACTIVE
-                            JSONObject courseJsonData = this.courseService.analysisCourse(sblshShort);
-                            if (!CommonConstants.API_SUCCESS.equals(courseJsonData.getString("code"))) {
-                                throw new Exception("保存过程信息失败！" + courseJsonData.getString("error"));
-                            }
-
-                            //3.最终处理is_used为1
-                            businessinfo.setIsUsed("1");
-                            businessInfoService.saveOrUpdate(businessinfo);
-
-
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            //如果捕获到异常直接跳过，进入下次循环
-                            continue;
-
                         }
                     }
                 }
