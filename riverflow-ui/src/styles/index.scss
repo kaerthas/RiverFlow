@@ -1,0 +1,57 @@
+// 全局样式入口
+
+// 主题色变量
+:root {
+  --rf-primary: #1677FF;
+  --rf-primary-light: #E6F4FF;
+  --rf-success: #52C41A;
+  --rf-warning: #FAAD14;
+  --rf-danger: #F5222D;
+  --rf-info: #722ED1;
+  --rf-text-main: #262626;
+  --rf-text-secondary: #595959;
+  --rf-text-muted: #8C8C8C;
+  --rf-border-color: #D9D9D9;
+  --rf-bg-page: #F0F2F5;
+  --rf-bg-card: #FFFFFF;
+  --rf-sidebar-width: 220px;
+  --rf-sidebar-collapsed-width: 64px;
+  --rf-header-height: 56px;
+}
+
+// 滚动条美化
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+// 通用工具类
+.rf-page {
+  padding: 20px;
+  min-height: calc(100vh - var(--rf-header-height));
+  background: var(--rf-bg-page);
+}
+
+.rf-card {
+  background: var(--rf-bg-card);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+}
+
+.rf-page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--rf-text-main);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

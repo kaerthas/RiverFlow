@@ -1,0 +1,30 @@
+{
+  "name": "riverflow-ui",
+  "version": "1.0.0",
+  "description": "RiverFlow · 河狸流程编排平台 - 前端工程",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0",
+    "pinia": "^2.1.7",
+    "element-plus": "^2.5.6",
+    "@element-plus/icons-vue": "^2.3.1",
+    "axios": "^1.6.7",
+    "@logicflow/core": "^1.2.18",
+    "@logicflow/extension": "^1.2.19",
+    "monaco-editor": "^0.47.0",
+    "js-cookie": "^3.0.5",
+    "dayjs": "^1.11.10",
+    "nprogress": "^0.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "vite": "^5.1.6",
+    "sass": "^1.72.0"
+  }
+}

@@ -1,4 +1,0 @@
-org.springframework.context.ApplicationContextInitializer=\
-    com.inspur.workinfo.init.ApplicationLoggerInitializer
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.inspur.workinfo.util.SpringContextHolder
