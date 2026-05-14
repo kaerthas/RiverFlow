@@ -1,3 +1,9 @@
 riverflow-api/target/
 .idea/
 riverflow-common/target/
+riverflow-ui/node_modules/
+
+riverflow-ui/dist/
+riverflow-admin/target/
+.idea
+riverflow-ui/package-lock.json
