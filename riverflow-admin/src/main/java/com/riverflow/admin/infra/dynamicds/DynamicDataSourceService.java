@@ -86,6 +86,17 @@ public class DynamicDataSourceService {
         }
     }
 
+    /**
+     * 根据数据源ID切换并执行SQL
+     */
+    public Object executeWithDsById(Long dsId, SqlExecutor executor) throws Exception {
+        Datasource ds = datasourceService.getById(dsId);
+        if (ds == null) {
+            throw new IllegalArgumentException("数据源不存在: dsId=" + dsId);
+        }
+        return executeWithDs(ds.getDsCode(), executor);
+    }
+
     @FunctionalInterface
     public interface SqlExecutor {
         Object execute() throws Exception;
