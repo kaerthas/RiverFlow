@@ -72,8 +72,8 @@
           :total="pagination.total"
           :page-sizes="[10, 20, 50, 100]"
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="loadList"
-          @current-change="loadList"
+          @update:page-size="loadList"
+          @update:current-page="loadList"
         />
       </div>
     </div>
@@ -180,7 +180,7 @@ async function loadList() {
   try {
     const res = await getTableList({ page: pagination.page, size: pagination.size })
     tableList.value = res.list || res.records || res || []
-    pagination.total = res.total || 0
+    pagination.total = Number(res.total) || 0
   } finally {
     loading.value = false
   }

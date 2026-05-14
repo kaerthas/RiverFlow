@@ -149,8 +149,8 @@
           :total="pagination.total"
           :page-sizes="[10, 20, 50]"
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSearch"
-          @current-change="handleSearch"
+          @update:page-size="handleSearch"
+          @update:current-page="handleSearch"
         />
       </div>
     </div>
@@ -231,7 +231,7 @@ async function handleSearch() {
     })
     if (res && res.records) {
       tableData.value = res.records
-      pagination.total = res.total
+      pagination.total = Number(res.total) || 0
     }
   } catch (e) {
     console.error('加载失败', e)

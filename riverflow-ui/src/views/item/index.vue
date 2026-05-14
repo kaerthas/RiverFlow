@@ -83,8 +83,8 @@
           :total="pagination.total"
           :page-sizes="[10, 20, 50, 100]"
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSearch"
-          @current-change="handleSearch"
+          @update:page-size="handleSearch"
+          @update:current-page="handleSearch"
         />
       </div>
     </div>
@@ -180,7 +180,7 @@ async function handleSearch() {
     }
     const res = await getItemList(params)
     tableData.value = res.list || res.records || res || []
-    pagination.total = res.total || 0
+    pagination.total = Number(res.total) || 0
   } finally {
     loading.value = false
   }

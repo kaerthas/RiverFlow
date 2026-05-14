@@ -57,6 +57,10 @@ service.interceptors.response.use(
  * 统一处理未授权：清除 Token 并跳转登录页
  */
 function handleUnauthorized() {
+  // 避免在登录页循环跳转
+  if (window.location.pathname === '/login') {
+    return
+  }
   const userStore = useUserStore()
   userStore.clearToken()
   // 使用 window.location 进行全页跳转，避免路由守卫拦截
