@@ -1,7 +1,7 @@
 package com.riverflow.admin.infra.dynamicds;
 
 import com.alibaba.druid.pool.DruidDataSource;
-import com.baomidou.dynamic.datasource.toolkit.DsScheduledExecutor;
+import com.baomidou.dynamic.datasource.DynamicRoutingDataSource;
 import com.baomidou.dynamic.datasource.toolkit.DynamicDataSourceContextHolder;
 import com.riverflow.admin.service.DatasourceService;
 import com.riverflow.api.entity.Datasource;
@@ -26,6 +26,8 @@ public class DynamicDataSourceService {
     private DatasourceService datasourceService;
     @Autowired
     private RiverFlowDynamicDataSourceProvider dataSourceProvider;
+    @Autowired
+    private DynamicRoutingDataSource dynamicRoutingDataSource;
 
     /**
      * 应用启动时加载所有启用的数据源
@@ -54,14 +56,14 @@ public class DynamicDataSourceService {
                 ds.getDsCode(), ds.getUrl(), ds.getUsername(),
                 ds.getPassword(), ds.getDriverClass(), ds.getDbType());
         // 使用 dynamic-datasource 的公共API添加
-        com.baomidou.dynamic.datasource.toolkit.DsScheduledExecutor.addDataSource(ds.getDsCode(), dataSource);
+        dynamicRoutingDataSource.addDataSource(ds.getDsCode(), dataSource);
     }
 
     /**
      * 移除数据源
      */
     public void removeDataSource(String dsCode) {
-        com.baomidou.dynamic.datasource.toolkit.DsScheduledExecutor.removeDataSource(dsCode);
+        dynamicRoutingDataSource.removeDataSource(dsCode);
     }
 
     /**

@@ -33,7 +33,14 @@ public class JwtUtil {
 
     @PostConstruct
     public void init() {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        // JJWT 0.11.x 要求 HMAC-SHA 密钥至少 256 bits (32 bytes)
+        if (keyBytes.length < 32) {
+            log.warn("JWT secret 长度不足 32 字节 (当前 {} 字节)，将自动生成安全密钥", keyBytes.length);
+            this.key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+        } else {
+            this.key = Keys.hmacShaKeyFor(keyBytes);
+        }
     }
 
     /**

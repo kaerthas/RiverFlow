@@ -1,6 +1,6 @@
 package com.riverflow.admin.infra.http;
 
-import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.HttpRequestBase;
 
 /**
  * 直连执行策略
@@ -8,7 +8,7 @@ import org.apache.http.client.methods.HttpUriRequest;
 public class DirectExecutionStrategy implements RequestExecutionStrategy {
 
     @Override
-    public void prepareRequest(HttpUriRequest request) {
+    public void prepareRequest(HttpRequestBase request) {
         // 直连模式无需额外处理
     }
 }

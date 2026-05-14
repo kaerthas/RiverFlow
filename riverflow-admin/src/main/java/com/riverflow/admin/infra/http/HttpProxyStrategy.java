@@ -2,7 +2,7 @@ package com.riverflow.admin.infra.http;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
-import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.config.RequestConfig;
 
 /**
@@ -20,7 +20,7 @@ public class HttpProxyStrategy implements RequestExecutionStrategy {
     }
 
     @Override
-    public void prepareRequest(HttpUriRequest request) {
+    public void prepareRequest(HttpRequestBase request) {
         HttpHost proxy = new HttpHost(proxyHost, proxyPort);
         RequestConfig config = RequestConfig.custom()
                 .setProxy(proxy)

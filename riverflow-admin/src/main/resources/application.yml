@@ -10,41 +10,46 @@ spring:
   application:
     name: riverflow-admin
 
-  # 数据源配置
+  # 数据源配置（dynamic-datasource 格式）
   datasource:
-    type: com.alibaba.druid.pool.DruidDataSource
-    druid:
-      driver-class-name: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://127.0.0.1:3306/riverflow?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
-      username: root
-      password: ENC(123456) # 使用Jasypt加密，实际部署时请替换
-      initial-size: 5
-      min-idle: 5
-      max-active: 20
-      max-wait: 60000
-      test-while-idle: true
-      test-on-borrow: false
-      test-on-return: false
-      validation-query: SELECT 1
-      stat-view-servlet:
-        enabled: true
-        url-pattern: /druid/*
-        login-username: admin
-        login-password: admin
+    dynamic:
+      primary: master
+      strict: false
+      datasource:
+        master:
+          url: jdbc:mysql://127.0.0.1:3306/riverflow?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+          username: root
+          password: java # 本地开发使用明文，生产环境请使用Jasypt加密
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          type: com.alibaba.druid.pool.DruidDataSource
+      druid:
+        initial-size: 5
+        min-idle: 5
+        max-active: 20
+        max-wait: 60000
+        test-while-idle: true
+        test-on-borrow: false
+        test-on-return: false
+        validation-query: SELECT 1
+        stat-view-servlet:
+          enabled: true
+          url-pattern: /druid/*
+          login-username: admin
+          login-password: admin
 
   # Redis配置
-  redis:
-    host: 127.0.0.1
-    port: 6379
-    password:
-    database: 0
-    timeout: 10s
-    lettuce:
-      pool:
-        min-idle: 0
-        max-idle: 8
-        max-active: 8
-        max-wait: -1ms
+#  redis:
+#    host: 127.0.0.1
+#    port: 6379
+#    password:
+#    database: 0
+#    timeout: 10s
+#    lettuce:
+#      pool:
+#        min-idle: 0
+#        max-idle: 8
+#        max-active: 8
+#        max-wait: -1ms
 
   # Jackson配置
   jackson:
@@ -83,7 +88,7 @@ jasypt:
 
 # JWT配置
 jwt:
-  secret: riverflow-jwt-secret-key-2024
+  secret: riverflow-jwt-secret-key-2024-spring-boot
   expiration: 86400000 # 24小时，单位毫秒
   header: Authorization
   token-prefix: "Bearer "

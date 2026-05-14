@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.riverflow.admin.service.*;
 import com.riverflow.api.entity.FlowInstance;
 import com.riverflow.api.entity.FlowLog;
+import com.riverflow.api.entity.FlowTask;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,7 +72,7 @@ public class MonitorController {
     @GetMapping("/pending-tasks")
     public R<Long> pendingTasks() {
         long count = flowTaskService.count(
-                new QueryWrapper<>()
+                new QueryWrapper<FlowTask>()
                         .eq("status", "pending")
                         .eq("del_flag", 0));
         return R.ok(count);

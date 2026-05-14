@@ -22,6 +22,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- SLF4J（Lombok @Slf4j 编译需要） -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Hutool -->
         <dependency>
             <groupId>cn.hutool</groupId>
@@ -41,11 +48,25 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Spring Web MVC（全局异常处理使用） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Servlet API（用于R响应） -->
         <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
             <optional>true</optional>
+        </dependency>
+
+        <!-- MyBatis Plus 注解（BaseEntity使用） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-annotation</artifactId>
+            <version>${mybatis-plus.version}</version>
         </dependency>
     </dependencies>
 </project>

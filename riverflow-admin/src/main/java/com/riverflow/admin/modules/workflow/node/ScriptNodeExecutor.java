@@ -47,7 +47,7 @@ public class ScriptNodeExecutor implements NodeExecutor {
 
         // 组装脚本变量
         Map<String, Object> variables = new HashMap<>();
-        variables.put("ctx", context.getVariables());
+        variables.put("ctx", context.toMap());
         variables.put("context", context);
         variables.put("instanceId", context.getInstanceId());
 

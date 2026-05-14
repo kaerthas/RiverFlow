@@ -16,6 +16,10 @@ import java.util.Map;
 @Slf4j
 public class XmlPostRequestExecutor extends HttpRequestExecutor {
 
+    public XmlPostRequestExecutor(CloseableHttpClient httpClient) {
+        super(httpClient);
+    }
+
     public XmlPostRequestExecutor(CloseableHttpClient httpClient, RequestExecutionStrategy strategy) {
         super(httpClient, strategy);
     }

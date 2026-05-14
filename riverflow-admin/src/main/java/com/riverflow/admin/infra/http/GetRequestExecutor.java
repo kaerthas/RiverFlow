@@ -16,6 +16,10 @@ import java.util.Map;
 @Slf4j
 public class GetRequestExecutor extends HttpRequestExecutor {
 
+    public GetRequestExecutor(CloseableHttpClient httpClient) {
+        super(httpClient);
+    }
+
     public GetRequestExecutor(CloseableHttpClient httpClient, RequestExecutionStrategy strategy) {
         super(httpClient, strategy);
     }

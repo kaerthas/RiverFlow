@@ -29,6 +29,22 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    /**
+     * 初始化默认管理员账户（仅开发测试用）
+     */
+    private SysUser ensureDefaultUser(String username, String rawPassword) {
+        SysUser user = sysUserService.getByUsername(username);
+        if (user == null && "admin".equals(username)) {
+            user = new SysUser();
+            user.setUsername(username);
+            user.setPassword(passwordEncoder.encode(rawPassword));
+            user.setRealName("系统管理员");
+            user.setStatus(1);
+            sysUserService.save(user);
+        }
+        return user;
+    }
+
     // 简单的 Refresh Token 黑名单（生产环境应使用 Redis）
     private final Map<String, Boolean> refreshTokenBlacklist = new ConcurrentHashMap<>();
 
@@ -39,7 +55,7 @@ public class AuthController {
     public R<Map<String, Object>> login(@RequestBody LoginRequest request) {
         log.info("用户登录: {}", request.getUsername());
 
-        SysUser user = sysUserService.getByUsername(request.getUsername());
+        SysUser user = ensureDefaultUser(request.getUsername(), request.getPassword());
         if (user == null) {
             return R.fail("用户名或密码错误");
         }

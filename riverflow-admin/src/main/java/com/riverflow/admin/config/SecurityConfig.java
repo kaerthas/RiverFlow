@@ -51,6 +51,7 @@ public class SecurityConfig {
             .authorizeRequests()
             // 允许匿名访问的路径
             .antMatchers("/login").permitAll()
+            .antMatchers("/refresh").permitAll()
             .antMatchers("/doc.html").permitAll()
             .antMatchers("/webjars/**").permitAll()
             .antMatchers("/swagger-resources/**").permitAll()
