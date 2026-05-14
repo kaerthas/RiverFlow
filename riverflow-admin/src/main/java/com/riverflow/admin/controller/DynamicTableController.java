@@ -91,7 +91,7 @@ public class DynamicTableController {
     /**
      * 根据动态表配置自动生成对外 SQL 接口
      * 生成 INSERT / SELECT / UPDATE / DELETE 四个接口注册到 wf_api_catalog
-     * 外部系统通过 /api/open/{apiCode} 调用
+     * 外部系统通过 /open/{apiCode} 调用
      */
     @PostMapping("/{id}/gen-api")
     public R<Map<String, Object>> generateApi(@PathVariable Long id,
@@ -163,7 +163,7 @@ public class DynamicTableController {
         Map<String, Object> result = new HashMap<>();
         result.put("tableCode", tableCode);
         result.put("generatedApis", generatedApis);
-        result.put("invokePrefix", "/api/open/");
+        result.put("invokePrefix", "/open/");
         result.put("contentType", contentType);
 
         log.info("动态表 [{}] 接口生成完成，共 {} 个接口，contentType={}", tableCode, generatedApis.size(), contentType);

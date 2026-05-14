@@ -51,7 +51,12 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="url" label="请求地址" min-width="280" class-name="cell-wrap" />
+        <el-table-column label="请求地址" min-width="280" class-name="cell-wrap">
+          <template #default="{ row }">
+            <span v-if="row.apiType === 'sql'" class="rf-code">/open/{{ row.apiCode }}</span>
+            <span v-else>{{ row.url }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="120" align="center">
           <template #default="{ row }">
             <el-switch v-model="row.status" :active-value="1" :inactive-value="0" @change="handleStatusChange(row)" />
@@ -126,8 +131,14 @@
                 </el-form-item>
               </el-col>
             </el-row>
-            <el-form-item label="请求地址" prop="url">
-              <el-input v-model="form.url" placeholder="http(s)://... 或 SQL 语句" />
+            <el-form-item v-if="form.apiType === 'sql'" label="SQL 语句" prop="url">
+              <el-input v-model="form.url" type="textarea" :rows="4" placeholder="请输入 SQL 语句，如 INSERT INTO..." />
+              <div v-if="form.apiCode" style="margin-top: 6px; font-size: 12px; color: var(--rf-text-muted)">
+                调用路径：<span class="rf-code">/open/{{ form.apiCode }}</span>
+              </div>
+            </el-form-item>
+            <el-form-item v-else label="请求地址" prop="url">
+              <el-input v-model="form.url" placeholder="http(s)://..." />
             </el-form-item>
             <el-row :gutter="16">
               <el-col :span="12">
@@ -459,7 +470,11 @@ async function handleStatusChange(row) {
 }
 
 function handleDebug(row) {
-  debugRow.value = row
+  debugRow.value = { ...row }
+  // SQL 类型接口的调试地址需走 /api 代理（Vite proxy 会 rewrite 成 /open/{apiCode}）
+  if (row.apiType === 'sql') {
+    debugRow.value.url = `/api/open/${row.apiCode}`
+  }
   debugDialogVisible.value = true
 }
 

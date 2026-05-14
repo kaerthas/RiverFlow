@@ -1,9 +1,11 @@
 package com.riverflow.admin.controller;
 
+import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
 import com.riverflow.admin.infra.http.HttpRequestService;
+import com.riverflow.admin.infra.openapi.NestedParamResolver;
 import com.riverflow.admin.service.ApiCatalogService;
 import com.riverflow.admin.service.DatasourceService;
 import com.riverflow.api.entity.ApiCatalog;
@@ -14,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,11 +26,11 @@ import java.util.regex.Pattern;
 /**
  * 通用开放接口执行器
  * 根据 wf_api_catalog 配置动态暴露接口，支持 sql / proxy 类型
- * 调用方式：POST /api/open/{apiCode} 或 GET /api/open/{apiCode}
+ * 调用方式：POST /open/{apiCode} 或 GET /open/{apiCode}
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/open")
+@RequestMapping("/open")
 public class OpenApiController {
 
     @Autowired
@@ -42,7 +45,16 @@ public class OpenApiController {
     private HttpRequestService httpRequestService;
 
     @PostMapping("/{apiCode}")
-    public R<Object> executePost(@PathVariable String apiCode, @RequestBody(required = false) Map<String, Object> params) {
+    public R<Object> executePost(@PathVariable String apiCode,
+                                 @RequestBody(required = false) Map<String, Object> bodyParams,
+                                 HttpServletRequest request) {
+        String contentType = request.getContentType();
+        Map<String, Object> params;
+        if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
+            params = NestedParamResolver.resolve(request);
+        } else {
+            params = bodyParams != null ? bodyParams : new HashMap<>();
+        }
         return execute(apiCode, params);
     }
 
@@ -165,16 +177,24 @@ public class OpenApiController {
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
             String key = matcher.group(1).trim();
-            Object value = params.get(key);
-            String replacement = value != null ? escapeSql(String.valueOf(value)) : "NULL";
+            // 支持嵌套路径取值，如 baseInfo.person.name
+            Object value = NestedParamResolver.getValueByPath(params, key);
+            String replacement = formatSqlValue(value);
             matcher.appendReplacement(sb, replacement);
         }
         matcher.appendTail(sb);
         return sb.toString();
     }
 
-    private String escapeSql(String value) {
-        if (value == null) return "NULL";
-        return "'" + value.replace("'", "''") + "'";
+    private String formatSqlValue(Object value) {
+        if (value == null) {
+            return "NULL";
+        }
+        // Map/List 自动序列化为 JSON 字符串（用于 JSON 类型字段）
+        if (value instanceof Map || value instanceof List) {
+            return "'" + JSON.toJSONString(value).replace("'", "''") + "'";
+        }
+        String str = String.valueOf(value);
+        return "'" + str.replace("'", "''") + "'";
     }
 }
