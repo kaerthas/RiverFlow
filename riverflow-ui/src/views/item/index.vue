@@ -1,73 +1,82 @@
 <template>
-  <div class="rf-page">
-    <div class="rf-page-title">
-      <el-icon><Document /></el-icon>
-      事项管理
+  <div class="rf-list-page">
+    <div class="rf-list-header">
+      <h1 class="title">事项管理</h1>
+      <p class="subtitle">事项信息维护与流程绑定</p>
+      <button class="btn-primary" @click="handleAdd">
+        <el-icon><Plus /></el-icon> 新增事项
+      </button>
     </div>
 
-    <div class="rf-card">
-      <!-- 搜索栏 -->
-      <el-form :model="queryForm" inline class="search-form">
-        <el-form-item label="区划">
-          <el-cascader
-            v-model="queryForm.regionCode"
-            :options="regionOptions"
-            :props="{ checkStrictly: true, value: 'regionCode', label: 'regionName' }"
-            placeholder="选择区划"
-            clearable
-            style="width: 240px"
-          />
-        </el-form-item>
-        <el-form-item label="事项编码">
-          <el-input v-model="queryForm.itemCode" placeholder="请输入事项编码" clearable />
-        </el-form-item>
-        <el-form-item label="事项名称">
-          <el-input v-model="queryForm.itemName" placeholder="请输入事项名称" clearable />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon> 查询
-          </el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
-
-      <!-- 操作栏 -->
-      <div class="toolbar">
-        <el-button type="primary" @click="handleAdd">
-          <el-icon><Plus /></el-icon> 新增事项
-        </el-button>
+    <div class="rf-search-bar">
+      <div class="search-fields">
+        <el-form :model="queryForm" inline>
+          <el-form-item label="区划">
+            <el-cascader
+              v-model="queryForm.regionCode"
+              :options="regionOptions"
+              :props="{ checkStrictly: true, value: 'regionCode', label: 'regionName' }"
+              placeholder="选择区划"
+              clearable
+              style="width: 240px"
+            />
+          </el-form-item>
+          <el-form-item label="事项编码">
+            <el-input v-model="queryForm.itemCode" placeholder="请输入事项编码" clearable />
+          </el-form-item>
+          <el-form-item label="事项名称">
+            <el-input v-model="queryForm.itemName" placeholder="请输入事项名称" clearable />
+          </el-form-item>
+        </el-form>
       </div>
+      <div class="search-actions">
+        <button class="btn-search" @click="handleSearch">
+          <el-icon><Search /></el-icon> 查询
+        </button>
+        <button class="btn-reset" @click="handleReset">重置</button>
+      </div>
+    </div>
 
-      <!-- 表格 -->
-      <el-table :data="tableData" stripe v-loading="loading" size="small">
-        <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column prop="itemCode" label="事项编码" width="160" />
-        <el-table-column prop="itemName" label="事项名称" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="regionName" label="所属区划" width="140" />
-        <el-table-column prop="catalogCode" label="国家基本编码" width="140" />
-        <el-table-column prop="serviceObj" label"办理对象" width="100">
+    <div class="rf-table-card">
+      <el-table :data="tableData" v-loading="loading" class="rf-data-table" :fit="false" empty-text="暂无数据">
+        <el-table-column type="index" label="#" width="52" align="center" />
+        <el-table-column prop="itemCode" label="事项编码" width="240">
           <template #default="{ row }">
-            <el-tag v-if="row.serviceObj === 0" size="small">个人</el-tag>
-            <el-tag v-else type="success" size="small">法人</el-tag>
+            <span class="rf-code">{{ row.itemCode }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="80" align="center">
+        <el-table-column prop="itemName" label="事项名称" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="regionName" label="所属区划" width="160" />
+        <el-table-column prop="catalogCode" label="国家基本编码" width="180" />
+        <el-table-column prop="serviceObj" label="办理对象" width="110">
+          <template #default="{ row }">
+            <span v-if="row.serviceObj === 0" class="rf-tag manual">个人</span>
+            <span v-else class="rf-tag event">法人</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="120" align="center">
           <template #default="{ row }">
             <el-switch v-model="row.status" :active-value="1" :inactive-value="0" @change="handleStatusChange(row)" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="primary" size="small" @click="handleBindFlow(row)">绑定流程</el-button>
-            <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            <div class="rf-actions">
+              <button class="action-btn primary" @click="handleEdit(row)">
+                <el-icon><Edit /></el-icon>
+              </button>
+              <button class="action-btn success" @click="handleBindFlow(row)">
+                <el-icon><Link /></el-icon>
+              </button>
+              <button class="action-btn danger" @click="handleDelete(row)">
+                <el-icon><Delete /></el-icon>
+              </button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
 
-      <!-- 分页 -->
-      <div class="pagination">
+      <div class="rf-pagination">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.size"
@@ -81,8 +90,8 @@
     </div>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" destroy-on-close>
-      <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" destroy-on-close class="edit-dialog">
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px" class="edit-form">
         <el-form-item label="所属区划" prop="regionCode">
           <el-cascader
             v-model="form.regionCode"
@@ -119,6 +128,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { getItemList, createItem, updateItem, deleteItem, getRegionTree } from '@/api/item'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -133,7 +143,7 @@ const queryForm = reactive({
 
 const form = reactive({
   id: null,
-  regionCode: '',
+  regionCode: [],
   itemCode: '',
   itemName: '',
   catalogCode: '',
@@ -141,7 +151,7 @@ const form = reactive({
 })
 
 const formRules = {
-  regionCode: [{ required: true, message: '请选择区划', trigger: 'change' }],
+  regionCode: [{ required: true, message: '请选择区划', trigger: 'change', type: 'array' }],
   itemCode: [{ required: true, message: '请输入事项编码', trigger: 'blur' }],
   itemName: [{ required: true, message: '请输入事项名称', trigger: 'blur' }]
 }
@@ -152,86 +162,109 @@ const pagination = reactive({
   total: 0
 })
 
-const regionOptions = ref([
-  { regionCode: '610000', regionName: '陕西省', children: [
-    { regionCode: '610100', regionName: '西安市', children: [
-      { regionCode: '610102', regionName: '新城区' },
-      { regionCode: '610103', regionName: '碑林区' },
-      { regionCode: '610104', regionName: '莲湖区' }
-    ]},
-    { regionCode: '610200', regionName: '铜川市' }
-  ]}
-])
+const regionOptions = ref([])
 
-const tableData = ref([
-  { id: 1, itemCode: '610000-001', itemName: '残疾人证新办', regionName: '陕西省/西安市/新城区', catalogCode: 'A001', serviceObj: 0, status: 1 },
-  { id: 2, itemCode: '610000-002', itemName: '困难残疾人生活补贴', regionName: '陕西省/西安市/碑林区', catalogCode: 'A002', serviceObj: 0, status: 1 },
-  { id: 3, itemCode: '610000-003', itemName: '火化证明办理', regionName: '陕西省/铜川市', catalogCode: 'B001', serviceObj: 0, status: 1 }
-])
+const tableData = ref([])
 
-function handleSearch() {
+async function handleSearch() {
   loading.value = true
-  setTimeout(() => { loading.value = false }, 500)
+  try {
+    const params = {
+      page: pagination.page,
+      size: pagination.size,
+      itemCode: queryForm.itemCode,
+      itemName: queryForm.itemName
+    }
+    if (queryForm.regionCode && queryForm.regionCode.length) {
+      params.regionCode = queryForm.regionCode[queryForm.regionCode.length - 1]
+    }
+    const res = await getItemList(params)
+    tableData.value = res.list || res.records || res || []
+    pagination.total = res.total || 0
+  } finally {
+    loading.value = false
+  }
 }
 
 function handleReset() {
   queryForm.regionCode = ''
   queryForm.itemCode = ''
   queryForm.itemName = ''
+  pagination.page = 1
   handleSearch()
 }
 
 function handleAdd() {
   dialogTitle.value = '新增事项'
-  Object.assign(form, { id: null, regionCode: '', itemCode: '', itemName: '', catalogCode: '', serviceObj: 0 })
+  Object.assign(form, { id: null, regionCode: [], itemCode: '', itemName: '', catalogCode: '', serviceObj: 0 })
   dialogVisible.value = true
 }
 
 function handleEdit(row) {
   dialogTitle.value = '编辑事项'
-  Object.assign(form, row)
+  // 区划回显为数组，简化处理直接用 regionCode
+  Object.assign(form, { ...row, regionCode: row.regionCode ? [row.regionCode] : [] })
   dialogVisible.value = true
 }
 
-function handleSubmit() {
-  formRef.value.validate((valid) => {
-    if (!valid) return
-    ElMessage.success('保存成功')
+async function handleSubmit() {
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
+  try {
+    const payload = {
+      ...form,
+      regionCode: Array.isArray(form.regionCode) ? form.regionCode[form.regionCode.length - 1] : form.regionCode
+    }
+    if (form.id) {
+      await updateItem(payload)
+      ElMessage.success('修改成功')
+    } else {
+      await createItem(payload)
+      ElMessage.success('新增成功')
+    }
     dialogVisible.value = false
     handleSearch()
-  })
+  } catch (error) {
+    // 错误已由 request 拦截器提示
+  }
 }
 
-function handleDelete(row) {
-  ElMessageBox.confirm(`确认删除事项「${row.itemName}」？`, '提示', { type: 'warning' }).then(() => {
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(`确认删除事项「${row.itemName}」？`, '提示', { type: 'warning' })
+    await deleteItem(row.id)
     ElMessage.success('删除成功')
     handleSearch()
-  })
+  } catch (e) {
+    // 取消或接口失败
+  }
 }
 
-function handleStatusChange(row) {
-  ElMessage.success(`事项已${row.status === 1 ? '启用' : '停用'}`)
+async function handleStatusChange(row) {
+  try {
+    await updateItem({ ...row, status: row.status })
+    ElMessage.success(`事项已${row.status === 1 ? '启用' : '停用'}`)
+  } catch (e) {
+    // 失败时回滚状态
+    row.status = row.status === 1 ? 0 : 1
+  }
 }
 
 function handleBindFlow(row) {
-  ElMessage.info(`正在为「${row.itemName}」绑定流程`)
+  ElMessage.info(`正在为「${row.itemName}」绑定流程（功能开发中）`)
+}
+
+async function loadRegionTree() {
+  try {
+    const res = await getRegionTree()
+    regionOptions.value = res || []
+  } catch (e) {
+    regionOptions.value = []
+  }
 }
 
 onMounted(() => {
+  loadRegionTree()
   handleSearch()
 })
 </script>
-
-<style scoped lang="scss">
-.search-form {
-  margin-bottom: 16px;
-}
-.toolbar {
-  margin-bottom: 16px;
-}
-.pagination {
-  margin-top: 16px;
-  display: flex;
-  justify-content: flex-end;
-}
-</style>

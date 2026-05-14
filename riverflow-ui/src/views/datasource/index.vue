@@ -30,29 +30,174 @@
         </el-col>
       </el-row>
     </div>
+
+    <!-- 新增/编辑弹窗 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="560px" destroy-on-close>
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="110px">
+        <el-form-item label="数据源编码" prop="dsCode">
+          <el-input v-model="form.dsCode" placeholder="如 master、biz_db" :disabled="!!form.id" />
+        </el-form-item>
+        <el-form-item label="数据源名称" prop="dsName">
+          <el-input v-model="form.dsName" placeholder="如 主库(MySQL)" />
+        </el-form-item>
+        <el-form-item label="数据库类型" prop="dbType">
+          <el-select v-model="form.dbType" placeholder="请选择" style="width: 100%" @change="onDbTypeChange">
+            <el-option label="MySQL" value="mysql" />
+            <el-option label="Oracle" value="oracle" />
+            <el-option label="PostgreSQL" value="postgresql" />
+            <el-option label="SQL Server" value="sqlserver" />
+            <el-option label="达梦" value="dm" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="驱动类" prop="driverClass">
+          <el-input v-model="form.driverClass" placeholder="驱动类全限定名" />
+        </el-form-item>
+        <el-form-item label="连接URL" prop="url">
+          <el-input v-model="form.url" type="textarea" :rows="2" placeholder="jdbc:mysql://host:port/db" />
+        </el-form-item>
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="form.username" placeholder="数据库用户名" />
+        </el-form-item>
+        <el-form-item label="密码" prop="password">
+          <el-input v-model="form.password" type="password" placeholder="数据库密码" show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  getDatasourceList,
+  createDatasource,
+  updateDatasource,
+  deleteDatasource,
+  testConnection
+} from '@/api/datasource'
 
-const datasourceList = ref([
-  { id: 1, dsCode: 'master', dsName: '主库(MySQL)', dbType: 'mysql', url: 'jdbc:mysql://127.0.0.1:3306/riverflow', status: 1 },
-  { id: 2, dsCode: 'biz_oracle', dsName: '业务库(Oracle)', dbType: 'oracle', url: 'jdbc:oracle:thin:@172.18.10.205:1521/orcl', status: 1 },
-  { id: 3, dsCode: 'archive_pg', dsName: '归档库(PostgreSQL)', dbType: 'postgresql', url: 'jdbc:postgresql://127.0.0.1:5432/archive', status: 0 }
-])
+const loading = ref(false)
+const dialogVisible = ref(false)
+const dialogTitle = ref('新增数据源')
+const formRef = ref(null)
+const submitLoading = ref(false)
 
-function handleAdd() { ElMessage.info('新增数据源弹窗待实现') }
-function handleEdit(ds) { ElMessage.info(`编辑数据源: ${ds.dsName}`) }
-function handleDelete(ds) {
-  ElMessageBox.confirm(`确认删除数据源「${ds.dsName}」？`, '删除确认', { type: 'warning' }).then(() => {
-    ElMessage.success('删除成功')
+const datasourceList = ref([])
+
+const form = reactive({
+  id: null,
+  dsCode: '',
+  dsName: '',
+  dbType: '',
+  driverClass: '',
+  url: '',
+  username: '',
+  password: ''
+})
+
+const formRules = {
+  dsCode: [{ required: true, message: '请输入数据源编码', trigger: 'blur' }],
+  dsName: [{ required: true, message: '请输入数据源名称', trigger: 'blur' }],
+  dbType: [{ required: true, message: '请选择数据库类型', trigger: 'change' }],
+  url: [{ required: true, message: '请输入连接URL', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+}
+
+const dbTypeDriverMap = {
+  mysql: 'com.mysql.cj.jdbc.Driver',
+  oracle: 'oracle.jdbc.OracleDriver',
+  postgresql: 'org.postgresql.Driver',
+  sqlserver: 'com.microsoft.sqlserver.jdbc.SQLServerDriver',
+  dm: 'dm.jdbc.driver.DmDriver'
+}
+
+function onDbTypeChange(val) {
+  if (dbTypeDriverMap[val] && !form.driverClass) {
+    form.driverClass = dbTypeDriverMap[val]
+  }
+}
+
+async function loadList() {
+  loading.value = true
+  try {
+    const res = await getDatasourceList({ page: 1, size: 999 })
+    datasourceList.value = res.list || res.records || res || []
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleAdd() {
+  dialogTitle.value = '新增数据源'
+  Object.assign(form, {
+    id: null,
+    dsCode: '',
+    dsName: '',
+    dbType: '',
+    driverClass: '',
+    url: '',
+    username: '',
+    password: ''
   })
+  dialogVisible.value = true
 }
-function handleTest(ds) {
-  ElMessage.success(`数据源「${ds.dsName}」连接成功`)
+
+function handleEdit(ds) {
+  dialogTitle.value = '编辑数据源'
+  Object.assign(form, { ...ds })
+  dialogVisible.value = true
 }
+
+async function handleSubmit() {
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
+  submitLoading.value = true
+  try {
+    if (form.id) {
+      await updateDatasource(form)
+      ElMessage.success('修改成功')
+    } else {
+      await createDatasource(form)
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    loadList()
+  } catch (e) {
+    // 错误已由 request 拦截器提示
+  } finally {
+    submitLoading.value = false
+  }
+}
+
+async function handleDelete(ds) {
+  try {
+    await ElMessageBox.confirm(`确认删除数据源「${ds.dsName}」？`, '删除确认', { type: 'warning' })
+    await deleteDatasource(ds.id)
+    ElMessage.success('删除成功')
+    loadList()
+  } catch (e) {
+    // 取消或失败
+  }
+}
+
+async function handleTest(ds) {
+  try {
+    await testConnection(ds.id)
+    ElMessage.success(`数据源「${ds.dsName}」连接成功`)
+  } catch (e) {
+    // 失败已由 request 拦截器提示
+  }
+}
+
+onMounted(() => {
+  loadList()
+})
 </script>
 
 <style scoped lang="scss">

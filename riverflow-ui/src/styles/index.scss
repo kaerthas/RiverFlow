@@ -1,57 +1,736 @@
-// 全局样式入口
+// ============================================================
+// RiverFlow · 全局样式系统 v2
+// 设计原则：高对比度、非对称留白、质感材质、弹簧物理动效
+// ============================================================
 
-// 主题色变量
+// -------- 字体栈 --------
+// 优先使用系统字体中质感最好的组合，无需加载外部字体
+$font-sans: -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+  'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+$font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code',
+  'Menlo', Monaco, monospace;
+
+// -------- 色彩系统 --------
+// 中性色：统一的冷灰基调，避免暖冷混用
 :root {
-  --rf-primary: #1677FF;
-  --rf-primary-light: #E6F4FF;
-  --rf-success: #52C41A;
-  --rf-warning: #FAAD14;
-  --rf-danger: #F5222D;
-  --rf-info: #722ED1;
-  --rf-text-main: #262626;
-  --rf-text-secondary: #595959;
-  --rf-text-muted: #8C8C8C;
-  --rf-border-color: #D9D9D9;
-  --rf-bg-page: #F0F2F5;
-  --rf-bg-card: #FFFFFF;
+  --rf-neutral-0: #ffffff;
+  --rf-neutral-50: #f7f8fa;
+  --rf-neutral-100: #f0f1f5;
+  --rf-neutral-200: #e4e6eb;
+  --rf-neutral-300: #d1d5db;
+  --rf-neutral-400: #9ca3af;
+  --rf-neutral-500: #6b7280;
+  --rf-neutral-600: #4b5563;
+  --rf-neutral-700: #374151;
+  --rf-neutral-800: #1f2937;
+  --rf-neutral-900: #0f1115;
+
+  // 主色：降低饱和度的科技蓝，避免"AI蓝紫"感
+  --rf-primary: #2563eb;
+  --rf-primary-light: #dbeafe;
+  --rf-primary-dark: #1d4ed8;
+  --rf-primary-glow: rgba(37, 99, 235, 0.12);
+
+  // 功能色：全部降饱和
+  --rf-success: #10b981;
+  --rf-success-bg: #d1fae5;
+  --rf-warning: #f59e0b;
+  --rf-warning-bg: #fef3c7;
+  --rf-danger: #ef4444;
+  --rf-danger-bg: #fee2e2;
+  --rf-info: #6366f1;
+  --rf-info-bg: #e0e7ff;
+
+  // 文字色
+  --rf-text-main: #111827;
+  --rf-text-secondary: #4b5563;
+  --rf-text-muted: #9ca3af;
+
+  // 表面色
+  --rf-border-color: #e5e7eb;
+  --rf-border-light: #f3f4f6;
+  --rf-bg-page: #f7f8fa;
+  --rf-bg-card: #ffffff;
+  --rf-bg-elevated: #ffffff;
+
+  // 布局尺寸
   --rf-sidebar-width: 220px;
   --rf-sidebar-collapsed-width: 64px;
   --rf-header-height: 56px;
+
+  // 动效曲线：弹簧物理感
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+
+  // 阴影系统： tinted shadows（带色调的阴影）
+  --shadow-sm: 0 1px 2px 0 rgba(15, 17, 21, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(15, 17, 21, 0.05),
+    0 2px 4px -2px rgba(15, 17, 21, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 17, 21, 0.06),
+    0 4px 6px -4px rgba(15, 17, 21, 0.03);
+  --shadow-xl: 0 20px 25px -5px rgba(15, 17, 21, 0.06),
+    0 8px 10px -6px rgba(15, 17, 21, 0.03);
+  --shadow-glow: 0 0 0 3px var(--rf-primary-glow);
+
+  // 圆角系统：非统一圆角，内紧外松
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
 }
 
-// 滚动条美化
+// -------- 全局 reset & 基础 --------
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: $font-sans;
+  color: var(--rf-text-main);
+  background: var(--rf-bg-page);
+}
+
+// -------- 滚动条美化 --------
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--rf-neutral-300);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--rf-neutral-400);
 }
 
-// 通用工具类
+// -------- 页面工具类 --------
 .rf-page {
-  padding: 20px;
+  padding: 24px;
   min-height: calc(100vh - var(--rf-header-height));
   background: var(--rf-bg-page);
 }
 
 .rf-card {
   background: var(--rf-bg-card);
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--rf-border-light);
+  transition: box-shadow var(--duration-base) var(--ease-out-quart),
+    transform var(--duration-base) var(--ease-out-quart);
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
 }
 
 .rf-page-title {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   color: var(--rf-text-main);
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
+  gap: 10px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+// -------- 布局工具类 --------
+.rf-flex {
+  display: flex;
+}
+.rf-flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.rf-flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.rf-flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+// -------- 文字工具类 --------
+.rf-text-main {
+  color: var(--rf-text-main);
+}
+.rf-text-secondary {
+  color: var(--rf-text-secondary);
+}
+.rf-text-muted {
+  color: var(--rf-text-muted);
+}
+.rf-text-primary {
+  color: var(--rf-primary);
+}
+.rf-text-success {
+  color: var(--rf-success);
+}
+.rf-text-warning {
+  color: var(--rf-warning);
+}
+.rf-text-danger {
+  color: var(--rf-danger);
+}
+
+.rf-text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// -------- 间距工具类 --------
+.rf-gap-1 {
+  gap: 4px;
+}
+.rf-gap-2 {
   gap: 8px;
+}
+.rf-gap-3 {
+  gap: 12px;
+}
+.rf-gap-4 {
+  gap: 16px;
+}
+.rf-gap-6 {
+  gap: 24px;
+}
+
+// -------- 动效工具类 --------
+.rf-transition {
+  transition: all var(--duration-base) var(--ease-out-quart);
+}
+
+.rf-hover-lift {
+  transition: transform var(--duration-base) var(--ease-spring),
+    box-shadow var(--duration-base) var(--ease-out-quart);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  &:active {
+    transform: scale(0.985) translateY(0);
+  }
+}
+
+// -------- 玻璃拟态工具类 --------
+.rf-glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.rf-glass-dark {
+  background: rgba(15, 17, 21, 0.6);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+// -------- 渐变工具类 --------
+.rf-gradient-mesh {
+  background: radial-gradient(
+      ellipse at 20% 20%,
+      rgba(37, 99, 235, 0.08) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 80% 80%,
+      rgba(99, 102, 241, 0.06) 0%,
+      transparent 50%
+    ),
+    var(--rf-bg-page);
+}
+
+// ============================================================
+// 列表页通用样式系统
+// ============================================================
+
+.rf-list-page {
+  padding: 28px 32px;
+  min-height: calc(100dvh - var(--rf-header-height));
+  background: var(--rf-bg-page);
+}
+
+// 页面头部
+.rf-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+
+  .title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--rf-text-main);
+    margin: 0 0 6px;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--rf-text-muted);
+    margin: 0;
+    font-weight: 400;
+  }
+
+  .btn-primary {
+    height: 40px;
+    padding: 0 20px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+    transition: all 0.2s var(--ease-out-quart);
+
+    &:hover {
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: scale(0.97);
+    }
+  }
+}
+
+// 搜索栏
+.rf-search-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--rf-border-light);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+  gap: 16px;
+  flex-wrap: wrap;
+
+  .search-fields {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .search-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .btn-search,
+  .btn-reset {
+    height: 34px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s;
+  }
+
+  .btn-search {
+    background: var(--rf-primary);
+    color: #fff;
+
+    &:hover {
+      background: var(--rf-primary-dark);
+    }
+
+    &:active {
+      transform: scale(0.96);
+    }
+  }
+
+  .btn-reset {
+    background: var(--rf-neutral-100);
+    color: var(--rf-text-secondary);
+
+    &:hover {
+      background: var(--rf-neutral-200);
+    }
+  }
+}
+
+// 表格卡片
+.rf-table-card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--rf-border-light);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+
+  .el-table {
+    --el-table-border-color: transparent;
+  }
+}
+
+// 数据表格覆盖
+.rf-data-table {
+  .el-table__header-wrapper {
+    background: var(--rf-neutral-50);
+  }
+
+  .el-table__header th.el-table__cell {
+    background: var(--rf-neutral-50);
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--rf-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    height: 48px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--rf-border-light);
+  }
+
+  .el-table__cell .cell {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  // 允许换行的列（如 URL、长文本）
+  .cell-wrap .cell {
+    white-space: normal !important;
+    word-break: break-all !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    line-height: 1.5;
+  }
+
+  .el-table__row {
+    transition: background 0.15s;
+
+    &:hover {
+      background: #f8fafc;
+    }
+
+    td {
+      font-size: 13px;
+      color: var(--rf-text-main);
+      padding: 14px 16px;
+      border-bottom: 1px solid #f6f7f9;
+    }
+  }
+
+  // 空状态美化
+  .el-table__empty-block {
+    padding: 48px 0;
+
+    &::before {
+      content: '';
+      display: block;
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 12px;
+      border: 2px dashed var(--rf-neutral-300);
+      border-radius: 50%;
+      opacity: 0.6;
+    }
+
+    .el-table__empty-text {
+      color: var(--rf-neutral-400);
+      font-size: 14px;
+    }
+  }
+}
+
+// 分页
+.rf-pagination {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 20px;
+  border-top: 1px solid #f1f5f9;
+}
+
+// -------- 列表页通用元素 --------
+
+// 编码 badge（等宽、蓝色）
+.rf-code {
+  font-family: $font-mono;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rf-primary);
+  background: var(--rf-primary-light);
+  padding: 3px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+// 时间文字
+.rf-time {
+  font-size: 12px;
+  color: var(--rf-text-muted);
+  font-family: $font-mono;
+  white-space: nowrap;
+}
+
+// 状态标签（带小圆点）
+.rf-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &.published {
+    background: #d1fae5;
+    color: #059669;
+    .dot { background: #10b981; }
+  }
+
+  &.draft {
+    background: #eff6ff;
+    color: #2563eb;
+    .dot { background: #3b82f6; }
+  }
+
+  &.offline {
+    background: #f3f4f6;
+    color: #6b7280;
+    .dot { background: #9ca3af; }
+  }
+
+  &.success {
+    background: #d1fae5;
+    color: #059669;
+    .dot { background: #10b981; }
+  }
+
+  &.running {
+    background: #fef3c7;
+    color: #d97706;
+    .dot { background: #f59e0b; }
+  }
+
+  &.failed {
+    background: #fee2e2;
+    color: #dc2626;
+    .dot { background: #ef4444; }
+  }
+
+  &.warning {
+    background: #fef3c7;
+    color: #d97706;
+    .dot { background: #f59e0b; }
+  }
+}
+
+// 触发方式 / 分类标签
+.rf-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &.manual, &.default {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
+
+  &.cron, &.定时 {
+    background: #e0e7ff;
+    color: #4f46e5;
+  }
+
+  &.event, &.事件 {
+    background: #d1fae5;
+    color: #059669;
+  }
+
+  &.proxy {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
+
+  &.sql {
+    background: #fef3c7;
+    color: #d97706;
+  }
+
+  &.script {
+    background: #f3e8ff;
+    color: #7c3aed;
+  }
+
+  &.data {
+    background: #d1fae5;
+    color: #059669;
+  }
+
+  &.get {
+    background: #d1fae5;
+    color: #059669;
+  }
+
+  &.post {
+    background: #dbeafe;
+    color: #2563eb;
+  }
+}
+
+// 操作按钮组
+.rf-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  .action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--rf-text-muted);
+    background: transparent;
+    border: none;
+    transition: all 0.15s var(--ease-out-quart);
+
+    &:hover {
+      background: #f1f5f9;
+      color: var(--rf-text-secondary);
+    }
+
+    &:active {
+      transform: scale(0.92);
+    }
+
+    &.primary:hover {
+      color: var(--rf-primary);
+      background: var(--rf-primary-light);
+    }
+
+    &.success:hover {
+      color: var(--rf-success);
+      background: var(--rf-success-bg);
+    }
+
+    &.warning:hover {
+      color: var(--rf-warning);
+      background: var(--rf-warning-bg);
+    }
+
+    &.danger:hover {
+      color: var(--rf-danger);
+      background: var(--rf-danger-bg);
+    }
+  }
+}
+
+// 空状态
+.rf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+
+  .empty-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--rf-text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .empty-desc {
+    font-size: 13px;
+    color: var(--rf-text-muted);
+  }
+}
+
+// -------- Element Plus 全局覆盖 --------
+// 让 Element Plus 组件融入新主题
+.el-button {
+  font-weight: 500;
+  transition: all var(--duration-fast) var(--ease-out-quart);
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.el-input__wrapper,
+.el-textarea__inner {
+  border-radius: var(--radius-md) !important;
+  box-shadow: 0 0 0 1px var(--rf-border-color) inset !important;
+  transition: box-shadow var(--duration-fast) var(--ease-out-quart) !important;
+
+  &:hover {
+    box-shadow: 0 0 0 1px var(--rf-neutral-300) inset !important;
+  }
+
+  &.is-focus {
+    box-shadow: 0 0 0 1px var(--rf-primary) inset,
+      0 0 0 3px var(--rf-primary-glow) !important;
+  }
+}
+
+.el-tag {
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+}
+
+.el-dialog {
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+}
+
+// -------- 数字等宽 --------
+.rf-mono {
+  font-family: $font-mono;
+  font-variant-numeric: tabular-nums;
 }

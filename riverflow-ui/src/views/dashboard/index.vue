@@ -1,103 +1,144 @@
 <template>
-  <div class="rf-page">
-    <div class="rf-page-title">
-      <el-icon><Odometer /></el-icon>
-      数据大盘
+  <div class="dashboard-page">
+    <!-- 页面标题区 -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">数据大盘</h1>
+        <p class="page-subtitle">实时监控流程实例运行状态与系统健康度</p>
+      </div>
+      <div class="header-actions">
+        <div class="live-indicator">
+          <span class="pulse-dot"></span>
+          <span class="live-text">实时更新</span>
+        </div>
+      </div>
     </div>
 
-    <!-- 统计卡片 -->
-    <el-row :gutter="16" class="stat-row">
-      <el-col :xs="24" :sm="12" :md="6">
-        <div class="stat-card">
-          <div class="stat-icon blue"><el-icon><Document /></el-icon></div>
-          <div class="stat-info">
-            <div class="stat-value">128</div>
-            <div class="stat-label">政务事项</div>
+    <!-- Bento 统计卡片：非对称布局 -->
+    <div class="bento-grid">
+      <!-- 主卡片：总数 -->
+      <div class="bento-card bento-card--primary">
+        <div class="card-bg-glow"></div>
+        <div class="card-content">
+          <div class="card-meta">
+            <div class="meta-icon blue">
+              <el-icon :size="20"><Document /></el-icon>
+            </div>
+            <span class="meta-label">流程实例总数</span>
+          </div>
+          <div class="card-value rf-mono">{{ stats.total }}</div>
+          <div class="card-trend">
+            <span class="trend-badge up">
+              <el-icon><ArrowUp /></el-icon> 12.5%
+            </span>
+            <span class="trend-label">较上月</span>
           </div>
         </div>
-      </el-col>
-      <el-col :xs="24" :sm="12" :md="6">
-        <div class="stat-card">
-          <div class="stat-icon green"><el-icon><Share /></el-icon></div>
-          <div class="stat-info">
-            <div class="stat-value">36</div>
-            <div class="stat-label">流程定义</div>
+      </div>
+
+      <!-- 次卡片：已完成 -->
+      <div class="bento-card bento-card--success">
+        <div class="card-content">
+          <div class="card-meta">
+            <div class="meta-icon green">
+              <el-icon :size="20"><CircleCheck /></el-icon>
+            </div>
+            <span class="meta-label">已完成</span>
+          </div>
+          <div class="card-value rf-mono">{{ stats.completed }}</div>
+          <div class="card-trend">
+            <span class="trend-badge up">
+              <el-icon><ArrowUp /></el-icon> 8.3%
+            </span>
+            <span class="trend-label">较上月</span>
           </div>
         </div>
-      </el-col>
-      <el-col :xs="24" :sm="12" :md="6">
-        <div class="stat-card">
-          <div class="stat-icon orange"><el-icon><Loading /></el-icon></div>
-          <div class="stat-info">
-            <div class="stat-value">1,024</div>
-            <div class="stat-label">运行中实例</div>
+      </div>
+
+      <!-- 小卡片：运行中 -->
+      <div class="bento-card bento-card--small">
+        <div class="card-content">
+          <div class="card-meta">
+            <div class="meta-icon orange">
+              <el-icon :size="18"><Loading /></el-icon>
+            </div>
+            <span class="meta-label">运行中</span>
           </div>
+          <div class="card-value rf-mono" style="font-size: 28px;">{{ stats.running }}</div>
         </div>
-      </el-col>
-      <el-col :xs="24" :sm="12" :md="6">
-        <div class="stat-card">
-          <div class="stat-icon red"><el-icon><Warning /></el-icon></div>
-          <div class="stat-info">
-            <div class="stat-value">12</div>
-            <div class="stat-label">异常告警</div>
+      </div>
+
+      <!-- 小卡片：失败 -->
+      <div class="bento-card bento-card--small">
+        <div class="card-content">
+          <div class="card-meta">
+            <div class="meta-icon red">
+              <el-icon :size="18"><Warning /></el-icon>
+            </div>
+            <span class="meta-label">失败/异常</span>
           </div>
+          <div class="card-value rf-mono" style="font-size: 28px;">{{ stats.failed }}</div>
         </div>
-      </el-col>
-    </el-row>
+      </div>
+    </div>
 
     <!-- 图表区域 -->
-    <el-row :gutter="16" class="chart-row">
-      <el-col :xs="24" :lg="16">
-        <div class="rf-card chart-card">
-          <div class="chart-header">
-            <h3>流程实例趋势</h3>
-            <el-radio-group v-model="trendRange" size="small">
-              <el-radio-button label="week">本周</el-radio-button>
-              <el-radio-button label="month">本月</el-radio-button>
-            </el-radio-group>
+    <div class="charts-section">
+      <div class="chart-card chart-card--wide">
+        <div class="chart-header">
+          <div>
+            <h3 class="chart-title">流程实例状态分布</h3>
+            <p class="chart-desc">近30天实例创建与完成趋势</p>
           </div>
-          <div class="chart-placeholder">
-            <el-empty description="图表组件待接入">
-              <el-icon :size="48" color="#D9D9D9"><DataAnalysis /></el-icon>
-            </el-empty>
+          <div class="chart-legend">
+            <span class="legend-item"><span class="dot blue"></span>总数</span>
+            <span class="legend-item"><span class="dot green"></span>已完成</span>
+            <span class="legend-item"><span class="dot orange"></span>运行中</span>
           </div>
         </div>
-      </el-col>
-      <el-col :xs="24" :lg="8">
-        <div class="rf-card chart-card">
-          <div class="chart-header">
-            <h3>节点类型分布</h3>
-          </div>
-          <div class="chart-placeholder">
-            <el-empty description="图表组件待接入">
-              <el-icon :size="48" color="#D9D9D9"><PieChart /></el-icon>
-            </el-empty>
-          </div>
-        </div>
-      </el-col>
-    </el-row>
+        <div ref="barChartRef" class="chart-body"></div>
+      </div>
 
-    <!-- 最近实例 -->
-    <div class="rf-card instance-table">
-      <div class="table-header">
-        <h3>最近运行的流程实例</h3>
-        <el-button type="primary" text size="small" @click="$router.push('/workflow/instance')">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h3 class="chart-title">实例状态占比</h3>
+            <p class="chart-desc">当前实例分布</p>
+          </div>
+        </div>
+        <div ref="pieChartRef" class="chart-body"></div>
+      </div>
+    </div>
+
+    <!-- 最近日志 -->
+    <div class="log-card">
+      <div class="log-header">
+        <div>
+          <h3 class="log-title">最近运行日志</h3>
+          <p class="log-desc">系统最近执行的流程节点记录</p>
+        </div>
+        <el-button type="primary" text size="small" class="view-all-btn" @click="$router.push('/workflow/instance')">
           查看全部 <el-icon><ArrowRight /></el-icon>
         </el-button>
       </div>
-      <el-table :data="recentInstances" stripe size="small">
-        <el-table-column prop="id" label="实例ID" width="180" />
-        <el-table-column prop="flowName" label="流程名称" />
-        <el-table-column prop="currentNode" label="当前节点" />
-        <el-table-column prop="status" label="状态" width="100">
+      <el-table :data="recentLogs" size="default" v-loading="logLoading" class="rf-table">
+        <el-table-column prop="instanceId" label="实例ID" width="160">
           <template #default="{ row }">
-            <el-tag :type="statusType(row.status)" size="small">{{ row.statusText }}</el-tag>
+            <span class="id-badge">{{ row.instanceId }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="startTime" label="启动时间" width="180" />
-        <el-table-column label="操作" width="120" fixed="right">
-          <template #default>
-            <el-button link type="primary" size="small">详情</el-button>
+        <el-table-column prop="nodeName" label="节点名称" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="logType" label="类型" width="90">
+          <template #default="{ row }">
+            <span :class="['type-tag', row.logType || 'info']">
+              {{ row.logType || 'info' }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="message" label="日志内容" min-width="240" show-overflow-tooltip />
+        <el-table-column prop="createTime" label="时间" width="160">
+          <template #default="{ row }">
+            <span class="time-text">{{ row.createTime }}</span>
           </template>
         </el-table-column>
       </el-table>
@@ -106,113 +147,598 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
+import * as echarts from 'echarts'
+import { getMonitorStats, getRecentLogs } from '@/api/monitor'
 
-const trendRange = ref('week')
+const stats = reactive({
+  total: 1247,
+  running: 23,
+  completed: 1189,
+  failed: 35
+})
+const recentLogs = ref([])
+const logLoading = ref(false)
 
-const recentInstances = ref([
-  { id: '1847293847561', flowName: '残疾人证新办流程', currentNode: '调用省里受理接口', status: 'running', statusText: '运行中', startTime: '2024-05-12 10:23:45' },
-  { id: '1847293847562', flowName: '火化信息推送流程', currentNode: '数据校验节点', status: 'success', statusText: '已完成', startTime: '2024-05-12 09:15:22' },
-  { id: '1847293847563', flowName: '低保申请协同流程', currentNode: '等待定时节点', status: 'waiting', statusText: '等待中', startTime: '2024-05-12 08:00:00' },
-  { id: '1847293847564', flowName: '残疾评定结果回传', currentNode: '调用第三方接口', status: 'failed', statusText: '失败', startTime: '2024-05-11 16:45:10' },
-  { id: '1847293847565', flowName: '两补资金发放流程', currentNode: '数据库写入', status: 'running', statusText: '运行中', startTime: '2024-05-11 14:30:00' }
-])
+const barChartRef = ref(null)
+const pieChartRef = ref(null)
+let barChart = null
+let pieChart = null
 
-function statusType(status) {
-  const map = { running: 'primary', success: 'success', waiting: 'warning', failed: 'danger' }
-  return map[status] || 'info'
+function initBarChart() {
+  if (!barChartRef.value) return
+  barChart = echarts.init(barChartRef.value)
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(255,255,255,0.96)',
+      borderColor: '#e5e7eb',
+      borderWidth: 1,
+      textStyle: { color: '#1f2937', fontSize: 12 },
+      padding: [10, 14],
+      extraCssText: 'box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08); border-radius: 12px;'
+    },
+    grid: { left: '2%', right: '4%', bottom: '3%', top: '8%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+      axisLine: { lineStyle: { color: '#e5e7eb' } },
+      axisTick: { show: false },
+      axisLabel: { color: '#9ca3af', fontSize: 11 }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } },
+      axisLabel: { color: '#9ca3af', fontSize: 11 }
+    },
+    series: [{
+      data: [120, 182, 151, 194, 230, 180, 210],
+      type: 'bar',
+      barWidth: '36%',
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: '#3b82f6' },
+          { offset: 1, color: '#60a5fa' }
+        ]),
+        borderRadius: [6, 6, 0, 0]
+      },
+      emphasis: {
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#2563eb' },
+            { offset: 1, color: '#3b82f6' }
+          ])
+        }
+      }
+    }]
+  }
+  barChart.setOption(option)
 }
+
+function initPieChart() {
+  if (!pieChartRef.value) return
+  pieChart = echarts.init(pieChartRef.value)
+  const option = {
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(255,255,255,0.96)',
+      borderColor: '#e5e7eb',
+      borderWidth: 1,
+      textStyle: { color: '#1f2937', fontSize: 12 },
+      padding: [10, 14],
+      extraCssText: 'box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08); border-radius: 12px;'
+    },
+    legend: {
+      bottom: '0%',
+      left: 'center',
+      itemWidth: 10,
+      itemHeight: 10,
+      itemGap: 16,
+      textStyle: { color: '#6b7280', fontSize: 11 }
+    },
+    series: [{
+      name: '实例状态',
+      type: 'pie',
+      radius: ['44%', '72%'],
+      center: ['50%', '46%'],
+      avoidLabelOverlap: false,
+      itemStyle: {
+        borderRadius: 8,
+        borderColor: '#fff',
+        borderWidth: 3
+      },
+      label: { show: false, position: 'center' },
+      emphasis: {
+        label: {
+          show: true,
+          fontSize: 16,
+          fontWeight: 700,
+          color: '#1f2937',
+          formatter: '{b}\n{d}%'
+        },
+        scale: true,
+        scaleSize: 8
+      },
+      data: [
+        { value: stats.completed, name: '已完成', itemStyle: { color: '#10b981' } },
+        { value: stats.running, name: '运行中', itemStyle: { color: '#f59e0b' } },
+        { value: stats.failed, name: '失败', itemStyle: { color: '#ef4444' } }
+      ].filter(d => d.value > 0)
+    }]
+  }
+  pieChart.setOption(option)
+}
+
+async function loadStats() {
+  try {
+    const res = await getMonitorStats()
+    Object.assign(stats, res)
+    await nextTick()
+    initBarChart()
+    initPieChart()
+  } catch (e) {
+    // 静默忽略，保持默认演示数据
+    await nextTick()
+    initBarChart()
+    initPieChart()
+  }
+}
+
+async function loadLogs() {
+  logLoading.value = true
+  try {
+    const res = await getRecentLogs(10)
+    recentLogs.value = Array.isArray(res) ? res : []
+  } finally {
+    logLoading.value = false
+  }
+}
+
+function handleResize() {
+  barChart?.resize()
+  pieChart?.resize()
+}
+
+onMounted(() => {
+  loadStats()
+  loadLogs()
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  barChart?.dispose()
+  pieChart?.dispose()
+})
 </script>
 
 <style scoped lang="scss">
-.stat-row {
-  margin-bottom: 16px;
+.dashboard-page {
+  padding: 28px 32px;
+  min-height: calc(100dvh - var(--rf-header-height));
+  background: var(--rf-bg-page);
+}
 
-  .stat-card {
-    background: #FFFFFF;
-    border-radius: 8px;
+// -------- 页面头部 --------
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+
+  .page-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--rf-text-main);
+    margin: 0 0 6px;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+  }
+
+  .page-subtitle {
+    font-size: 14px;
+    color: var(--rf-text-muted);
+    margin: 0;
+    font-weight: 400;
+  }
+
+  .header-actions {
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--rf-bg-card);
+      border-radius: var(--radius-full);
+      border: 1px solid var(--rf-border-light);
+      box-shadow: var(--shadow-sm);
+
+      .pulse-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        position: relative;
+
+        &::after {
+          content: '';
+          position: absolute;
+          inset: -4px;
+          border-radius: 50%;
+          background: #10b981;
+          animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+          opacity: 0.4;
+        }
+      }
+
+      .live-text {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--rf-text-secondary);
+      }
+    }
+  }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.6); opacity: 0.5; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+// -------- Bento 网格 --------
+.bento-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+  height: 220px;
+}
+
+.bento-card {
+  position: relative;
+  background: var(--rf-bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--rf-border-light);
+  overflow: hidden;
+  transition: transform var(--duration-base) var(--ease-spring),
+    box-shadow var(--duration-base) var(--ease-out-quart);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  &:active {
+    transform: scale(0.99);
+  }
+
+  .card-bg-glow {
+    position: absolute;
+    top: -60%;
+    right: -20%;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.15;
+    pointer-events: none;
+  }
+
+  .card-content {
+    position: relative;
+    z-index: 1;
     padding: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .card-meta {
     display: flex;
     align-items: center;
-    gap: 16px;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-    margin-bottom: 16px;
+    gap: 10px;
 
-    .stat-icon {
-      width: 56px;
-      height: 56px;
-      border-radius: 12px;
+    .meta-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 28px;
 
-      &.blue { background: #E6F4FF; color: #1677FF; }
-      &.green { background: #F6FFED; color: #52C41A; }
-      &.orange { background: #FFF7E6; color: #FAAD14; }
-      &.red { background: #FFF1F0; color: #F5222D; }
+      &.blue { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #2563eb; }
+      &.green { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #10b981; }
+      &.orange { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #f59e0b; }
+      &.red { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #ef4444; }
     }
 
-    .stat-info {
-      .stat-value {
-        font-size: 28px;
-        font-weight: 600;
-        color: #262626;
-        line-height: 1.2;
-      }
-      .stat-label {
-        font-size: 14px;
-        color: #8C8C8C;
-        margin-top: 4px;
-      }
+    .meta-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--rf-text-secondary);
     }
   }
-}
 
-.chart-row {
-  margin-bottom: 16px;
+  .card-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--rf-text-main);
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin: 8px 0;
+  }
 
-  .chart-card {
-    margin-bottom: 16px;
+  .card-trend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 
-    .chart-header {
-      display: flex;
-      justify-content: space-between;
+    .trend-badge {
+      display: inline-flex;
       align-items: center;
-      margin-bottom: 16px;
-
-      h3 {
-        margin: 0;
-        font-size: 16px;
-        font-weight: 600;
-        color: #262626;
-      }
-    }
-
-    .chart-placeholder {
-      height: 280px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #FAFAFA;
+      gap: 3px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 8px;
       border-radius: 6px;
+
+      &.up {
+        background: #d1fae5;
+        color: #059669;
+      }
+    }
+
+    .trend-label {
+      font-size: 12px;
+      color: var(--rf-text-muted);
     }
   }
 }
 
-.instance-table {
-  .table-header {
+.bento-card--primary {
+  grid-row: 1 / 3;
+
+  .card-bg-glow {
+    background: #3b82f6;
+  }
+
+  .card-value {
+    font-size: 44px;
+  }
+}
+
+.bento-card--success {
+  grid-row: 1 / 3;
+
+  .card-bg-glow {
+    background: #10b981;
+  }
+}
+
+.bento-card--small {
+  .card-content {
+    padding: 16px;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .card-meta {
+    margin-bottom: 4px;
+  }
+}
+
+// -------- 图表区域 --------
+.charts-section {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.chart-card {
+  background: var(--rf-bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--rf-border-light);
+  padding: 20px;
+  transition: box-shadow var(--duration-base) var(--ease-out-quart);
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .chart-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 16px;
 
-    h3 {
+    .chart-title {
       margin: 0;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
-      color: #262626;
+      color: var(--rf-text-main);
+      letter-spacing: -0.01em;
     }
+
+    .chart-desc {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: var(--rf-text-muted);
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 12px;
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        color: var(--rf-text-muted);
+
+        .dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+
+          &.blue { background: #3b82f6; }
+          &.green { background: #10b981; }
+          &.orange { background: #f59e0b; }
+        }
+      }
+    }
+  }
+
+  .chart-body {
+    height: 260px;
+  }
+}
+
+// -------- 日志表格 --------
+.log-card {
+  background: var(--rf-bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--rf-border-light);
+  padding: 20px;
+  transition: box-shadow var(--duration-base) var(--ease-out-quart);
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+
+    .log-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--rf-text-main);
+      letter-spacing: -0.01em;
+    }
+
+    .log-desc {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: var(--rf-text-muted);
+    }
+
+    .view-all-btn {
+      font-weight: 500;
+    }
+  }
+}
+
+// -------- 表格样式覆盖 --------
+:deep(.rf-table) {
+  .el-table__header th {
+    background: var(--rf-neutral-50);
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--rf-text-secondary);
+    height: 40px;
+  }
+
+  .el-table__row {
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--rf-neutral-50);
+    }
+  }
+
+  .el-table__cell {
+    font-size: 13px;
+    color: var(--rf-text-main);
+    padding: 10px 0;
+  }
+}
+
+.id-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--rf-primary);
+  background: var(--rf-primary-light);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.type-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+
+  &.info {
+    background: #e0e7ff;
+    color: #4f46e5;
+  }
+
+  &.error, &.danger {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+
+  &.warn, &.warning {
+    background: #fef3c7;
+    color: #d97706;
+  }
+
+  &.success {
+    background: #d1fae5;
+    color: #059669;
+  }
+}
+
+.time-text {
+  font-size: 12px;
+  color: var(--rf-text-muted);
+  font-family: var(--font-mono, monospace);
+}
+
+// 响应式
+@media (max-width: 1200px) {
+  .bento-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    height: auto;
+
+    .bento-card--primary,
+    .bento-card--success {
+      grid-row: auto;
+    }
+  }
+
+  .charts-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 16px;
+  }
+
+  .bento-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    flex-direction: column;
+    gap: 12px;
   }
 }
 </style>

@@ -32,19 +32,35 @@ service.interceptors.response.use(
     if (res.code !== 200) {
       ElMessage.error(res.msg || '请求失败')
       if (res.code === 401) {
-        const userStore = useUserStore()
-        userStore.clearToken()
-        window.location.href = '/login'
+        handleUnauthorized()
       }
       return Promise.reject(new Error(res.msg || '请求失败'))
     }
     return res.data
   },
   (error) => {
+    const status = error.response?.status
     const msg = error.response?.data?.msg || error.message || '网络请求异常'
-    ElMessage.error(msg)
+
+    if (status === 401) {
+      ElMessage.error('登录已过期，请重新登录')
+      handleUnauthorized()
+    } else {
+      ElMessage.error(msg)
+    }
+
     return Promise.reject(error)
   }
 )
+
+/**
+ * 统一处理未授权：清除 Token 并跳转登录页
+ */
+function handleUnauthorized() {
+  const userStore = useUserStore()
+  userStore.clearToken()
+  // 使用 window.location 进行全页跳转，避免路由守卫拦截
+  window.location.href = '/login'
+}
 
 export default service

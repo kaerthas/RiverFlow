@@ -1,54 +1,88 @@
 <template>
-  <div class="rf-page">
-    <div class="rf-page-title">
-      <el-icon><Monitor /></el-icon>
-      流程实例监控
+  <div class="rf-list-page">
+    <div class="rf-list-header">
+      <h1 class="title">流程实例监控</h1>
+      <p class="subtitle">查看和管理流程实例的运行状态</p>
     </div>
 
-    <div class="rf-card">
-      <el-form :model="queryForm" inline class="search-form">
-        <el-form-item label="流程编码">
-          <el-input v-model="queryForm.flowCode" placeholder="请输入流程编码" clearable />
-        </el-form-item>
-        <el-form-item label="业务主键">
-          <el-input v-model="queryForm.businessKey" placeholder="请输入业务主键" clearable />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="queryForm.status" placeholder="全部状态" clearable style="width: 120px">
-            <el-option label="运行中" value="running" />
-            <el-option label="已完成" value="completed" />
-            <el-option label="已挂起" value="suspended" />
-            <el-option label="失败" value="failed" />
-            <el-option label="已终止" value="terminated" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
+    <div class="rf-search-bar">
+      <div class="search-fields">
+        <el-form :model="queryForm" inline>
+          <el-form-item label="流程编码">
+            <el-input v-model="queryForm.flowCode" placeholder="请输入流程编码" clearable />
+          </el-form-item>
+          <el-form-item label="业务主键">
+            <el-input v-model="queryForm.businessKey" placeholder="请输入业务主键" clearable />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="queryForm.status" placeholder="全部状态" clearable style="width: 120px">
+              <el-option label="运行中" value="running" />
+              <el-option label="已完成" value="completed" />
+              <el-option label="已挂起" value="suspended" />
+              <el-option label="失败" value="failed" />
+              <el-option label="已终止" value="terminated" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </div>
+      <div class="search-actions">
+        <button class="btn-search" @click="handleSearch">查询</button>
+        <button class="btn-reset" @click="handleReset">重置</button>
+      </div>
+    </div>
 
-      <el-table :data="tableData" stripe size="small" v-loading="loading">
-        <el-table-column prop="id" label="实例ID" width="180" />
-        <el-table-column prop="flowCode" label="流程编码" width="140" />
-        <el-table-column prop="businessKey" label="业务主键" width="160" />
-        <el-table-column prop="currentNodeId" label="当前节点" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="status" label="状态" width="100" align="center">
+    <div class="rf-table-card">
+      <el-table :data="tableData" class="rf-data-table" :fit="false" v-loading="loading" empty-text="暂无数据">
+        <el-table-column type="index" label="#" width="52" align="center" />
+        <el-table-column label="实例ID" width="240">
           <template #default="{ row }">
-            <el-tag :type="statusType(row.status)" size="small">{{ statusText(row.status) }}</el-tag>
+            <span class="rf-code">{{ row.id }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="startTime" label="启动时间" width="160" />
-        <el-table-column label="操作" width="260" fixed="right">
+        <el-table-column label="流程编码" width="220">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleDetail(row)">详情</el-button>
-            <el-button link type="primary" size="small" @click="handleExecute(row)" v-if="row.status === 'running'">执行</el-button>
-            <el-button v-if="row.status === 'running'" link type="warning" size="small" @click="handleTerminate(row)">终止</el-button>
+            <span class="rf-code">{{ row.flowCode }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="业务主键">
+          <template #default="{ row }">
+            <span class="rf-mono">{{ row.businessKey }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="currentNodeId" label="当前节点" min-width="220" show-overflow-tooltip />
+        <el-table-column label="状态" width="120" align="center">
+          <template #default="{ row }">
+            <span v-if="row.status === 'running'" class="rf-status running"><span class="dot"></span>运行中</span>
+            <span v-else-if="row.status === 'completed'" class="rf-status success"><span class="dot"></span>已完成</span>
+            <span v-else-if="row.status === 'suspended'" class="rf-status warning"><span class="dot"></span>已挂起</span>
+            <span v-else-if="row.status === 'failed'" class="rf-status failed"><span class="dot"></span>失败</span>
+            <span v-else-if="row.status === 'terminated'" class="rf-status offline"><span class="dot"></span>已终止</span>
+            <span v-else class="rf-status">{{ row.status }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="启动时间" width="185">
+          <template #default="{ row }">
+            <span class="rf-time">{{ formatTime(row.startTime) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="120" fixed="right">
+          <template #default="{ row }">
+            <div class="rf-actions">
+              <button class="action-btn primary" title="详情" @click="handleDetail(row)">
+                <el-icon><View /></el-icon>
+              </button>
+              <button class="action-btn success" title="执行" @click="handleExecute(row)" v-if="row.status === 'running'">
+                <el-icon><VideoPlay /></el-icon>
+              </button>
+              <button class="action-btn warning" title="终止" @click="handleTerminate(row)" v-if="row.status === 'running'">
+                <el-icon><CircleClose /></el-icon>
+              </button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
 
-      <div class="pagination">
+      <div class="rf-pagination">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.size"
@@ -62,7 +96,7 @@
     </div>
 
     <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="流程实例详情" width="900px" destroy-on-close>
+    <el-dialog v-model="detailVisible" title="流程实例详情" width="900px" class="edit-dialog" destroy-on-close>
       <div v-if="currentInstance" class="instance-detail">
         <el-row :gutter="16" class="info-row">
           <el-col :span="8"><span class="label">实例ID:</span> {{ currentInstance.id }}</el-col>
@@ -97,7 +131,7 @@
           <el-tab-pane label="任务列表" name="tasks">
             <el-table :data="instanceTasks" stripe size="small">
               <el-table-column prop="nodeName" label="节点" />
-              <el-table-column prop="status" label="状态" width="100">
+              <el-table-column prop="status" label="状态" width="120">
                 <template #default="{ row }">
                   <el-tag :type="taskStatusType(row.status)" size="small">{{ row.status }}</el-tag>
                 </template>
@@ -115,6 +149,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { View, VideoPlay, CircleClose } from '@element-plus/icons-vue'
 import {
   getFlowInstanceList,
   getFlowInstanceDetail,
@@ -200,6 +235,10 @@ async function handleTerminate(row) {
   }
 }
 
+function formatTime(time) {
+  return time ? time.replace('T', ' ').substring(0, 19) : '-'
+}
+
 function statusType(status) {
   const map = { running: 'primary', completed: 'success', waiting: 'warning', failed: 'danger', suspended: 'info', terminated: 'info' }
   return map[status] || 'info'
@@ -219,9 +258,6 @@ handleSearch()
 </script>
 
 <style scoped lang="scss">
-.search-form { margin-bottom: 16px; }
-.pagination { margin-top: 16px; display: flex; justify-content: flex-end; }
-
 .instance-detail {
   .info-row {
     margin-bottom: 12px;

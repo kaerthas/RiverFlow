@@ -1,58 +1,152 @@
 <template>
-  <div class="rf-page">
-    <div class="rf-page-title">
-      <el-icon><Share /></el-icon>
-      流程定义
+  <div class="rf-list-page">
+    <!-- 页面头部 -->
+    <div class="rf-list-header">
+      <div>
+        <h1 class="title">流程定义</h1>
+        <p class="subtitle">管理和配置业务流程模板，支持拖拽编排与可视化设计</p>
+      </div>
+      <button class="btn-primary" @click="handleCreate">
+        <el-icon :size="16"><Plus /></el-icon>
+        <span>新建流程</span>
+      </button>
     </div>
 
-    <div class="rf-card">
-      <div class="toolbar">
-        <el-button type="primary" @click="handleCreate">
-          <el-icon><Plus /></el-icon> 新建流程
-        </el-button>
+    <!-- 搜索筛选栏 -->
+    <div class="rf-search-bar">
+      <div class="search-fields">
+        <el-input
+          v-model="searchForm.keyword"
+          placeholder="搜索流程名称或编码"
+          clearable
+          style="width: 260px"
+          @keyup.enter="handleSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-select v-model="searchForm.status" placeholder="全部状态" clearable style="width: 140px" @change="handleSearch">
+          <el-option label="已发布" :value="1" />
+          <el-option label="草稿" :value="0" />
+          <el-option label="已下线" :value="2" />
+        </el-select>
+        <el-select v-model="searchForm.triggerType" placeholder="全部触发方式" clearable style="width: 150px" @change="handleSearch">
+          <el-option label="手动" value="manual" />
+          <el-option label="定时" value="cron" />
+          <el-option label="事件" value="event" />
+        </el-select>
       </div>
+      <div class="search-actions">
+        <button class="btn-search" @click="handleSearch">
+          <el-icon><Search /></el-icon>
+          <span>查询</span>
+        </button>
+        <button class="btn-reset" @click="handleReset">
+          <el-icon><RefreshRight /></el-icon>
+          <span>重置</span>
+        </button>
+      </div>
+    </div>
 
-      <el-table :data="tableData" stripe size="small" v-loading="loading">
-        <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column prop="flowCode" label="流程编码" width="160" />
+    <!-- 数据表格 -->
+    <div class="rf-table-card">
+      <el-table :data="tableData" v-loading="loading" class="rf-data-table" :fit="false" empty-text="暂无数据">
+        <el-table-column type="index" label="#" width="52" align="center" />
+
+        <el-table-column prop="flowCode" label="流程编码" width="260">
+          <template #default="{ row }">
+            <span class="rf-code">{{ row.flowCode }}</span>
+          </template>
+        </el-table-column>
+
         <el-table-column prop="flowName" label="流程名称" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="itemCode" label="绑定事项" width="160" />
-        <el-table-column prop="triggerType" label="触发方式" width="100">
+
+        <el-table-column prop="itemCode" label="绑定事项" width="150">
           <template #default="{ row }">
-            <el-tag v-if="row.triggerType === 'cron'" size="small" type="primary">定时</el-tag>
-            <el-tag v-else-if="row.triggerType === 'event'" size="small" type="success">事件</el-tag>
-            <el-tag v-else size="small">手动</el-tag>
+            <span class="rf-mono" style="font-size: 12px; color: var(--rf-text-secondary)">{{ row.itemCode || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="version" label="版本" width="80" align="center" />
-        <el-table-column prop="status" label="状态" width="100" align="center">
+
+        <el-table-column prop="triggerType" label="触发方式" width="120" align="center">
           <template #default="{ row }">
-            <el-tag v-if="row.status === 1" type="success" size="small">已发布</el-tag>
-            <el-tag v-else-if="row.status === 0" size="small">草稿</el-tag>
-            <el-tag v-else type="info" size="small">已下线</el-tag>
+            <span :class="['rf-tag', row.triggerType || 'manual']">{{ triggerLabel(row.triggerType) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="160" />
-        <el-table-column label="操作" width="300" fixed="right">
+
+        <el-table-column prop="version" label="版本" width="100" align="center">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleDesign(row)">
-              <el-icon><Edit /></el-icon> 设计
-            </el-button>
-            <el-button v-if="row.status === 0" link type="success" size="small" @click="handlePublish(row)">发布</el-button>
-            <el-button v-if="row.status === 1" link type="warning" size="small" @click="handleOffline(row)">下线</el-button>
-            <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            <span class="rf-mono" style="font-size: 12px; color: var(--rf-text-muted)">v{{ row.version }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="status" label="状态" width="120" align="center">
+          <template #default="{ row }">
+            <span :class="['rf-status', statusClass(row.status)]">
+              <span class="dot"></span>
+              {{ statusLabel(row.status) }}
+            </span>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="createTime" label="创建时间" width="195">
+          <template #default="{ row }">
+            <span class="rf-time">{{ formatTime(row.createTime) }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="140" fixed="right" align="center">
+          <template #default="{ row }">
+            <div class="rf-actions">
+              <el-tooltip content="设计" placement="top">
+                <button class="action-btn primary" @click="handleDesign(row)">
+                  <el-icon><EditPen /></el-icon>
+                </button>
+              </el-tooltip>
+              <el-tooltip v-if="row.status === 0" content="发布" placement="top">
+                <button class="action-btn success" @click="handlePublish(row)">
+                  <el-icon><Promotion /></el-icon>
+                </button>
+              </el-tooltip>
+              <el-tooltip v-if="row.status === 1" content="下线" placement="top">
+                <button class="action-btn warning" @click="handleOffline(row)">
+                  <el-icon><Download /></el-icon>
+                </button>
+              </el-tooltip>
+              <el-tooltip content="编辑" placement="top">
+                <button class="action-btn" @click="handleEdit(row)">
+                  <el-icon><Edit /></el-icon>
+                </button>
+              </el-tooltip>
+              <el-tooltip content="删除" placement="top">
+                <button class="action-btn danger" @click="handleDelete(row)">
+                  <el-icon><Delete /></el-icon>
+                </button>
+              </el-tooltip>
+            </div>
           </template>
         </el-table-column>
       </el-table>
 
-      <div class="pagination">
+      <!-- 空状态 -->
+      <div v-if="!loading && tableData.length === 0" class="rf-empty">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.2" style="margin-bottom: 16px">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <path d="M3 9h18" />
+          <path d="M9 21V9" />
+        </svg>
+        <div class="empty-title">暂无流程定义</div>
+        <div class="empty-desc">点击右上角「新建流程」创建第一个业务流程</div>
+      </div>
+
+      <!-- 分页 -->
+      <div class="rf-pagination">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.size"
           :total="pagination.total"
           :page-sizes="[10, 20, 50]"
-          layout="total, sizes, prev, pager, next"
+          layout="total, sizes, prev, pager, next, jumper"
           @size-change="handleSearch"
           @current-change="handleSearch"
         />
@@ -60,22 +154,22 @@
     </div>
 
     <!-- 编辑弹窗 -->
-    <el-dialog v-model="editVisible" title="编辑流程" width="500px" destroy-on-close>
-      <el-form :model="editForm" label-width="100px">
+    <el-dialog v-model="editVisible" title="编辑流程" width="520px" destroy-on-close class="edit-dialog">
+      <el-form :model="editForm" label-width="100px" class="edit-form">
         <el-form-item label="流程编码">
           <el-input v-model="editForm.flowCode" disabled />
         </el-form-item>
         <el-form-item label="流程名称">
-          <el-input v-model="editForm.flowName" placeholder="请输入流程名称" />
+          <el-input v-model="editForm.flowName" placeholder="请输入流程名称" maxlength="50" show-word-limit />
         </el-form-item>
         <el-form-item label="绑定事项">
           <el-input v-model="editForm.itemCode" placeholder="请输入事项编码" />
         </el-form-item>
         <el-form-item label="触发方式">
           <el-select v-model="editForm.triggerType" style="width: 100%">
-            <el-option label="手动" value="manual" />
-            <el-option label="定时" value="cron" />
-            <el-option label="事件" value="event" />
+            <el-option label="手动触发" value="manual" />
+            <el-option label="定时触发" value="cron" />
+            <el-option label="事件触发" value="event" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -99,15 +193,39 @@ const editVisible = ref(false)
 const editLoading = ref(false)
 const editForm = reactive({ id: null, flowCode: '', flowName: '', itemCode: '', triggerType: 'manual' })
 
+const searchForm = reactive({ keyword: '', status: '', triggerType: '' })
 const pagination = reactive({ page: 1, size: 10, total: 0 })
 const tableData = ref([])
+
+function triggerLabel(type) {
+  const map = { manual: '手动', cron: '定时', event: '事件' }
+  return map[type] || '手动'
+}
+
+function statusLabel(status) {
+  const map = { 1: '已发布', 0: '草稿', 2: '已下线' }
+  return map[status] || '未知'
+}
+
+function statusClass(status) {
+  const map = { 1: 'published', 0: 'draft', 2: 'offline' }
+  return map[status] || 'draft'
+}
+
+function formatTime(time) {
+  if (!time) return '-'
+  return time.replace('T', ' ').substring(0, 19)
+}
 
 async function handleSearch() {
   loading.value = true
   try {
     const res = await getFlowDefinitionList({
       page: pagination.page,
-      size: pagination.size
+      size: pagination.size,
+      flowName: searchForm.keyword || undefined,
+      status: searchForm.status !== '' ? searchForm.status : undefined,
+      triggerType: searchForm.triggerType || undefined
     })
     if (res && res.records) {
       tableData.value = res.records
@@ -118,6 +236,14 @@ async function handleSearch() {
   } finally {
     loading.value = false
   }
+}
+
+function handleReset() {
+  searchForm.keyword = ''
+  searchForm.status = ''
+  searchForm.triggerType = ''
+  pagination.page = 1
+  handleSearch()
 }
 
 function handleCreate() {
@@ -182,7 +308,7 @@ async function confirmEdit() {
 
 async function handleDelete(row) {
   try {
-    await ElMessageBox.confirm(`确认删除流程「${row.flowName}」？`, '删除确认', { type: 'warning' })
+    await ElMessageBox.confirm(`确认删除流程「${row.flowName}」？删除后不可恢复。`, '删除确认', { type: 'warning' })
     await deleteFlowDefinition(row.id)
     ElMessage.success('删除成功')
     handleSearch()
@@ -197,6 +323,35 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.toolbar { margin-bottom: 16px; }
-.pagination { margin-top: 16px; display: flex; justify-content: flex-end; }
+.edit-dialog {
+  :deep(.el-dialog__header) {
+    padding: 20px 24px 12px;
+    margin-right: 0;
+    border-bottom: 1px solid #f1f5f9;
+
+    .el-dialog__title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--rf-text-main);
+      letter-spacing: -0.01em;
+    }
+  }
+
+  :deep(.el-dialog__body) {
+    padding: 24px;
+  }
+
+  :deep(.el-dialog__footer) {
+    padding: 12px 24px 20px;
+    border-top: 1px solid #f1f5f9;
+  }
+}
+
+.edit-form {
+  :deep(.el-form-item__label) {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--rf-text-secondary);
+  }
+}
 </style>

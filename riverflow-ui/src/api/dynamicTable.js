@@ -19,3 +19,11 @@ export function generateApi(id) {
 export function deleteTable(id) {
   return request({ url: `/dynamic-table/${id}`, method: 'delete' })
 }
+
+export function getTableColumns(id) {
+  return request({ url: `/dynamic-table/${id}/columns`, method: 'get' })
+}
+
+export function saveTableColumns(id, data) {
+  return request({ url: `/dynamic-table/${id}/columns`, method: 'post', data })
+}

@@ -9,7 +9,7 @@
       </el-menu-item>
     </template>
 
-    <el-sub-menu v-else :index="resolvePath(item.path)">
+    <el-sub-menu v-else :index="resolvePath('')">
       <template #title>
         <el-icon v-if="item.meta?.icon">
           <component :is="item.meta.icon" />
@@ -28,7 +28,15 @@
 
 <script setup>
 import { ref } from 'vue'
-import path from 'path-browserify'
+function resolve(basePath, routePath) {
+  if (!routePath) {
+    return basePath && basePath.startsWith('/') ? basePath : '/' + (basePath || '')
+  }
+  if (routePath.startsWith('/')) return routePath
+  if (!basePath) return '/' + routePath.replace(/^\//, '')
+  basePath = basePath.startsWith('/') ? basePath : '/' + basePath
+  return basePath.replace(/\/$/, '') + '/' + routePath.replace(/^\//, '')
+}
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -51,6 +59,6 @@ function hasOneShowingChild(children = [], parent) {
 }
 
 function resolvePath(routePath) {
-  return path.resolve(props.basePath, routePath)
+  return resolve(props.basePath, routePath)
 }
 </script>

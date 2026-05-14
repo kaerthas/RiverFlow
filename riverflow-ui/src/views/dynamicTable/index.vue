@@ -1,60 +1,284 @@
 <template>
-  <div class="rf-page">
-    <div class="rf-page-title">
-      <el-icon><Grid /></el-icon>
-      动态表设计器
+  <div class="rf-list-page">
+    <div class="rf-list-header">
+      <h1 class="title">动态表设计器</h1>
+      <p class="subtitle">管理动态数据表结构，设计字段并生成 CRUD API</p>
+      <button class="btn-primary" @click="handleCreate">
+        <el-icon><Plus /></el-icon> 新建表
+      </button>
     </div>
-    <div class="rf-card">
-      <div class="toolbar">
-        <el-button type="primary" @click="handleCreate"><el-icon><Plus /></el-icon> 新建表</el-button>
+
+    <div class="rf-search-bar">
+      <div class="search-fields">
+        <!-- 暂无搜索条件 -->
       </div>
-      <el-table :data="tableList" stripe size="small">
-        <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column prop="tableCode" label="表编码" width="160" />
-        <el-table-column prop="tableName" label="表名称" min-width="180" />
-        <el-table-column prop="dsName" label="所属数据源" width="140" />
-        <el-table-column prop="columnCount" label="字段数" width="80" align="center" />
-        <el-table-column prop="status" label="状态" width="80" align="center">
+      <div class="search-actions">
+        <button class="btn-search" @click="loadList">查询</button>
+        <button class="btn-reset" @click="handleReset">重置</button>
+      </div>
+    </div>
+
+    <div class="rf-table-card">
+      <el-table :data="tableList" stripe v-loading="loading" class="rf-data-table" :fit="false" empty-text="暂无数据">
+        <el-table-column type="index" label="#" width="52" align="center" />
+        <el-table-column prop="tableCode" label="表编码" width="260">
           <template #default="{ row }">
-            <el-tag v-if="row.status === 1" type="success" size="small">已生成</el-tag>
-            <el-tag v-else size="small">草稿</el-tag>
+            <span class="rf-code">{{ row.tableCode }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="160" />
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column prop="tableName" label="表名称" min-width="180" />
+        <el-table-column prop="dsName" label="所属数据源" width="170">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleDesign(row)">设计表</el-button>
-            <el-button link type="primary" size="small" @click="handleGenApi(row)">生成API</el-button>
-            <el-button link type="primary" size="small" @click="handlePreviewData(row)">数据</el-button>
-            <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            {{ row.dsName || row.dsId || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="columnCount" label="字段数" width="120" align="center">
+          <template #default="{ row }">
+            <span class="rf-mono">{{ row.columnCount }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <span v-if="row.status === 1" class="rf-status success"><span class="dot"></span>已生成</span>
+            <span v-else class="rf-status draft"><span class="dot"></span>草稿</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="创建时间" width="195">
+          <template #default="{ row }">
+            <span class="rf-time">{{ formatTime(row.createTime) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="120" fixed="right">
+          <template #default="{ row }">
+            <div class="rf-actions">
+              <button class="action-btn primary" title="设计表" @click="handleDesign(row)">
+                <el-icon><EditPen /></el-icon>
+              </button>
+              <button class="action-btn success" title="生成API" @click="handleGenApi(row)">
+                <el-icon><Promotion /></el-icon>
+              </button>
+              <button class="action-btn danger" title="删除" @click="handleDelete(row)">
+                <el-icon><Delete /></el-icon>
+              </button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="rf-pagination">
+        <el-pagination
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.size"
+          :total="pagination.total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="loadList"
+          @current-change="loadList"
+        />
+      </div>
     </div>
+
+    <!-- 新建/编辑表弹窗 -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      width="900px"
+      top="5vh"
+      destroy-on-close
+      :close-on-click-modal="false"
+      class="edit-dialog"
+    >
+      <el-tabs v-model="activeTab">
+        <el-tab-pane label="基本信息" name="base">
+          <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px" class="edit-form">
+            <el-form-item label="表编码" prop="tableCode">
+              <el-input v-model="form.tableCode" placeholder="如 t_business_info" :disabled="!!form.id" />
+            </el-form-item>
+            <el-form-item label="表名称" prop="tableName">
+              <el-input v-model="form.tableName" placeholder="如 业务申办信息表" />
+            </el-form-item>
+            <el-form-item label="数据源" prop="dsId">
+              <el-select v-model="form.dsId" placeholder="请选择数据源" style="width: 100%">
+                <el-option
+                  v-for="ds in datasourceOptions"
+                  :key="ds.id"
+                  :label="ds.dsName"
+                  :value="ds.id"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="备注">
+              <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="表用途说明" />
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+        <el-tab-pane label="字段设计" name="columns">
+          <TableDesigner ref="designerRef" v-model="columns" />
+        </el-tab-pane>
+      </el-tabs>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  getTableList,
+  createTable,
+  getTableDetail,
+  getTableColumns,
+  saveTableColumns,
+  generateApi,
+  deleteTable
+} from '@/api/dynamicTable'
+import { getDatasourceList } from '@/api/datasource'
+import TableDesigner from '@/components/TableDesigner/index.vue'
 
-const tableList = ref([
-  { id: 1, tableCode: 't_business_info', tableName: '业务申办信息表', dsName: '主库(mysql)', columnCount: 24, status: 1, createTime: '2024-05-10 09:30:00' },
-  { id: 2, tableCode: 't_material_info', tableName: '申请材料信息表', dsName: '主库(mysql)', columnCount: 12, status: 1, createTime: '2024-05-08 14:20:00' },
-  { id: 3, tableCode: 't_cremation_info', tableName: '火化信息登记表', dsName: '主库(mysql)', columnCount: 18, status: 0, createTime: '2024-05-12 11:00:00' }
-])
+const loading = ref(false)
+const dialogVisible = ref(false)
+const dialogTitle = ref('新建表')
+const formRef = ref(null)
+const designerRef = ref(null)
+const submitLoading = ref(false)
+const activeTab = ref('base')
 
-function handleCreate() { ElMessage.info('新建表弹窗待实现') }
-function handleDesign(row) { ElMessage.info(`设计表: ${row.tableName}`) }
-function handleGenApi(row) { ElMessage.success(`已为「${row.tableName}」生成CRUD接口`) }
-function handlePreviewData(row) { ElMessage.info(`查看表数据: ${row.tableName}`) }
-function handleDelete(row) {
-  ElMessageBox.confirm(`确认删除表「${row.tableName}」？`, '删除确认', { type: 'warning' }).then(() => {
-    ElMessage.success('删除成功')
-  })
+const tableList = ref([])
+const datasourceOptions = ref([])
+
+const pagination = reactive({
+  page: 1,
+  size: 10,
+  total: 0
+})
+
+const form = reactive({
+  id: null,
+  tableCode: '',
+  tableName: '',
+  dsId: null,
+  remark: '',
+  status: 0
+})
+
+const formRules = {
+  tableCode: [{ required: true, message: '请输入表编码', trigger: 'blur' }],
+  tableName: [{ required: true, message: '请输入表名称', trigger: 'blur' }],
+  dsId: [{ required: true, message: '请选择数据源', trigger: 'change' }]
 }
+
+const columns = ref([])
+
+const formatTime = (time) => time ? time.replace('T', ' ').substring(0, 19) : '-'
+
+async function loadList() {
+  loading.value = true
+  try {
+    const res = await getTableList({ page: pagination.page, size: pagination.size })
+    tableList.value = res.list || res.records || res || []
+    pagination.total = res.total || 0
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadDatasourceOptions() {
+  try {
+    const res = await getDatasourceList({ page: 1, size: 999 })
+    datasourceOptions.value = res.list || res.records || res || []
+  } catch (e) {
+    datasourceOptions.value = []
+  }
+}
+
+function handleReset() {
+  pagination.page = 1
+  loadList()
+}
+
+function handleCreate() {
+  dialogTitle.value = '新建表'
+  activeTab.value = 'base'
+  Object.assign(form, { id: null, tableCode: '', tableName: '', dsId: null, remark: '', status: 0 })
+  columns.value = []
+  dialogVisible.value = true
+}
+
+async function handleDesign(row) {
+  dialogTitle.value = `编辑表 - ${row.tableName}`
+  activeTab.value = 'base'
+  Object.assign(form, { ...row })
+  columns.value = []
+  dialogVisible.value = true
+  // 加载字段
+  await nextTick()
+  try {
+    const cols = await getTableColumns(row.id)
+    columns.value = Array.isArray(cols) ? cols : []
+  } catch (e) {
+    columns.value = []
+  }
+}
+
+async function handleSubmit() {
+  if (activeTab.value === 'columns') {
+    activeTab.value = 'base'
+    await nextTick()
+  }
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
+
+  submitLoading.value = true
+  try {
+    const payload = { ...form }
+    const saved = await createTable(payload)
+    const tableId = saved?.id || form.id
+    if (tableId && columns.value.length) {
+      const validCols = designerRef.value?.getValidColumns() || columns.value.filter(c => c.columnCode && c.columnName)
+      if (validCols.length) {
+        await saveTableColumns(tableId, validCols)
+      }
+    }
+    ElMessage.success('保存成功')
+    dialogVisible.value = false
+    loadList()
+  } catch (e) {
+    // 错误已由 request 拦截器提示
+  } finally {
+    submitLoading.value = false
+  }
+}
+
+async function handleGenApi(row) {
+  try {
+    await generateApi(row.id)
+    ElMessage.success(`已为「${row.tableName}」生成 CRUD 接口`)
+    loadList()
+  } catch (e) {
+    // 失败已由 request 拦截器提示
+  }
+}
+
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(`确认删除表「${row.tableName}」？`, '删除确认', { type: 'warning' })
+    await deleteTable(row.id)
+    ElMessage.success('删除成功')
+    loadList()
+  } catch (e) {
+    // 取消或失败
+  }
+}
+
+onMounted(() => {
+  loadDatasourceOptions()
+  loadList()
+})
 </script>
 
 <style scoped lang="scss">
-.toolbar { margin-bottom: 16px; }
 </style>
