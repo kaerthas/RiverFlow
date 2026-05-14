@@ -51,7 +51,7 @@
 
     <!-- 数据表格 -->
     <div class="rf-table-card">
-      <el-table :data="tableData" v-loading="loading" class="rf-data-table" :fit="false" empty-text="暂无数据">
+      <el-table :data="tableData" v-loading="loading" class="rf-data-table" :fit="false" max-height="480">
         <el-table-column type="index" label="#" width="52" align="center" />
 
         <el-table-column prop="flowCode" label="流程编码" width="260">
@@ -126,18 +126,20 @@
             </div>
           </template>
         </el-table-column>
-      </el-table>
 
-      <!-- 空状态 -->
-      <div v-if="!loading && tableData.length === 0" class="rf-empty">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.2" style="margin-bottom: 16px">
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <path d="M3 9h18" />
-          <path d="M9 21V9" />
-        </svg>
-        <div class="empty-title">暂无流程定义</div>
-        <div class="empty-desc">点击右上角「新建流程」创建第一个业务流程</div>
-      </div>
+        <!-- 空状态插槽：替换表格默认的暂无数据 -->
+        <template #empty>
+          <div class="rf-empty">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.2" style="margin-bottom: 16px">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 9h18" />
+              <path d="M9 21V9" />
+            </svg>
+            <div class="empty-title">暂无流程定义</div>
+            <div class="empty-desc">点击右上角「新建流程」创建第一个业务流程</div>
+          </div>
+        </template>
+      </el-table>
 
       <!-- 分页 -->
       <div class="rf-pagination">
@@ -352,6 +354,16 @@ onMounted(() => {
     font-size: 13px;
     font-weight: 500;
     color: var(--rf-text-secondary);
+  }
+}
+
+// 空状态插槽样式
+.rf-data-table {
+  :deep(.el-table__empty-block) {
+    // 去掉全局样式带来的虚线圆圈伪元素
+    &::before {
+      display: none !important;
+    }
   }
 }
 </style>
