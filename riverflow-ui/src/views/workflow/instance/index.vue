@@ -1,8 +1,13 @@
 <template>
   <div class="rf-list-page">
     <div class="rf-list-header">
-      <h1 class="title">流程实例监控</h1>
-      <p class="subtitle">查看和管理流程实例的运行状态</p>
+      <div>
+        <h1 class="title">流程实例监控</h1>
+        <p class="subtitle">查看和管理流程实例的运行状态</p>
+      </div>
+      <button class="btn-primary" @click="handleStartDialog">
+        <el-icon><VideoPlay /></el-icon> 启动实例
+      </button>
     </div>
 
     <div class="rf-search-bar">
@@ -95,6 +100,29 @@
       </div>
     </div>
 
+    <!-- 启动实例弹窗 -->
+    <el-dialog v-model="startDialogVisible" title="手动启动流程实例" width="520px" destroy-on-close :close-on-click-modal="false">
+      <el-form ref="startFormRef" :model="startForm" :rules="startFormRules" label-width="100px">
+        <el-form-item label="流程定义" prop="flowId">
+          <el-select v-model="startForm.flowId" placeholder="请选择要启动的流程" clearable style="width: 100%">
+            <el-option
+              v-for="flow in flowDefinitionOptions"
+              :key="flow.id"
+              :label="flow.flowName"
+              :value="flow.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="业务主键" prop="businessKey">
+          <el-input v-model="startForm.businessKey" placeholder="如办件流水号、 receiptNo 等" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="startDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleStartSubmit">启动</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 详情弹窗 -->
     <el-dialog v-model="detailVisible" title="流程实例详情" width="900px" class="edit-dialog" destroy-on-close>
       <div v-if="currentInstance" class="instance-detail">
@@ -156,15 +184,29 @@ import {
   executeFlowInstance,
   terminateFlowInstance,
   getInstanceTasks,
-  getInstanceLogs
+  getInstanceLogs,
+  getFlowDefinitionList,
+  startFlowInstance
 } from '@/api/workflow'
 
 const loading = ref(false)
 const detailVisible = ref(false)
+const startDialogVisible = ref(false)
 const currentInstance = ref(null)
 const activeTab = ref('logs')
 const instanceLogs = ref([])
 const instanceTasks = ref([])
+const flowDefinitionOptions = ref([])
+
+const startForm = reactive({
+  flowId: null,
+  businessKey: ''
+})
+const startFormRef = ref(null)
+const startFormRules = {
+  flowId: [{ required: true, message: '请选择流程定义', trigger: 'change' }],
+  businessKey: [{ required: true, message: '请输入业务主键', trigger: 'blur' }]
+}
 
 const queryForm = reactive({
   flowCode: '',
@@ -211,6 +253,32 @@ async function handleDetail(row) {
     instanceTasks.value = tasksRes || []
   } catch (e) {
     console.error('加载详情失败', e)
+  }
+}
+
+async function handleStartDialog() {
+  startForm.flowId = null
+  startForm.businessKey = ''
+  startDialogVisible.value = true
+  // 加载已发布的流程定义
+  try {
+    const res = await getFlowDefinitionList({ page: 1, size: 999, status: 1 })
+    flowDefinitionOptions.value = res.list || res.records || res || []
+  } catch (e) {
+    flowDefinitionOptions.value = []
+  }
+}
+
+async function handleStartSubmit() {
+  const valid = await startFormRef.value.validate().catch(() => false)
+  if (!valid) return
+  try {
+    await startFlowInstance(startForm.flowId, startForm.businessKey)
+    ElMessage.success('流程实例启动成功')
+    startDialogVisible.value = false
+    handleSearch()
+  } catch (e) {
+    ElMessage.error('启动失败: ' + (e.message || '未知错误'))
   }
 }
 

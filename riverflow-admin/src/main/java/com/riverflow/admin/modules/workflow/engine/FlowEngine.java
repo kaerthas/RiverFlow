@@ -63,7 +63,9 @@ public class FlowEngine {
         flowInstanceService.save(instance);
 
         FlowContext context = new FlowContext(instance.getId(), businessKey, flowCode);
-        context.set("itemCode", itemCode);
+        if (itemCode != null) {
+            context.set("itemCode", itemCode);
+        }
         instance.setContextJson(context.toJsonString());
         instance.setCurrentNodeId("");
         flowInstanceService.updateById(instance);

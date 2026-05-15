@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface FlowNodeService extends IService<FlowNode> {
     List<FlowNode> getNodesByFlowId(Long flowId);
+
+    int physicalDeleteByFlowId(Long flowId);
 }

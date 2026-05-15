@@ -11,10 +11,13 @@ import com.riverflow.api.enums.FlowNodeTypeEnum;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 工作流管理 Controller
@@ -109,30 +112,75 @@ public class WorkflowController {
     }
 
     @PostMapping("/definition/{flowId}/save-graph")
-    public R<Void> saveGraph(@PathVariable Long flowId, @RequestBody GraphSaveRequest request) {
+    @Transactional(rollbackFor = Exception.class)
+    public R<Void> saveGraph(@PathVariable Long flowId, @RequestBody com.alibaba.fastjson2.JSONObject request) {
         FlowDefinition def = flowDefinitionService.getById(flowId);
         if (def == null) return R.fail("流程定义不存在");
-        def.setGraphJson(request.getGraphJson());
-        flowDefinitionService.updateById(def);
 
-        // 保存节点
-        flowNodeService.remove(new QueryWrapper<FlowNode>().eq("flow_id", flowId));
-        if (request.getNodes() != null) {
-            for (FlowNode node : request.getNodes()) {
+        // 保存节点（物理删除旧记录，避免唯一键冲突）
+        flowNodeService.getBaseMapper().physicalDeleteByFlowId(flowId);
+        com.alibaba.fastjson2.JSONArray nodes = request.getJSONArray("nodes");
+        if (nodes != null && !nodes.isEmpty()) {
+            List<FlowNode> nodeList = new ArrayList<>();
+            for (int i = 0; i < nodes.size(); i++) {
+                com.alibaba.fastjson2.JSONObject nodeJson = nodes.getJSONObject(i);
+                FlowNode node = new FlowNode();
                 node.setFlowId(flowId);
+                node.setNodeId(nodeJson.getString("id"));
+                node.setNodeName(nodeJson.getString("text"));
+                node.setNodeType(nodeJson.getString("type"));
+
+                // properties 整体序列化为 configJson
+                com.alibaba.fastjson2.JSONObject props = nodeJson.getJSONObject("properties");
+                if (props != null) {
+                    node.setConfigJson(props.toJSONString());
+                    if (node.getNodeName() == null) {
+                        node.setNodeName(props.getString("name"));
+                    }
+                }
+
+                // x, y 坐标
+                Object x = nodeJson.get("x");
+                Object y = nodeJson.get("y");
+                if (x != null) node.setXCoordinate(new java.math.BigDecimal(x.toString()));
+                if (y != null) node.setYCoordinate(new java.math.BigDecimal(y.toString()));
+
+                node.setSortNo(i);
                 node.setDelFlag(0);
+                nodeList.add(node);
             }
-            flowNodeService.saveBatch(request.getNodes());
+            // 去重：同一个 flow_id + node_id 只保留一条（防止前端数据异常）
+            Map<String, FlowNode> nodeMap = new java.util.LinkedHashMap<>();
+            for (FlowNode n : nodeList) {
+                nodeMap.put(n.getNodeId(), n);
+            }
+            flowNodeService.saveBatch(new ArrayList<>(nodeMap.values()));
         }
 
-        // 保存边
-        flowEdgeService.remove(new QueryWrapper<FlowEdge>().eq("flow_id", flowId));
-        if (request.getEdges() != null) {
-            for (FlowEdge edge : request.getEdges()) {
+        // 保存边（物理删除旧记录，避免唯一键冲突）
+        flowEdgeService.getBaseMapper().physicalDeleteByFlowId(flowId);
+        com.alibaba.fastjson2.JSONArray edges = request.getJSONArray("edges");
+        if (edges != null && !edges.isEmpty()) {
+            List<FlowEdge> edgeList = new ArrayList<>();
+            for (int i = 0; i < edges.size(); i++) {
+                com.alibaba.fastjson2.JSONObject edgeJson = edges.getJSONObject(i);
+                FlowEdge edge = new FlowEdge();
                 edge.setFlowId(flowId);
+                edge.setEdgeId(edgeJson.getString("id"));
+                edge.setSourceNode(edgeJson.getString("sourceNodeId"));
+                edge.setTargetNode(edgeJson.getString("targetNodeId"));
+
+                com.alibaba.fastjson2.JSONObject props = edgeJson.getJSONObject("properties");
+                if (props != null) {
+                    edge.setConditionType(props.getString("conditionType"));
+                    edge.setConditionExpression(props.getString("conditionExpression"));
+                }
+
+                edge.setPriority(i);
                 edge.setDelFlag(0);
+                edgeList.add(edge);
             }
-            flowEdgeService.saveBatch(request.getEdges());
+            flowEdgeService.saveBatch(edgeList);
         }
 
         return R.ok();

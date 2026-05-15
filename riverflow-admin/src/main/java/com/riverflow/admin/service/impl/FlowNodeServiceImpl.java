@@ -15,4 +15,9 @@ public class FlowNodeServiceImpl extends ServiceImpl<FlowNodeMapper, FlowNode> i
     public List<FlowNode> getNodesByFlowId(Long flowId) {
         return baseMapper.selectByFlowId(flowId);
     }
+
+    @Override
+    public int physicalDeleteByFlowId(Long flowId) {
+        return baseMapper.physicalDeleteByFlowId(flowId);
+    }
 }
