@@ -29,7 +29,7 @@
         <el-table-column prop="tableName" label="表名称" min-width="180" />
         <el-table-column prop="dsName" label="所属数据源" width="170">
           <template #default="{ row }">
-            {{ row.dsName || row.dsId || '-' }}
+            {{ row.dsName || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="columnCount" label="字段数" width="120" align="center">
@@ -48,13 +48,19 @@
             <span class="rf-time">{{ formatTime(row.createTime) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right" align="center">
           <template #default="{ row }">
             <div class="rf-actions">
               <button class="action-btn primary" title="设计表" @click="handleDesign(row)">
                 <el-icon><EditPen /></el-icon>
               </button>
-              <button class="action-btn success" title="生成API" @click="handleGenApi(row)">
+              <button class="action-btn warning" title="创建表" @click="handleCreatePhysical(row)">
+                <el-icon><Coin /></el-icon>
+              </button>
+              <button v-if="row.status !== 1" class="action-btn success" title="发布" @click="handlePublish(row)">
+                <el-icon><Check /></el-icon>
+              </button>
+              <button class="action-btn" title="生成API" @click="handleGenApi(row)">
                 <el-icon><Promotion /></el-icon>
               </button>
               <button class="action-btn danger" title="删除" @click="handleDelete(row)">
@@ -134,7 +140,9 @@ import {
   getTableColumns,
   saveTableColumns,
   generateApi,
-  deleteTable
+  deleteTable,
+  createPhysicalTable,
+  publishTable
 } from '@/api/dynamicTable'
 import { getDatasourceList } from '@/api/datasource'
 import TableDesigner from '@/components/TableDesigner/index.vue'
@@ -250,6 +258,26 @@ async function handleSubmit() {
     // 错误已由 request 拦截器提示
   } finally {
     submitLoading.value = false
+  }
+}
+
+async function handleCreatePhysical(row) {
+  try {
+    const res = await createPhysicalTable(row.id)
+    ElMessage.success(`「${row.tableName}」物理表创建成功`)
+    loadList()
+  } catch (e) {
+    // 失败已由 request 拦截器提示
+  }
+}
+
+async function handlePublish(row) {
+  try {
+    await publishTable(row.id)
+    ElMessage.success(`「${row.tableName}」已发布`)
+    loadList()
+  } catch (e) {
+    // 失败已由 request 拦截器提示
   }
 }
 

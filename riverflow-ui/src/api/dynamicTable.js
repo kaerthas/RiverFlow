@@ -27,3 +27,11 @@ export function getTableColumns(id) {
 export function saveTableColumns(id, data) {
   return request({ url: `/dynamic-table/${id}/columns`, method: 'post', data })
 }
+
+export function createPhysicalTable(id) {
+  return request({ url: `/dynamic-table/${id}/create-table`, method: 'post' })
+}
+
+export function publishTable(id) {
+  return request({ url: `/dynamic-table/${id}/publish`, method: 'put' })
+}

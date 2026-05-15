@@ -1,6 +1,9 @@
 package com.riverflow.api.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.riverflow.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -28,7 +31,20 @@ public class DynamicTable extends BaseEntity {
     /**
      * 所属数据源ID，0表示主库
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long dsId;
+
+    /**
+     * 数据源名称（非持久化，列表展示用）
+     */
+    @TableField(exist = false)
+    private String dsName;
+
+    /**
+     * 字段数量（非持久化，列表展示用）
+     */
+    @TableField(exist = false)
+    private Integer columnCount;
 
     /**
      * 备注

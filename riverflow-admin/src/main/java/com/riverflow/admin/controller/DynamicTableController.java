@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
 import com.riverflow.admin.mapper.DynamicTableColumnMapper;
 import com.riverflow.admin.service.ApiCatalogService;
+import com.riverflow.admin.service.DatasourceService;
 import com.riverflow.admin.service.DynamicTableColumnService;
 import com.riverflow.admin.service.DynamicTableService;
 import com.riverflow.api.entity.ApiCatalog;
@@ -40,6 +41,8 @@ public class DynamicTableController {
     private JdbcTemplate jdbcTemplate;
     @Autowired
     private DynamicDataSourceService dynamicDataSourceService;
+    @Autowired
+    private DatasourceService datasourceService;
 
     @GetMapping("/list")
     public R<Page<DynamicTable>> list(
@@ -49,7 +52,38 @@ public class DynamicTableController {
         QueryWrapper<DynamicTable> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);
         qw.orderByDesc("create_time");
-        return R.ok(dynamicTableService.page(pageParam, qw));
+        Page<DynamicTable> result = dynamicTableService.page(pageParam, qw);
+
+        // 填充数据源名称和字段数
+        if (result.getRecords() != null && !result.getRecords().isEmpty()) {
+            // 1. 批量查询数据源名称
+            List<Long> dsIds = result.getRecords().stream()
+                    .map(DynamicTable::getDsId)
+                    .filter(id -> id != null && id != 0)
+                    .distinct()
+                    .collect(Collectors.toList());
+            Map<Long, String> dsNameMap = new HashMap<>();
+            if (!dsIds.isEmpty()) {
+                List<com.riverflow.api.entity.Datasource> dsList = datasourceService.listByIds(dsIds);
+                dsNameMap = dsList.stream()
+                        .collect(Collectors.toMap(com.riverflow.api.entity.Datasource::getId, com.riverflow.api.entity.Datasource::getDsName, (a, b) -> a));
+            }
+
+            // 2. 批量查询字段数
+            for (DynamicTable table : result.getRecords()) {
+                if (table.getDsId() != null && dsNameMap.containsKey(table.getDsId())) {
+                    table.setDsName(dsNameMap.get(table.getDsId()));
+                }
+                long colCount = dynamicTableColumnService.count(
+                        new QueryWrapper<DynamicTableColumn>()
+                                .eq("table_id", table.getId())
+                                .eq("del_flag", 0)
+                );
+                table.setColumnCount((int) colCount);
+            }
+        }
+
+        return R.ok(result);
     }
 
     @GetMapping("/{id}")
@@ -85,6 +119,20 @@ public class DynamicTableController {
         dynamicTableService.removeById(id);
         // 物理删除关联字段配置（绕过 @TableLogic）
         dynamicTableColumnMapper.physicalDeleteByTableId(id);
+        return R.ok();
+    }
+
+    /**
+     * 发布动态表（标记为已启用）
+     */
+    @PutMapping("/{id}/publish")
+    public R<Void> publish(@PathVariable Long id) {
+        DynamicTable table = dynamicTableService.getById(id);
+        if (table == null) {
+            return R.fail("表不存在");
+        }
+        table.setStatus(1);
+        dynamicTableService.updateById(table);
         return R.ok();
     }
 
