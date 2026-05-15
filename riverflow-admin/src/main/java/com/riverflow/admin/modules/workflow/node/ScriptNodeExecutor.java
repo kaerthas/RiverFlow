@@ -40,7 +40,11 @@ public class ScriptNodeExecutor implements NodeExecutor {
         }
 
         JSONObject config = JSON.parseObject(configJson);
+        // 兼容前端字段名 scriptContent 和 script
         String script = config.getString("script");
+        if (script == null || script.isEmpty()) {
+            script = config.getString("scriptContent");
+        }
         if (script == null || script.isEmpty()) {
             return NodeExecuteResult.fail("脚本节点未配置脚本内容");
         }
