@@ -153,9 +153,8 @@
               <div class="section-title">数据库配置</div>
               <el-form label-position="top" size="default">
                 <el-form-item label="数据源">
-                  <el-select v-model="selectedNode.properties.dsCode" placeholder="选择数据源" style="width: 100%">
-                    <el-option label="主库(mysql)" value="master" />
-                    <el-option label="Oracle业务库" value="biz_oracle" />
+                  <el-select v-model="selectedNode.properties.dsCode" placeholder="选择数据源" clearable style="width: 100%">
+                    <el-option v-for="ds in datasourceOptions" :key="ds.id" :label="ds.dsName" :value="ds.dsCode" />
                   </el-select>
                 </el-form-item>
                 <el-form-item label="操作类型">
@@ -325,7 +324,8 @@ import {
 } from '@logicflow/extension'
 import '@logicflow/core/dist/style/index.css'
 import '@logicflow/extension/lib/style/index.css'
-import { saveFlowDefinition, getFlowDefinitionDetail, publishFlowDefinition, startFlowInstance } from '@/api/workflow'
+import { saveFlowDefinition, saveFlowGraph, getFlowDefinitionDetail, publishFlowDefinition, startFlowInstance } from '@/api/workflow'
+import { getDatasourceList } from '@/api/datasource'
 import MonacoEditor from '@/components/MonacoEditor/index.vue'
 
 const route = useRoute()
@@ -345,6 +345,7 @@ const selectedNode = ref(null)
 const selectedEdge = ref(null)
 const inputMappings = ref([])
 const outputMappings = ref([])
+const datasourceOptions = ref([])
 
 const nodeGroups = [
   {
@@ -663,10 +664,17 @@ async function handleSave() {
     graphJson: JSON.stringify(graphData)
   }
   try {
+    // 1. 保存流程定义
     const res = await saveFlowDefinition(defData)
     if (!flowId.value && res) {
       flowId.value = res
     }
+
+    // 2. 保存节点和边（核心修复：之前只保存了 graphJson 字符串，节点和边没拆表存储）
+    if (flowId.value && graphData.nodes) {
+      await saveFlowGraph(flowId.value, graphData)
+    }
+
     ElMessage.success('流程草稿已保存')
   } catch (e) {
     ElMessage.error('保存失败: ' + e.message)
@@ -758,8 +766,18 @@ async function loadFlowData() {
   }
 }
 
+async function loadDatasourceOptions() {
+  try {
+    const res = await getDatasourceList({ page: 1, size: 999 })
+    datasourceOptions.value = res.list || res.records || res || []
+  } catch (e) {
+    datasourceOptions.value = []
+  }
+}
+
 onMounted(() => {
   nextTick(() => initLogicFlow())
+  loadDatasourceOptions()
 })
 
 onUnmounted(() => {
