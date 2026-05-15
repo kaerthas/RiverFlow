@@ -473,7 +473,13 @@ function initLogicFlow() {
     parsedColumns.value = []
   })
 
-  lf.on('element:delete', () => {
+  lf.on('node:delete', () => {
+    selectedNode.value = null
+    selectedEdge.value = null
+    parsedColumns.value = []
+  })
+
+  lf.on('edge:delete', () => {
     selectedNode.value = null
     selectedEdge.value = null
     parsedColumns.value = []
