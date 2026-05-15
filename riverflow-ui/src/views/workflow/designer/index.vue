@@ -473,6 +473,12 @@ function initLogicFlow() {
     parsedColumns.value = []
   })
 
+  lf.on('element:delete', () => {
+    selectedNode.value = null
+    selectedEdge.value = null
+    parsedColumns.value = []
+  })
+
   lf.on('connection:not-allowed', (data) => {
     ElMessage.warning(data.msg || '不允许的连线')
   })
