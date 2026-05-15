@@ -77,14 +77,33 @@ public class FlowEngine {
      */
     @Transactional(rollbackFor = Exception.class)
     public void executeNode(FlowInstance instance, FlowNode node, List<FlowEdge> edges, List<FlowNode> nodes) {
+        // 动态锁过期：节点超时 + 10秒缓冲，最少30秒
+        int nodeTimeout = node.getTimeout() != null ? node.getTimeout() : 30000;
+        int lockSeconds = Math.max(30, nodeTimeout / 1000 + 10);
+
         String lockKey = CommonConstant.FLOW_LOCK_PREFIX + instance.getId();
-        Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", 30, TimeUnit.SECONDS);
+        Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", lockSeconds, TimeUnit.SECONDS);
         if (!Boolean.TRUE.equals(locked)) {
             log.warn("[流程实例:{}] 获取分布式锁失败，跳过本次执行", instance.getId());
             return;
         }
 
         try {
+            // 二次校验：获取锁后，再次查询数据库确认该实例当前节点的最新task状态
+            // 防止 Redis 锁过期后，其他线程已执行完该节点并流转到下一节点，导致重复执行
+            FlowTask latestTask = flowTaskService.getOne(
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<FlowTask>()
+                            .eq("instance_id", instance.getId())
+                            .eq("node_id", node.getNodeId())
+                            .orderByDesc("create_time")
+                            .last("LIMIT 1")
+            );
+            if (latestTask != null && !FlowTaskStatusEnum.PENDING.getCode().equals(latestTask.getStatus())) {
+                log.warn("[流程实例:{}] 二次校验失败，任务已被其他线程执行（status={}），释放锁并跳过",
+                        instance.getId(), latestTask.getStatus());
+                return;
+            }
+
             FlowContext context = FlowContext.fromJson(instance.getContextJson());
             if (context.getInstanceId() == null) {
                 context.set("_instanceId", instance.getId());
