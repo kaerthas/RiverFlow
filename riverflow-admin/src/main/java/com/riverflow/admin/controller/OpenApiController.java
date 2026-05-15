@@ -6,10 +6,21 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
 import com.riverflow.admin.infra.http.HttpRequestService;
 import com.riverflow.admin.infra.openapi.NestedParamResolver;
+import com.riverflow.admin.modules.workflow.engine.FlowEngine;
 import com.riverflow.admin.service.ApiCatalogService;
 import com.riverflow.admin.service.DatasourceService;
+import com.riverflow.admin.service.FlowDefinitionService;
+import com.riverflow.admin.service.FlowInstanceService;
+import com.riverflow.admin.service.FlowNodeService;
+import com.riverflow.admin.service.FlowTaskService;
 import com.riverflow.api.entity.ApiCatalog;
 import com.riverflow.api.entity.Datasource;
+import com.riverflow.api.entity.FlowDefinition;
+import com.riverflow.api.entity.FlowInstance;
+import com.riverflow.api.entity.FlowNode;
+import com.riverflow.api.entity.FlowTask;
+import com.riverflow.api.enums.FlowNodeTypeEnum;
+import com.riverflow.api.enums.FlowTaskStatusEnum;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +54,16 @@ public class OpenApiController {
     private DynamicDataSourceService dynamicDataSourceService;
     @Autowired
     private HttpRequestService httpRequestService;
+    @Autowired
+    private FlowEngine flowEngine;
+    @Autowired
+    private FlowDefinitionService flowDefinitionService;
+    @Autowired
+    private FlowNodeService flowNodeService;
+    @Autowired
+    private FlowInstanceService flowInstanceService;
+    @Autowired
+    private FlowTaskService flowTaskService;
 
     @PostMapping("/{apiCode}")
     public R<Object> executePost(@PathVariable String apiCode,
@@ -127,6 +148,10 @@ public class OpenApiController {
             } else if (result instanceof Number) {
                 resultData.put("affectedRows", result);
             }
+
+            // 配置化流程触发（SQL执行成功后，隔离异常不影响接口返回）
+            triggerFlowIfNeeded(api, params, resultData);
+
             return R.ok(resultData);
         } catch (Exception e) {
             log.error("SQL执行失败: apiCode={}, sql={}", api.getApiCode(), resolvedSql, e);
@@ -196,5 +221,85 @@ public class OpenApiController {
         }
         String str = String.valueOf(value);
         return "'" + str.replace("'", "''") + "'";
+    }
+
+    /**
+     * 配置化流程触发
+     * 当接口配置了 triggerEnabled=1 且 triggerFlowId 不为空时，
+     * 在 SQL 执行成功后自动启动对应流程实例
+     */
+    private void triggerFlowIfNeeded(ApiCatalog api, Map<String, Object> params, JSONObject resultData) {
+        if (api.getTriggerEnabled() == null || api.getTriggerEnabled() != 1 || api.getTriggerFlowId() == null) {
+            return;
+        }
+
+        try {
+            FlowDefinition def = flowDefinitionService.getById(api.getTriggerFlowId());
+            if (def == null) {
+                log.warn("流程触发失败：流程定义不存在, triggerFlowId={}", api.getTriggerFlowId());
+                return;
+            }
+            if (def.getStatus() == null || def.getStatus() != 1) {
+                log.warn("流程触发失败：流程未发布, triggerFlowId={}, status={}", api.getTriggerFlowId(), def.getStatus());
+                return;
+            }
+
+            // 提取业务主键
+            String bizKeyField = api.getTriggerBizKeyField();
+            String businessKey = null;
+            if (bizKeyField != null && !bizKeyField.isEmpty()) {
+                Object bizVal = NestedParamResolver.getValueByPath(params, bizKeyField);
+                if (bizVal != null) {
+                    businessKey = String.valueOf(bizVal);
+                }
+            }
+            if (businessKey == null || businessKey.isEmpty() || "null".equals(businessKey)) {
+                businessKey = String.valueOf(System.currentTimeMillis());
+                log.warn("业务主键字段未配置或参数中不存在，使用时间戳作为 businessKey: apiCode={}", api.getApiCode());
+            }
+
+            // 启动流程实例
+            FlowInstance instance = flowEngine.startInstance(
+                    api.getTriggerFlowId(),
+                    def.getFlowCode(),
+                    businessKey,
+                    def.getItemCode()
+            );
+
+            // 创建开始节点的 pending 任务，让 FlowScheduler 能扫描并自动推进
+            List<FlowNode> nodes = flowNodeService.list(
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<FlowNode>()
+                            .eq("flow_id", api.getTriggerFlowId())
+                            .eq("del_flag", 0)
+            );
+            FlowNode startNode = nodes.stream()
+                    .filter(n -> FlowNodeTypeEnum.START.getCode().equals(n.getNodeType()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (startNode != null) {
+                FlowTask task = new FlowTask();
+                task.setInstanceId(instance.getId());
+                task.setNodeId(startNode.getNodeId());
+                task.setNodeName(startNode.getNodeName());
+                task.setNodeType(startNode.getNodeType());
+                task.setStatus(FlowTaskStatusEnum.PENDING.getCode());
+                task.setExecuteCount(0);
+                task.setCreateTime(java.time.LocalDateTime.now());
+                flowTaskService.save(task);
+
+                instance.setCurrentNodeId(startNode.getNodeId());
+                flowInstanceService.updateById(instance);
+            }
+
+            resultData.put("instanceId", instance.getId());
+            resultData.put("businessKey", businessKey);
+            log.info("流程触发成功: apiCode={}, instanceId={}, businessKey={}",
+                    api.getApiCode(), instance.getId(), businessKey);
+
+        } catch (Exception e) {
+            log.error("流程触发异常: apiCode={}, triggerFlowId={}", api.getApiCode(), api.getTriggerFlowId(), e);
+            // 流程触发异常不影响 SQL 接口返回，仅记录日志
+        }
     }
 }

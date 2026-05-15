@@ -86,6 +86,21 @@ public class ApiCatalog extends BaseEntity {
     private Integer proxyPort;
 
     /**
+     * 是否启用流程触发：0-否 1-是
+     */
+    private Integer triggerEnabled;
+
+    /**
+     * 执行成功后触发的流程定义ID
+     */
+    private Long triggerFlowId;
+
+    /**
+     * 从请求参数中提取业务主键的字段名
+     */
+    private String triggerBizKeyField;
+
+    /**
      * 状态：0-草稿，1-已发布，2-下线
      */
     private Integer status;

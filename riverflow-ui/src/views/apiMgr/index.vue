@@ -62,6 +62,12 @@
             <el-switch v-model="row.status" :active-value="1" :inactive-value="0" @change="handleStatusChange(row)" />
           </template>
         </el-table-column>
+        <el-table-column label="流程触发" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="row.triggerEnabled === 1" type="success" size="small">已启用</el-tag>
+            <el-tag v-else type="info" size="small">未启用</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="120" fixed="right" align="center">
           <template #default="{ row }">
             <div class="rf-actions">
@@ -183,6 +189,27 @@
                 <el-input-number v-model="form.proxyPort" placeholder="端口" :min="1" :max="65535" style="width: 120px; margin-left: 8px" />
               </template>
             </el-form-item>
+
+            <el-divider content-position="left">流程触发配置</el-divider>
+            <el-form-item label="启用流程触发">
+              <el-switch v-model="form.triggerEnabled" :active-value="1" :inactive-value="0" />
+            </el-form-item>
+            <template v-if="form.triggerEnabled === 1">
+              <el-row :gutter="16">
+                <el-col :span="12">
+                  <el-form-item label="触发流程">
+                    <el-select v-model="form.triggerFlowId" placeholder="请选择要触发的流程" clearable style="width: 100%">
+                      <el-option v-for="flow in flowDefinitionOptions" :key="flow.id" :label="flow.flowName" :value="flow.id" />
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="业务主键字段">
+                    <el-input v-model="form.triggerBizKeyField" placeholder="请求参数中的字段名，如 receiptNo" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </template>
           </el-form>
         </el-tab-pane>
         <el-tab-pane label="参数配置" name="params">
@@ -264,6 +291,7 @@ import {
   saveApiParams
 } from '@/api/apiMgr'
 import { getDatasourceList } from '@/api/datasource'
+import { getFlowDefinitionList } from '@/api/workflow'
 import ApiDebugger from '@/components/ApiDebugger/index.vue'
 
 const loading = ref(false)
@@ -289,6 +317,7 @@ const pagination = reactive({
 
 const apiList = ref([])
 const datasourceOptions = ref([])
+const flowDefinitionOptions = ref([])
 
 const form = reactive({
   id: null,
@@ -305,6 +334,9 @@ const form = reactive({
   proxyEnabled: 0,
   proxyHost: '',
   proxyPort: null,
+  triggerEnabled: 0,
+  triggerFlowId: null,
+  triggerBizKeyField: '',
   status: 0
 })
 
@@ -396,6 +428,9 @@ function handleAdd() {
     proxyEnabled: 0,
     proxyHost: '',
     proxyPort: null,
+    triggerEnabled: 0,
+    triggerFlowId: null,
+    triggerBizKeyField: '',
     status: 0
   })
   allParams.value = []
@@ -478,8 +513,18 @@ function handleDebug(row) {
   debugDialogVisible.value = true
 }
 
+async function loadFlowDefinitionOptions() {
+  try {
+    const res = await getFlowDefinitionList({ page: 1, size: 999, status: 1 })
+    flowDefinitionOptions.value = res.list || res.records || res || []
+  } catch (e) {
+    flowDefinitionOptions.value = []
+  }
+}
+
 onMounted(() => {
   loadDatasourceOptions()
+  loadFlowDefinitionOptions()
   loadList()
 })
 </script>
