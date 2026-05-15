@@ -15,4 +15,9 @@ public class FlowEdgeServiceImpl extends ServiceImpl<FlowEdgeMapper, FlowEdge> i
     public List<FlowEdge> getEdgesByFlowId(Long flowId) {
         return baseMapper.selectByFlowId(flowId);
     }
+
+    @Override
+    public int physicalDeleteByFlowId(Long flowId) {
+        return baseMapper.physicalDeleteByFlowId(flowId);
+    }
 }

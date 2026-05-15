@@ -118,7 +118,7 @@ public class WorkflowController {
         if (def == null) return R.fail("流程定义不存在");
 
         // 保存节点（物理删除旧记录，避免唯一键冲突）
-        flowNodeService.getBaseMapper().physicalDeleteByFlowId(flowId);
+        flowNodeService.physicalDeleteByFlowId(flowId);
         com.alibaba.fastjson2.JSONArray nodes = request.getJSONArray("nodes");
         if (nodes != null && !nodes.isEmpty()) {
             List<FlowNode> nodeList = new ArrayList<>();
@@ -158,7 +158,7 @@ public class WorkflowController {
         }
 
         // 保存边（物理删除旧记录，避免唯一键冲突）
-        flowEdgeService.getBaseMapper().physicalDeleteByFlowId(flowId);
+        flowEdgeService.physicalDeleteByFlowId(flowId);
         com.alibaba.fastjson2.JSONArray edges = request.getJSONArray("edges");
         if (edges != null && !edges.isEmpty()) {
             List<FlowEdge> edgeList = new ArrayList<>();
