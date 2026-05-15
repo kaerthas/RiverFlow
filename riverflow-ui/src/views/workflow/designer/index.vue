@@ -129,10 +129,8 @@
               <div class="section-title">接口配置</div>
               <el-form label-position="top" size="default">
                 <el-form-item label="绑定接口">
-                  <el-select v-model="selectedNode.properties.apiCode" placeholder="选择已注册的接口" style="width: 100%">
-                    <el-option label="省里统一认证平台" value="API_001" />
-                    <el-option label="协同调度中心" value="API_002" />
-                    <el-option label="中残申请接口" value="API_003" />
+                  <el-select v-model="selectedNode.properties.apiCode" placeholder="选择已注册的接口" clearable style="width: 100%">
+                    <el-option v-for="api in apiCatalogOptions" :key="api.id" :label="api.apiName" :value="api.apiCode" />
                   </el-select>
                 </el-form-item>
                 <el-form-item label="超时时间(ms)">
@@ -326,6 +324,7 @@ import '@logicflow/core/dist/style/index.css'
 import '@logicflow/extension/lib/style/index.css'
 import { saveFlowDefinition, saveFlowGraph, getFlowDefinitionDetail, publishFlowDefinition, startFlowInstance } from '@/api/workflow'
 import { getDatasourceList } from '@/api/datasource'
+import { getApiCatalogList } from '@/api/apiMgr'
 import MonacoEditor from '@/components/MonacoEditor/index.vue'
 
 const route = useRoute()
@@ -346,6 +345,7 @@ const selectedEdge = ref(null)
 const inputMappings = ref([])
 const outputMappings = ref([])
 const datasourceOptions = ref([])
+const apiCatalogOptions = ref([])
 
 const nodeGroups = [
   {
@@ -775,9 +775,19 @@ async function loadDatasourceOptions() {
   }
 }
 
+async function loadApiCatalogOptions() {
+  try {
+    const res = await getApiCatalogList({ page: 1, size: 999, status: 1 })
+    apiCatalogOptions.value = res.list || res.records || res || []
+  } catch (e) {
+    apiCatalogOptions.value = []
+  }
+}
+
 onMounted(() => {
   nextTick(() => initLogicFlow())
   loadDatasourceOptions()
+  loadApiCatalogOptions()
 })
 
 onUnmounted(() => {
