@@ -117,7 +117,7 @@
             <div class="section-title">基本信息</div>
             <el-form label-position="top" size="default">
               <el-form-item label="节点名称">
-                <el-input v-model="selectedNode.properties.name" placeholder="请输入节点名称" @change="updateNodeText" />
+                <el-input v-model="selectedNode.properties.name" placeholder="请输入节点名称" @change="updateNodeProperties" />
               </el-form-item>
               <el-form-item label="节点编码">
                 <el-input v-model="selectedNode.properties.code" placeholder="自动生成" disabled />
@@ -129,15 +129,15 @@
               <div class="section-title">接口配置</div>
               <el-form label-position="top" size="default">
                 <el-form-item label="绑定接口">
-                  <el-select v-model="selectedNode.properties.apiCode" placeholder="选择已注册的接口" clearable style="width: 100%">
+                  <el-select v-model="selectedNode.properties.apiCode" placeholder="选择已注册的接口" clearable style="width: 100%" @change="updateNodeProperties">
                     <el-option v-for="api in apiCatalogOptions" :key="api.id" :label="api.apiName" :value="api.apiCode" />
                   </el-select>
                 </el-form-item>
                 <el-form-item label="超时时间(ms)">
-                  <el-input-number v-model="selectedNode.properties.timeout" :min="1000" :max="120000" :step="1000" style="width: 100%" />
+                  <el-input-number v-model="selectedNode.properties.timeout" :min="1000" :max="120000" :step="1000" style="width: 100%" @change="updateNodeProperties" />
                 </el-form-item>
                 <el-form-item label="失败策略">
-                  <el-radio-group v-model="selectedNode.properties.failStrategy">
+                  <el-radio-group v-model="selectedNode.properties.failStrategy" @change="updateNodeProperties">
                     <el-radio-button label="suspend">挂起</el-radio-button>
                     <el-radio-button label="skip">跳过</el-radio-button>
                     <el-radio-button label="retry">重试</el-radio-button>
@@ -151,12 +151,12 @@
               <div class="section-title">数据库配置</div>
               <el-form label-position="top" size="default">
                 <el-form-item label="数据源">
-                  <el-select v-model="selectedNode.properties.dsCode" placeholder="选择数据源" clearable style="width: 100%">
+                  <el-select v-model="selectedNode.properties.dsCode" placeholder="选择数据源" clearable style="width: 100%" @change="updateNodeProperties">
                     <el-option v-for="ds in datasourceOptions" :key="ds.id" :label="ds.dsName" :value="ds.dsCode" />
                   </el-select>
                 </el-form-item>
                 <el-form-item label="操作类型">
-                  <el-radio-group v-model="selectedNode.properties.operation">
+                  <el-radio-group v-model="selectedNode.properties.operation" @change="updateNodeProperties">
                     <el-radio-button label="select">查询</el-radio-button>
                     <el-radio-button label="insert">插入</el-radio-button>
                     <el-radio-button label="update">更新</el-radio-button>
@@ -164,8 +164,36 @@
                   </el-radio-group>
                 </el-form-item>
                 <el-form-item label="SQL语句">
-                  <el-input v-model="selectedNode.properties.sql" type="textarea" :rows="4" placeholder="支持SpEL占位符" />
+                  <el-input v-model="selectedNode.properties.sql" type="textarea" :rows="4" placeholder="支持SpEl占位符，如 SELECT * FROM table WHERE id = #{_businessKey}" @change="updateNodeProperties" />
                 </el-form-item>
+                <el-form-item>
+                  <el-button type="primary" size="small" :loading="parsingColumns" @click="parseSqlColumns">
+                    <el-icon><Search /></el-icon> 解析返回字段
+                  </el-button>
+                  <el-button v-if="parsedColumns.length > 0" link type="primary" size="small" @click="addAllColumnsToOutput">
+                    全部添加至输出映射
+                  </el-button>
+                </el-form-item>
+                <!-- 解析出的字段列表 -->
+                <div v-if="parsedColumns.length > 0" class="parsed-columns-section">
+                  <div class="parsed-columns-list">
+                    <div v-for="col in parsedColumns" :key="col.name" class="parsed-column-item">
+                      <span class="col-name">{{ col.name }}</span>
+                      <span class="col-type">{{ col.type }}</span>
+                      <el-button link type="primary" size="small" @click="addOutputMappingFromColumn(col)">
+                        添加
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
+                <el-form-item label="结果变量名">
+                  <el-input v-model="selectedNode.properties.resultVarName" placeholder="如 aData，查询结果将自动写入上下文供下游使用" @change="updateNodeProperties" />
+                </el-form-item>
+                <el-alert class="form-tip" type="info" :closable="false" show-icon>
+                  <template #title>
+                    查询结果会自动放入上下文变量 <code>{{ selectedNode.properties.resultVarName || '（未设置）' }}</code>，下游节点可通过 <code>context.get('变量名')</code> 读取；也可通过下方【输出映射】将字段精确映射到上下文
+                  </template>
+                </el-alert>
               </el-form>
             </template>
 
@@ -174,7 +202,7 @@
               <div class="section-title">条件配置</div>
               <el-form label-position="top" size="default">
                 <el-form-item label="条件表达式(SpEL)">
-                  <el-input v-model="selectedNode.properties.expression" type="textarea" :rows="3" placeholder="如: #{context.resultCode == 200}" />
+                  <el-input v-model="selectedNode.properties.expression" type="textarea" :rows="3" placeholder="如: #{context.resultCode == 200}" @change="updateNodeProperties" />
                 </el-form-item>
               </el-form>
               <el-alert class="form-tip" type="info" :closable="false" show-icon>
@@ -187,16 +215,16 @@
               <div class="section-title">定时配置</div>
               <el-form label-position="top" size="default">
                 <el-form-item label="等待方式">
-                  <el-radio-group v-model="selectedNode.properties.timerType">
+                  <el-radio-group v-model="selectedNode.properties.timerType" @change="updateNodeProperties">
                     <el-radio-button label="delay">延迟</el-radio-button>
                     <el-radio-button label="fixed">指定时间</el-radio-button>
                   </el-radio-group>
                 </el-form-item>
                 <el-form-item v-if="selectedNode.properties.timerType === 'delay'" label="延迟秒数">
-                  <el-input-number v-model="selectedNode.properties.delaySeconds" :min="1" style="width: 100%" />
+                  <el-input-number v-model="selectedNode.properties.delaySeconds" :min="1" style="width: 100%" @change="updateNodeProperties" />
                 </el-form-item>
                 <el-form-item v-else label="指定时间">
-                  <el-date-picker v-model="selectedNode.properties.fixedTime" type="datetime" placeholder="选择日期时间" style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" />
+                  <el-date-picker v-model="selectedNode.properties.fixedTime" type="datetime" placeholder="选择日期时间" style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" @change="updateNodeProperties" />
                 </el-form-item>
               </el-form>
             </template>
@@ -211,6 +239,7 @@
                     language="java"
                     theme="vs-dark"
                     height="240px"
+                    @change="updateNodeProperties"
                   />
                 </el-form-item>
               </el-form>
@@ -229,9 +258,9 @@
             <div class="mapping-list">
               <div v-for="(map, idx) in inputMappings" :key="idx" class="mapping-card">
                 <div class="mapping-row">
-                  <el-input v-model="map.source" placeholder="来源(上下文)" size="small" />
+                  <el-input v-model="map.source" placeholder="来源(上下文)" size="small" @change="updateNodeProperties" />
                   <el-icon class="mapping-arrow"><Right /></el-icon>
-                  <el-input v-model="map.target" placeholder="目标(节点入参)" size="small" />
+                  <el-input v-model="map.target" placeholder="目标(节点入参)" size="small" @change="updateNodeProperties" />
                 </div>
                 <el-icon class="mapping-delete" @click="removeInputMapping(idx)"><Close /></el-icon>
               </div>
@@ -248,9 +277,9 @@
             <div class="mapping-list">
               <div v-for="(map, idx) in outputMappings" :key="idx" class="mapping-card">
                 <div class="mapping-row">
-                  <el-input v-model="map.source" placeholder="来源(节点返回)" size="small" />
+                  <el-input v-model="map.source" placeholder="来源(节点返回)" size="small" @change="updateNodeProperties" />
                   <el-icon class="mapping-arrow"><Right /></el-icon>
-                  <el-input v-model="map.target" placeholder="目标(上下文)" size="small" />
+                  <el-input v-model="map.target" placeholder="目标(上下文)" size="small" @change="updateNodeProperties" />
                 </div>
                 <el-icon class="mapping-delete" @click="removeOutputMapping(idx)"><Close /></el-icon>
               </div>
@@ -262,7 +291,7 @@
             <div class="section-title">连线配置</div>
             <el-form label-position="top" size="default">
               <el-form-item label="条件类型">
-                <el-radio-group v-model="selectedEdge.properties.conditionType">
+                <el-radio-group v-model="selectedEdge.properties.conditionType" @change="updateEdgeProperties">
                   <el-radio-button label="default">默认</el-radio-button>
                   <el-radio-button label="success">成功</el-radio-button>
                   <el-radio-button label="fail">失败</el-radio-button>
@@ -270,10 +299,10 @@
                 </el-radio-group>
               </el-form-item>
               <el-form-item v-if="selectedEdge.properties.conditionType === 'custom'" label="SpEL表达式">
-                <el-input v-model="selectedEdge.properties.conditionExpression" type="textarea" :rows="2" placeholder="#{context.resultCode == 200}" />
+                <el-input v-model="selectedEdge.properties.conditionExpression" type="textarea" :rows="2" placeholder="#{context.resultCode == 200}" @change="updateEdgeProperties" />
               </el-form-item>
               <el-form-item label="优先级">
-                <el-input-number v-model="selectedEdge.properties.priority" :min="0" :max="100" style="width: 100%" />
+                <el-input-number v-model="selectedEdge.properties.priority" :min="0" :max="100" style="width: 100%" @change="updateEdgeProperties" />
               </el-form-item>
             </el-form>
           </div>
@@ -325,6 +354,7 @@ import '@logicflow/extension/lib/style/index.css'
 import { saveFlowDefinition, saveFlowGraph, getFlowDefinitionDetail, publishFlowDefinition, startFlowInstance } from '@/api/workflow'
 import { getDatasourceList } from '@/api/datasource'
 import { getApiCatalogList } from '@/api/apiMgr'
+import request from '@/utils/request'
 import MonacoEditor from '@/components/MonacoEditor/index.vue'
 
 const route = useRoute()
@@ -346,6 +376,8 @@ const inputMappings = ref([])
 const outputMappings = ref([])
 const datasourceOptions = ref([])
 const apiCatalogOptions = ref([])
+const parsedColumns = ref([])
+const parsingColumns = ref(false)
 
 const nodeGroups = [
   {
@@ -421,14 +453,24 @@ function initLogicFlow() {
     } else {
       selectedEdge.value = null
       selectedNode.value = data
-      inputMappings.value = data.properties?.inputMapping || []
-      outputMappings.value = data.properties?.outputMapping || []
+      // 从 properties 读取输入/输出映射（支持数组或JSON字符串）
+      const rawInput = data.properties?.inputMapping
+      const rawOutput = data.properties?.outputMapping
+      try {
+        inputMappings.value = rawInput ? (typeof rawInput === 'string' ? JSON.parse(rawInput) : rawInput) : []
+      } catch (e) { inputMappings.value = [] }
+      try {
+        outputMappings.value = rawOutput ? (typeof rawOutput === 'string' ? JSON.parse(rawOutput) : rawOutput) : []
+      } catch (e) { outputMappings.value = [] }
+      // 切换节点时清空已解析的字段列表
+      parsedColumns.value = []
     }
   })
 
   lf.on('blank:click', () => {
     selectedNode.value = null
     selectedEdge.value = null
+    parsedColumns.value = []
   })
 
   lf.on('connection:not-allowed', (data) => {
@@ -626,11 +668,85 @@ function handleDrop(e) {
   }
 }
 
-function updateNodeText() {
+function updateNodeProperties() {
   if (selectedNode.value && lf) {
-    lf.setProperties(selectedNode.value.id, { name: selectedNode.value.properties.name })
-    lf.changeNodeId(selectedNode.value.id, selectedNode.value.id)
+    // 将输入/输出映射同步回 properties（后端以JSON字符串存储）
+    selectedNode.value.properties.inputMapping = JSON.stringify(inputMappings.value)
+    selectedNode.value.properties.outputMapping = JSON.stringify(outputMappings.value)
+    lf.setProperties(selectedNode.value.id, selectedNode.value.properties)
+    // 同步节点显示文本
+    const text = selectedNode.value.properties.name || selectedNode.value.text?.value || selectedNode.value.text
+    if (text) {
+      lf.updateText(selectedNode.value.id, text)
+    }
   }
+}
+
+function updateEdgeProperties() {
+  if (selectedEdge.value && lf) {
+    lf.setProperties(selectedEdge.value.id, selectedEdge.value.properties)
+  }
+}
+
+// ==================== 输入/输出映射 & SQL字段解析 ====================
+
+async function parseSqlColumns() {
+  if (!selectedNode.value?.properties?.sql) {
+    ElMessage.warning('请先输入SQL语句')
+    return
+  }
+  const sql = selectedNode.value.properties.sql.trim()
+  if (!sql.toLowerCase().startsWith('select')) {
+    ElMessage.warning('仅支持解析 SELECT 语句')
+    return
+  }
+  parsingColumns.value = true
+  try {
+    const res = await request({
+      url: '/workflow/node/parse-sql-columns',
+      method: 'post',
+      data: {
+        dsCode: selectedNode.value.properties.dsCode || 'master',
+        sql: sql
+      }
+    })
+    parsedColumns.value = res || []
+    if (parsedColumns.value.length === 0) {
+      ElMessage.info('未解析到字段，请检查SQL语法')
+    } else {
+      ElMessage.success(`解析到 ${parsedColumns.value.length} 个字段`)
+    }
+  } catch (e) {
+    ElMessage.error('字段解析失败: ' + (e.message || e))
+  } finally {
+    parsingColumns.value = false
+  }
+}
+
+function addOutputMappingFromColumn(col) {
+  const sourcePath = `result.data[0].${col.name}`
+  const exists = outputMappings.value.some(m => m.source === sourcePath)
+  if (exists) {
+    ElMessage.warning('该字段已在输出映射中')
+    return
+  }
+  outputMappings.value.push({ source: sourcePath, target: '' })
+  updateNodeProperties()
+  ElMessage.success(`已添加字段: ${col.name}`)
+}
+
+function addAllColumnsToOutput() {
+  let added = 0
+  for (const col of parsedColumns.value) {
+    const sourcePath = `result.data[0].${col.name}`
+    const exists = outputMappings.value.some(m => m.source === sourcePath)
+    if (!exists) {
+      outputMappings.value.push({ source: sourcePath, target: '' })
+      added++
+    }
+  }
+  updateNodeProperties()
+  ElMessage.success(`已批量添加 ${added} 个字段至输出映射`)
 }
 
 function addInputMapping() { inputMappings.value.push({ source: '', target: '' }) }

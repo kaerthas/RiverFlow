@@ -70,16 +70,34 @@
             <span class="rf-time">{{ formatTime(row.startTime) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <div class="rf-actions">
               <button class="action-btn primary" title="详情" @click="handleDetail(row)">
                 <el-icon><View /></el-icon>
               </button>
+              <!-- 运行中：执行、挂起、终止 -->
               <button class="action-btn success" title="执行" @click="handleExecute(row)" v-if="row.status === 'running'">
                 <el-icon><VideoPlay /></el-icon>
               </button>
-              <button class="action-btn warning" title="终止" @click="handleTerminate(row)" v-if="row.status === 'running'">
+              <button class="action-btn warning" title="挂起" @click="handleSuspend(row)" v-if="row.status === 'running'">
+                <el-icon><VideoPause /></el-icon>
+              </button>
+              <button class="action-btn danger" title="终止" @click="handleTerminate(row)" v-if="row.status === 'running'">
+                <el-icon><CircleClose /></el-icon>
+              </button>
+              <!-- 已挂起：继续、终止 -->
+              <button class="action-btn success" title="继续" @click="handleResume(row)" v-if="row.status === 'suspended'">
+                <el-icon><RefreshRight /></el-icon>
+              </button>
+              <button class="action-btn danger" title="终止" @click="handleTerminate(row)" v-if="row.status === 'suspended'">
+                <el-icon><CircleClose /></el-icon>
+              </button>
+              <!-- 失败：重试、终止 -->
+              <button class="action-btn success" title="重试" @click="handleRetry(row)" v-if="row.status === 'failed'">
+                <el-icon><Refresh /></el-icon>
+              </button>
+              <button class="action-btn danger" title="终止" @click="handleTerminate(row)" v-if="row.status === 'failed'">
                 <el-icon><CircleClose /></el-icon>
               </button>
             </div>
@@ -177,12 +195,15 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { View, VideoPlay, CircleClose } from '@element-plus/icons-vue'
+import { View, VideoPlay, CircleClose, VideoPause, RefreshRight, Refresh } from '@element-plus/icons-vue'
 import {
   getFlowInstanceList,
   getFlowInstanceDetail,
   executeFlowInstance,
   terminateFlowInstance,
+  suspendFlowInstance,
+  resumeFlowInstance,
+  retryFlowInstance,
   getInstanceTasks,
   getInstanceLogs,
   getFlowDefinitionList,
@@ -300,6 +321,39 @@ async function handleTerminate(row) {
     handleSearch()
   } catch (e) {
     if (e !== 'cancel') ElMessage.error('终止失败: ' + e.message)
+  }
+}
+
+async function handleSuspend(row) {
+  try {
+    await ElMessageBox.confirm(`确认挂起实例「${row.id}」？`, '挂起确认', { type: 'warning' })
+    await suspendFlowInstance(row.id)
+    ElMessage.success('实例已挂起')
+    handleSearch()
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error('挂起失败: ' + e.message)
+  }
+}
+
+async function handleResume(row) {
+  try {
+    await ElMessageBox.confirm(`确认继续执行实例「${row.id}」？`, '继续确认', { type: 'info' })
+    await resumeFlowInstance(row.id)
+    ElMessage.success('实例已继续执行')
+    handleSearch()
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error('继续失败: ' + e.message)
+  }
+}
+
+async function handleRetry(row) {
+  try {
+    await ElMessageBox.confirm(`确认重试实例「${row.id}」？`, '重试确认', { type: 'info' })
+    await retryFlowInstance(row.id)
+    ElMessage.success('实例已重试')
+    handleSearch()
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error('重试失败: ' + e.message)
   }
 }
 

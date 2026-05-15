@@ -2,20 +2,28 @@ package com.riverflow.admin.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
 import com.riverflow.admin.modules.workflow.engine.FlowEngine;
 import com.riverflow.admin.service.*;
 import com.riverflow.api.entity.*;
 import com.riverflow.api.enums.FlowInstanceStatusEnum;
 import com.riverflow.api.enums.FlowNodeTypeEnum;
+import com.riverflow.api.enums.FlowTaskStatusEnum;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +49,8 @@ public class WorkflowController {
     private FlowLogService flowLogService;
     @Autowired
     private FlowEngine flowEngine;
+    @Autowired
+    private DynamicDataSourceService dynamicDataSourceService;
 
     // ==================== 流程定义 ====================
 
@@ -136,6 +146,20 @@ public class WorkflowController {
                     node.setConfigJson(props.toJSONString());
                     if (node.getNodeName() == null) {
                         node.setNodeName(props.getString("name"));
+                    }
+                    // 提取输入/输出映射（前端以JSON字符串存储）
+                    if (props.containsKey("inputMapping")) {
+                        node.setInputMapping(props.getString("inputMapping"));
+                    }
+                    if (props.containsKey("outputMapping")) {
+                        node.setOutputMapping(props.getString("outputMapping"));
+                    }
+                    // 提取超时和重试（兼容API/DB节点配置）
+                    if (props.containsKey("timeout")) {
+                        node.setTimeout(props.getIntValue("timeout"));
+                    }
+                    if (props.containsKey("retryTimes")) {
+                        node.setRetryTimes(props.getIntValue("retryTimes"));
                     }
                 }
 
@@ -250,6 +274,75 @@ public class WorkflowController {
         return R.ok();
     }
 
+    @PutMapping("/instance/{id}/suspend")
+    public R<Void> suspendInstance(@PathVariable Long id) {
+        FlowInstance instance = flowInstanceService.getById(id);
+        if (instance == null) return R.fail("实例不存在");
+        if (!FlowInstanceStatusEnum.RUNNING.getCode().equals(instance.getStatus())) {
+            return R.fail("仅运行中的实例可手动挂起");
+        }
+        instance.setStatus(FlowInstanceStatusEnum.SUSPENDED.getCode());
+        instance.setUpdateTime(LocalDateTime.now());
+        flowInstanceService.updateById(instance);
+        return R.ok();
+    }
+
+    @PostMapping("/instance/{instanceId}/resume")
+    public R<String> resumeInstance(@PathVariable Long instanceId) {
+        FlowInstance instance = flowInstanceService.getById(instanceId);
+        if (instance == null) return R.fail("实例不存在");
+        if (!FlowInstanceStatusEnum.SUSPENDED.getCode().equals(instance.getStatus())) {
+            return R.fail("实例不是挂起状态，无法继续");
+        }
+        return doResumeOrRetry(instance, "继续执行");
+    }
+
+    @PostMapping("/instance/{instanceId}/retry")
+    public R<String> retryInstance(@PathVariable Long instanceId) {
+        FlowInstance instance = flowInstanceService.getById(instanceId);
+        if (instance == null) return R.fail("实例不存在");
+        if (!FlowInstanceStatusEnum.FAILED.getCode().equals(instance.getStatus())) {
+            return R.fail("实例不是失败状态，无法重试");
+        }
+        return doResumeOrRetry(instance, "重试");
+    }
+
+    private R<String> doResumeOrRetry(FlowInstance instance, String actionName) {
+        // 1. 恢复实例状态
+        instance.setStatus(FlowInstanceStatusEnum.RUNNING.getCode());
+        instance.setUpdateTime(LocalDateTime.now());
+        flowInstanceService.updateById(instance);
+
+        // 2. 获取流程图
+        List<FlowNode> nodes = flowNodeService.getNodesByFlowId(instance.getFlowId());
+        List<FlowEdge> edges = flowEdgeService.getEdgesByFlowId(instance.getFlowId());
+
+        FlowNode currentNode = nodes.stream()
+                .filter(n -> n.getNodeId().equals(instance.getCurrentNodeId()))
+                .findFirst().orElse(null);
+        if (currentNode == null) return R.fail("当前节点不存在");
+
+        // 3. 将当前节点的失败任务重置为待执行（如果存在）
+        FlowTask latestTask = flowTaskService.getOne(
+                new QueryWrapper<FlowTask>()
+                        .eq("instance_id", instance.getId())
+                        .eq("node_id", currentNode.getNodeId())
+                        .orderByDesc("create_time")
+                        .last("LIMIT 1")
+        );
+        if (latestTask != null && FlowTaskStatusEnum.FAIL.getCode().equals(latestTask.getStatus())) {
+            latestTask.setStatus(FlowTaskStatusEnum.PENDING.getCode());
+            latestTask.setErrorMsg(null);
+            latestTask.setEndTime(null);
+            latestTask.setNextExecuteTime(null);
+            flowTaskService.updateById(latestTask);
+        }
+
+        // 4. 触发执行
+        flowEngine.executeNode(instance, currentNode, edges, nodes);
+        return R.ok(actionName + "完成");
+    }
+
     // ==================== 流程执行（手动推进）====================
 
     @PostMapping("/instance/{instanceId}/execute")
@@ -280,6 +373,54 @@ public class WorkflowController {
     public R<List<FlowLog>> getInstanceLogs(@PathVariable Long instanceId) {
         return R.ok(flowLogService.list(new QueryWrapper<FlowLog>()
                 .eq("instance_id", instanceId).orderByDesc("create_time")));
+    }
+
+    /**
+     * 解析SQL语句的返回字段列表
+     * 用于前端DB节点配置时，自动提取SELECT返回的列名
+     */
+    @PostMapping("/node/parse-sql-columns")
+    public R<List<Map<String, String>>> parseSqlColumns(@RequestBody com.alibaba.fastjson2.JSONObject request) {
+        String dsCode = request.getString("dsCode");
+        String sql = request.getString("sql");
+        if (sql == null || sql.trim().isEmpty()) {
+            return R.fail("SQL不能为空");
+        }
+
+        // 替换 #{xxx} SpEL 占位符，避免解析执行时报错
+        String testSql = sql.replaceAll("#\\{[^}]+}", "'__placeholder__'");
+
+        DataSource dataSource = dynamicDataSourceService.resolveDataSource(dsCode);
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(testSql)) {
+
+            ResultSetMetaData meta = null;
+            try {
+                meta = ps.getMetaData();
+            } catch (Exception e) {
+                log.debug("PreparedStatement.getMetaData() 不支持，退回到 executeQuery");
+            }
+
+            if (meta == null) {
+                try (ResultSet rs = ps.executeQuery()) {
+                    meta = rs.getMetaData();
+                }
+            }
+
+            List<Map<String, String>> columns = new ArrayList<>();
+            for (int i = 1; i <= meta.getColumnCount(); i++) {
+                Map<String, String> col = new LinkedHashMap<>();
+                col.put("name", meta.getColumnLabel(i));      // 列别名（或列名）
+                col.put("dbName", meta.getColumnName(i));     // 数据库原始列名
+                col.put("type", meta.getColumnTypeName(i));   // 数据类型
+                columns.add(col);
+            }
+            return R.ok(columns);
+        } catch (Exception e) {
+            log.error("SQL字段解析失败: {}", testSql, e);
+            return R.fail("SQL字段解析失败: " + e.getMessage());
+        }
     }
 
     /**

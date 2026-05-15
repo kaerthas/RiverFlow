@@ -35,7 +35,10 @@ public class GroovySandboxExecutor {
         "import cn.hutool.core.date.DateUtil\n" +
         "import cn.hutool.crypto.SecureUtil\n" +
         "\n" +
-        "def execute(Map args) {\n";
+        "def execute(Map args) {\n" +
+        "    def context = args.context\n" +
+        "    def ctx = args.ctx\n" +
+        "    def instanceId = args.instanceId\n";
 
     private static final String SCRIPT_TEMPLATE_SUFFIX = "\n}";
 

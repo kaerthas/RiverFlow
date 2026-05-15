@@ -105,6 +105,27 @@ export function terminateFlowInstance(id) {
   })
 }
 
+export function suspendFlowInstance(id) {
+  return request({
+    url: `/workflow/instance/${id}/suspend`,
+    method: 'put'
+  })
+}
+
+export function resumeFlowInstance(instanceId) {
+  return request({
+    url: `/workflow/instance/${instanceId}/resume`,
+    method: 'post'
+  })
+}
+
+export function retryFlowInstance(instanceId) {
+  return request({
+    url: `/workflow/instance/${instanceId}/retry`,
+    method: 'post'
+  })
+}
+
 export function getInstanceTasks(instanceId) {
   return request({
     url: `/workflow/instance/${instanceId}/tasks`,

@@ -84,7 +84,14 @@ public class DbNodeExecutor implements NodeExecutor {
                 resultData.put("affectedRows", result);
             }
 
-            // 输出映射
+            // 如果配置了结果变量名，自动将查询结果写入上下文（方便后续节点直接使用）
+            String resultVarName = config.getString("resultVarName");
+            if (resultVarName != null && !resultVarName.isEmpty() && resultData.containsKey("data")) {
+                context.set(resultVarName, resultData.get("data"));
+                log.info("[流程实例:{}] 查询结果已自动写入上下文变量: {}", context.getInstanceId(), resultVarName);
+            }
+
+            // 输出映射（支持更精细的字段映射）
             applyOutputMapping(node, context, resultData);
 
             return NodeExecuteResult.success(resultData);

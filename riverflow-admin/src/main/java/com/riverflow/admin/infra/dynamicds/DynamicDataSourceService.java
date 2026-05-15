@@ -97,6 +97,17 @@ public class DynamicDataSourceService {
         return executeWithDs(ds.getDsCode(), executor);
     }
 
+    /**
+     * 获取指定数据源的 DataSource 对象（master 返回路由源本身）
+     */
+    public DataSource resolveDataSource(String dsCode) {
+        if (dsCode == null || dsCode.isEmpty() || "master".equals(dsCode)) {
+            return dynamicRoutingDataSource;
+        }
+        DataSource ds = dynamicRoutingDataSource.getDataSource(dsCode);
+        return ds != null ? ds : dynamicRoutingDataSource;
+    }
+
     @FunctionalInterface
     public interface SqlExecutor {
         Object execute() throws Exception;
