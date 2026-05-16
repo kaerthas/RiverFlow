@@ -20,8 +20,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import javax.servlet.http.HttpServletRequest;
-
 /**
  * Spring Security 配置
  */
@@ -45,6 +43,8 @@ public class SecurityConfig {
             // 禁用 Session，使用无状态 JWT
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             .and()
+            // 禁用默认 logout（项目使用自定义 /logout Controller）
+            .logout().disable()
             // 异常处理
             .exceptionHandling()
             .authenticationEntryPoint(authenticationEntryPoint())
@@ -88,46 +88,16 @@ public class SecurityConfig {
     }
 
     /**
-     * 未认证处理
-     * 区分 API 请求和页面请求：
-     * - API 请求返回 JSON 401，由前端 axios 拦截器处理跳转
-     * - 页面请求（浏览器直接访问）302 重定向到 /login
+     * 未认证处理：前后端分离项目，始终返回 JSON 401，由前端处理跳转
      */
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
-            if (isApiRequest(request)) {
-                response.setContentType("application/json;charset=UTF-8");
-                response.setStatus(401);
-                response.getWriter().write(com.alibaba.fastjson2.JSON.toJSONString(
-                    R.fail(ResultCode.UNAUTHORIZED.getCode(), "未登录或Token已过期")));
-            } else {
-                response.sendRedirect("/login");
-            }
+            response.setContentType("application/json;charset=UTF-8");
+            response.setStatus(401);
+            response.getWriter().write(com.alibaba.fastjson2.JSON.toJSONString(
+                R.fail(ResultCode.UNAUTHORIZED.getCode(), "未登录或Token已过期")));
         };
-    }
-
-    /**
-     * 判断是否为 API 请求
-     */
-    private boolean isApiRequest(HttpServletRequest request) {
-        String uri = request.getRequestURI();
-        String accept = request.getHeader("Accept");
-        String xRequestedWith = request.getHeader("X-Requested-With");
-
-        // 路径以 /api/ 开头
-        if (uri != null && uri.startsWith("/api/")) {
-            return true;
-        }
-        // Accept 头包含 application/json
-        if (accept != null && accept.contains("application/json")) {
-            return true;
-        }
-        // AJAX 请求
-        if ("XMLHttpRequest".equalsIgnoreCase(xRequestedWith)) {
-            return true;
-        }
-        return false;
     }
 
     /**
