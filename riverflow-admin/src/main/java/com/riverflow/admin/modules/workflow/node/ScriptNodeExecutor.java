@@ -78,14 +78,20 @@ public class ScriptNodeExecutor implements NodeExecutor {
             Object result = groovyExecutor.execute(script, variables);
             log.info("[流程实例:{}] 脚本执行完成: result={}", context.getInstanceId(), result);
 
-            // 构建结果对象
-            JSONObject resultData = new JSONObject();
-            resultData.put("result", result);
-
-            // 输出映射
-            applyOutputMapping(node, context, resultData);
-
-            return NodeExecuteResult.success(resultData);
+            // 输出映射（result 直接为脚本返回值，不包装 result 层）
+            if (result instanceof JSONObject) {
+                applyOutputMapping(node, context, (JSONObject) result);
+                return NodeExecuteResult.success((JSONObject) result);
+            } else if (result instanceof Map) {
+                JSONObject jsonResult = new JSONObject((Map<?, ?>) result);
+                applyOutputMapping(node, context, jsonResult);
+                return NodeExecuteResult.success(jsonResult);
+            } else {
+                JSONObject wrap = new JSONObject();
+                wrap.put("result", result);
+                applyOutputMapping(node, context, wrap);
+                return NodeExecuteResult.success(wrap);
+            }
         } catch (Exception e) {
             log.error("[流程实例:{}] 脚本执行失败", context.getInstanceId(), e);
             return NodeExecuteResult.fail("脚本执行失败: " + e.getMessage());
