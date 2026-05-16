@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -43,7 +44,7 @@ public class HttpRequestService {
             switch (method != null ? method.toUpperCase() : "GET") {
                 case "GET":
                     result = executorFactory.createGetExecutor(useProxy, proxyHost, proxyPort)
-                            .execute(url, headers, (Map<String, String>) body, timeout);
+                            .execute(url, headers, convertToStringMap(body), timeout);
                     break;
                 case "POST":
                     if (contentType != null && contentType.contains("xml")) {
@@ -51,7 +52,7 @@ public class HttpRequestService {
                                 .execute(url, headers, body != null ? body.toString() : null, timeout);
                     } else if (contentType != null && contentType.contains("form")) {
                         result = executorFactory.createFormPostExecutor(useProxy, proxyHost, proxyPort)
-                                .execute(url, headers, (Map<String, String>) body, timeout);
+                                .execute(url, headers, convertToStringMap(body), timeout);
                     } else {
                         result = executorFactory.createJsonPostExecutor(useProxy, proxyHost, proxyPort)
                                 .execute(url, headers, body, timeout);
@@ -63,7 +64,7 @@ public class HttpRequestService {
                     break;
                 case "DELETE":
                     result = executorFactory.createGetExecutor(useProxy, proxyHost, proxyPort)
-                            .execute(url, headers, (Map<String, String>) body, timeout);
+                            .execute(url, headers, convertToStringMap(body), timeout);
                     break;
                 default:
                     throw new IllegalArgumentException("不支持的请求方式: " + method);
@@ -71,10 +72,29 @@ public class HttpRequestService {
             return result;
         } catch (IOException e) {
             log.error("HTTP 请求执行失败: url={}, method={}", url, method, e);
-            JSONObject error = new JSONObject();
-            error.put("success", false);
-            error.put("error", e.getMessage());
-            return error;
+            throw new RuntimeException("HTTP 请求执行失败: " + e.getMessage(), e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, String> convertToStringMap(Object body) {
+        if (body == null) {
+            return new HashMap<>();
+        }
+        if (body instanceof Map) {
+            Map<String, String> result = new HashMap<>();
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) body).entrySet()) {
+                result.put(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
+            }
+            return result;
+        }
+        if (body instanceof JSONObject) {
+            Map<String, String> result = new HashMap<>();
+            for (Map.Entry<String, Object> entry : ((JSONObject) body).entrySet()) {
+                result.put(entry.getKey(), String.valueOf(entry.getValue()));
+            }
+            return result;
+        }
+        return new HashMap<>();
     }
 }
