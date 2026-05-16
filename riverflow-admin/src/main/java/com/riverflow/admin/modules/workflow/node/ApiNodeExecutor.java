@@ -93,8 +93,32 @@ public class ApiNodeExecutor implements NodeExecutor {
         try {
             // 执行 HTTP 请求
             JSONObject result = httpRequestService.execute(apiCatalog, headers, body);
+            int statusCode = result.getIntValue("statusCode");
             log.info("[流程实例:{}] 接口调用完成: status={}",
-                    context.getInstanceId(), result.getIntValue("statusCode"));
+                    context.getInstanceId(), statusCode);
+
+            // 检查 HTTP 状态码，非 2xx 视为失败
+            if (statusCode < 200 || statusCode >= 300) {
+                String errorMsg = result.getString("body");
+                return NodeExecuteResult.fail("接口调用失败, HTTP状态码: " + statusCode + ", 响应: " + errorMsg);
+            }
+
+            // 检查业务响应码（如果响应体是统一包装格式 R<T>）
+            String bodyStr = result.getString("body");
+            if (bodyStr != null && !bodyStr.isEmpty()) {
+                try {
+                    JSONObject bodyJson = JSON.parseObject(bodyStr);
+                    if (bodyJson.containsKey("code")) {
+                        int bizCode = bodyJson.getIntValue("code");
+                        if (bizCode != 200) {
+                            String bizMsg = bodyJson.getString("msg");
+                            return NodeExecuteResult.fail("接口调用失败, 业务码: " + bizCode + ", 错误: " + bizMsg);
+                        }
+                    }
+                } catch (Exception e) {
+                    // body 不是 JSON，忽略业务码检查
+                }
+            }
 
             // 解析输出映射，将结果写回上下文
             String outputMapping = node.getOutputMapping();
