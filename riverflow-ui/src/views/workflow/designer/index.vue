@@ -445,6 +445,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import LogicFlow, {
   RectNode, RectNodeModel,
+  BezierEdge, BezierEdgeModel,
   h
 } from '@logicflow/core'
 import {
@@ -750,6 +751,24 @@ function registerCustomNodes() {
     }
 
     lf.register({ type, model: NodeModel, view: NodeView })
+  })
+
+  // 注册贝塞尔曲线边，启用拖拽调整控制点
+  lf.register({
+    type: 'bezier',
+    view: BezierEdge,
+    model: class extends BezierEdgeModel {
+      setAttributes() {
+        this.isShowAdjustPoint = true
+      }
+      getAdjustPointStyle() {
+        const style = super.getAdjustPointStyle()
+        style.fill = '#3b82f6'
+        style.stroke = '#ffffff'
+        style.strokeWidth = 2
+        return style
+      }
+    }
   })
 
   // 添加全局渐变定义
