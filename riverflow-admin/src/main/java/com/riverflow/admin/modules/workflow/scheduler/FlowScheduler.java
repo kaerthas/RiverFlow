@@ -69,19 +69,36 @@ public class FlowScheduler {
                 flowExecutor.submit(() -> {
                     try {
                         FlowInstance instance = flowInstanceService.getById(task.getInstanceId());
-                        if (instance == null) return;
+                        if (instance == null) {
+                            log.warn("任务对应的实例不存在: taskId={}", task.getId());
+                            return;
+                        }
                         if (!FlowInstanceStatusEnum.RUNNING.getCode().equals(instance.getStatus())) {
+                            log.debug("实例状态不是运行中，跳过: instanceId={}, status={}",
+                                    instance.getId(), instance.getStatus());
                             return;
                         }
 
                         List<FlowNode> nodes = flowNodeService.getNodesByFlowId(instance.getFlowId());
                         List<FlowEdge> edges = flowEdgeService.getEdgesByFlowId(instance.getFlowId());
 
+                        // 使用 task.getNodeId() 而非 instance.getCurrentNodeId() 来确定执行节点
                         FlowNode currentNode = nodes.stream()
-                                .filter(n -> n.getNodeId().equals(instance.getCurrentNodeId()))
+                                .filter(n -> n.getNodeId().equals(task.getNodeId()))
                                 .findFirst().orElse(null);
 
-                        if (currentNode == null) return;
+                        if (currentNode == null) {
+                            log.warn("任务节点 {} 在流程定义中不存在，跳过执行: taskId={}",
+                                    task.getNodeId(), task.getId());
+                            return;
+                        }
+
+                        // 一致性校验：任务节点应与实例当前节点一致
+                        if (!task.getNodeId().equals(instance.getCurrentNodeId())) {
+                            log.warn("任务节点 {} 与实例当前节点 {} 不一致，跳过执行: instanceId={}",
+                                    task.getNodeId(), instance.getCurrentNodeId(), instance.getId());
+                            return;
+                        }
 
                         flowEngine.executeNode(instance, currentNode, edges, nodes);
 
