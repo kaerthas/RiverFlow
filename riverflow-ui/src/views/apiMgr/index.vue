@@ -448,6 +448,17 @@ async function handleEdit(row) {
   try {
     const params = await getApiParams(row.id)
     allParams.value = Array.isArray(params) ? params : []
+    // 智能切换参数Tab：按 body > query > header > response 优先级
+    if (allParams.value.length > 0) {
+      const hasBody = allParams.value.some(p => p.paramType === 'body')
+      const hasQuery = allParams.value.some(p => p.paramType === 'query')
+      const hasHeader = allParams.value.some(p => p.paramType === 'header')
+      const hasResponse = allParams.value.some(p => p.paramType === 'response')
+      if (hasBody) paramTab.value = 'body'
+      else if (hasQuery) paramTab.value = 'query'
+      else if (hasHeader) paramTab.value = 'header'
+      else if (hasResponse) paramTab.value = 'response'
+    }
   } catch (e) {
     allParams.value = []
   }
