@@ -69,4 +69,16 @@ public class ApiParam extends BaseEntity {
      */
     @TableField("sort_no")
     private Integer sortNo;
+
+    /**
+     * 前端客户端ID，用于保存时建立嵌套关系（不存数据库）
+     */
+    @TableField(exist = false)
+    private String clientId;
+
+    /**
+     * 父参数的客户端ID（不存数据库）
+     */
+    @TableField(exist = false)
+    private String parentClientId;
 }

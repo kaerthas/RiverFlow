@@ -225,9 +225,11 @@
             </el-button>
           </div>
           <el-table :data="filteredParams" stripe size="small" border>
-            <el-table-column label="参数键" width="160">
+            <el-table-column label="参数键" width="180">
               <template #default="{ row }">
-                <el-input v-model="row.paramKey" size="small" placeholder="key" />
+                <div class="param-key-cell" :style="{ paddingLeft: (row._level * 20) + 'px' }">
+                  <el-input v-model="row.paramKey" size="small" placeholder="key" />
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="参数名称" width="140">
@@ -258,9 +260,10 @@
                 <el-input v-model="row.defaultValue" size="small" placeholder="默认值" />
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="70" align="center">
-              <template #default="{ $index }">
-                <el-button link type="danger" size="small" @click="removeParam($index)">删除</el-button>
+            <el-table-column label="操作" width="140" align="center">
+              <template #default="{ row }">
+                <el-button v-if="row.dataType === 'object' || row.dataType === 'array'" link type="primary" size="small" @click="addChildParam(row)">+子项</el-button>
+                <el-button link type="danger" size="small" @click="removeParam(row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -350,28 +353,99 @@ const formRules = {
 
 const allParams = ref([])
 
+// 给参数分配 clientId（用于前端嵌套关系）
+function ensureClientId(param) {
+  if (!param.clientId) {
+    param.clientId = 'c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+  }
+}
+
+// 计算参数的层级
+function getParamLevel(param) {
+  if (!param.parentId || param.parentId === '0' || param.parentId === 0 || param.parentId === 'null') return 0
+  const parent = allParams.value.find(p =>
+    p.clientId === param.parentId ||
+    p.id === param.parentId ||
+    String(p.id) === String(param.parentId)
+  )
+  return parent ? getParamLevel(parent) + 1 : 0
+}
+
 const filteredParams = computed(() => {
-  return allParams.value.filter(p => p.paramType === paramTab.value)
+  const typeParams = allParams.value.filter(p => p.paramType === paramTab.value)
+  // 确保每个参数有 clientId
+  typeParams.forEach(ensureClientId)
+  // 计算层级并直接写入原始对象（保证 v-model 双向绑定）
+  typeParams.forEach(p => {
+    p._level = getParamLevel(p)
+  })
+
+  // 按父子关系排序：父参数 -> 子参数(递归) -> 下一个父参数
+  function collectWithChildren(parentId, result) {
+    const children = typeParams
+      .filter(p => {
+        if (!parentId || parentId === '0' || parentId === 0) {
+          return !p.parentId || p.parentId === '0' || p.parentId === 0
+        }
+        return p.parentId === parentId
+      })
+      .sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
+    for (const child of children) {
+      result.push(child)
+      collectWithChildren(child.clientId, result)
+    }
+  }
+
+  const result = []
+  collectWithChildren(null, result)
+  return result
 })
 
 function addParam() {
-  allParams.value.push({
+  const newParam = {
     paramType: paramTab.value,
+    parentId: '0',
     paramKey: '',
     paramName: '',
     dataType: 'string',
     isRequired: 0,
     defaultValue: '',
     sortNo: allParams.value.length + 1
-  })
+  }
+  ensureClientId(newParam)
+  allParams.value.push(newParam)
 }
 
-function removeParam(index) {
-  // 找到在 allParams 中的真实索引
-  const typeParams = allParams.value.filter(p => p.paramType === paramTab.value)
-  const target = typeParams[index]
-  const realIndex = allParams.value.indexOf(target)
-  if (realIndex > -1) allParams.value.splice(realIndex, 1)
+function addChildParam(parent) {
+  const newParam = {
+    paramType: paramTab.value,
+    parentId: parent.clientId,
+    paramKey: '',
+    paramName: '',
+    dataType: 'string',
+    isRequired: 0,
+    defaultValue: '',
+    sortNo: allParams.value.length + 1
+  }
+  ensureClientId(newParam)
+  allParams.value.push(newParam)
+}
+
+function removeParam(row) {
+  const idsToDelete = new Set()
+  
+  function collectIds(target) {
+    idsToDelete.add(target.clientId)
+    // 找到所有子参数（parentId 匹配 clientId 或数据库 id）
+    allParams.value.forEach(p => {
+      if (p.parentId === target.clientId || p.parentId === target.id || String(p.parentId) === String(target.id)) {
+        collectIds(p)
+      }
+    })
+  }
+  
+  collectIds(row)
+  allParams.value = allParams.value.filter(p => !idsToDelete.has(p.clientId))
 }
 
 async function loadList() {
@@ -448,6 +522,19 @@ async function handleEdit(row) {
   try {
     const params = await getApiParams(row.id)
     allParams.value = Array.isArray(params) ? params : []
+    // 为每个参数分配 clientId
+    allParams.value.forEach(ensureClientId)
+    // 将数据库的 parent_id（数字）转换为 clientId 引用，供前端嵌套展示使用
+    allParams.value.forEach(p => {
+      if (p.parentId && p.parentId !== '0' && p.parentId !== 0) {
+        const parent = allParams.value.find(pp =>
+          pp.id === p.parentId || String(pp.id) === String(p.parentId)
+        )
+        if (parent) {
+          p.parentId = parent.clientId
+        }
+      }
+    })
     // 智能切换参数Tab：按 body > query > header > response 优先级
     if (allParams.value.length > 0) {
       const hasBody = allParams.value.some(p => p.paramType === 'body')
@@ -480,8 +567,13 @@ async function handleSubmit() {
       const res = await saveApiCatalog(form)
       apiId = res
     }
-    // 保存参数
-    const validParams = allParams.value.filter(p => p.paramKey)
+    // 保存参数（包含 clientId 和 parentClientId 用于嵌套关系）
+    const validParams = allParams.value.filter(p => p.paramKey).map(p => ({
+      ...p,
+      clientId: p.clientId,
+      parentClientId: (p.parentId && p.parentId !== '0' && p.parentId !== 0) ? String(p.parentId) : null,
+      parentId: 0
+    }))
     if (apiId && validParams.length) {
       await saveApiParams(apiId, validParams)
     }

@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.*;
 
 /**
  * 接口目录管理
@@ -66,10 +66,33 @@ public class ApiCatalogController {
     @PostMapping("/{id}/params")
     public R<Void> saveParams(@PathVariable Long id, @RequestBody List<ApiParam> params) {
         apiParamService.remove(new QueryWrapper<ApiParam>().eq("api_id", id));
+
+        // 建立 clientId -> dbId 映射
+        Map<String, Long> clientIdMap = new HashMap<>();
+
+        // 第一轮：保存所有参数（parentId 先设为 0，id 置空让数据库自动生成）
         for (ApiParam p : params) {
+            p.setId(null);
             p.setApiId(id);
+            p.setParentId(0L);
+            apiParamService.save(p);
+            if (p.getClientId() != null && !p.getClientId().isEmpty()) {
+                clientIdMap.put(p.getClientId(), p.getId());
+            }
         }
-        apiParamService.saveBatch(params);
+
+        // 第二轮：更新子参数的 parentId
+        for (ApiParam p : params) {
+            if (p.getParentClientId() != null && !p.getParentClientId().isEmpty()
+                    && !"0".equals(p.getParentClientId())) {
+                Long realParentId = clientIdMap.get(p.getParentClientId());
+                if (realParentId != null) {
+                    p.setParentId(realParentId);
+                    apiParamService.updateById(p);
+                }
+            }
+        }
+
         return R.ok();
     }
 
