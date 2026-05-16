@@ -1,6 +1,7 @@
 package com.riverflow.admin.modules.workflow.engine;
 
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
 import com.riverflow.admin.modules.workflow.node.NodeExecutor;
 import com.riverflow.admin.modules.workflow.node.NodeExecutorFactory;
@@ -91,8 +92,15 @@ public class FlowEngine {
         }
 
         try {
-            // 二次校验：获取锁后，再次查询数据库确认该实例当前节点的最新task状态
+            // 二次校验：获取锁后，再次查询数据库确认实例状态和任务状态
             // 防止 Redis 锁过期后，其他线程已执行完该节点并流转到下一节点，导致重复执行
+            FlowInstance freshInstance = flowInstanceService.getById(instance.getId());
+            if (freshInstance == null || !FlowInstanceStatusEnum.RUNNING.getCode().equals(freshInstance.getStatus())) {
+                log.warn("[流程实例:{}] 二次校验失败，实例状态不是运行中（status={}），释放锁并跳过",
+                        instance.getId(), freshInstance != null ? freshInstance.getStatus() : "null");
+                return;
+            }
+
             FlowTask latestTask = flowTaskService.getOne(
                     new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<FlowTask>()
                             .eq("instance_id", instance.getId())
@@ -148,7 +156,21 @@ public class FlowEngine {
                     transitionEngine.transition(instance, node, edges, nodes, context, result);
                 }
             } else {
-                handleFail(instance, node, task, result);
+                if ("skip".equals(node.getFailStrategy())) {
+                    log.info("[流程实例:{}] 节点 {} 执行失败但策略为跳过，继续流转: {}",
+                            instance.getId(), node.getNodeName(), result.getErrorMsg());
+                    task.setStatus(FlowTaskStatusEnum.FAIL.getCode());
+                    task.setErrorMsg(result.getErrorMsg());
+                    task.setEndTime(LocalDateTime.now());
+                    flowTaskService.updateById(task);
+                    saveLog(instance.getId(), task.getId(), node.getNodeId(), "error",
+                            "节点执行失败但跳过: " + result.getErrorMsg());
+                    // 构造一个空的 success result 继续流转
+                    NodeExecuteResult skipResult = NodeExecuteResult.success(new JSONObject());
+                    transitionEngine.transition(instance, node, edges, nodes, context, skipResult);
+                } else {
+                    handleFail(instance, node, task, result);
+                }
             }
 
         } catch (Exception e) {
