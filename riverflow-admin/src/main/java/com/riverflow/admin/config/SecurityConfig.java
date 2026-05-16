@@ -60,6 +60,7 @@ public class SecurityConfig {
             .antMatchers("/swagger-resources/**").permitAll()
             .antMatchers("/v3/api-docs/**").permitAll()
             .antMatchers("/open/**").permitAll()
+            .antMatchers("/example/**").permitAll()
             .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             // 其他请求需要认证
             .anyRequest().authenticated();
