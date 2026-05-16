@@ -28,6 +28,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,22 +68,50 @@ public class OpenApiController {
     private FlowTaskService flowTaskService;
 
     @PostMapping("/{apiCode}")
-    public R<Object> executePost(@PathVariable String apiCode,
-                                 @RequestBody(required = false) Map<String, Object> bodyParams,
+    public R<Object> executePost(@PathVariable("apiCode") String apiCode,
                                  HttpServletRequest request) {
         String contentType = request.getContentType();
         Map<String, Object> params;
         if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
             params = NestedParamResolver.resolve(request);
         } else {
-            params = bodyParams != null ? bodyParams : new HashMap<>();
+            params = readBodyAsMap(request);
         }
         return execute(apiCode, params);
     }
 
     @GetMapping("/{apiCode}")
-    public R<Object> executeGet(@PathVariable String apiCode, @RequestParam Map<String, Object> params) {
+    public R<Object> executeGet(@PathVariable("apiCode") String apiCode, @RequestParam Map<String, Object> params) {
         return execute(apiCode, params);
+    }
+
+    /**
+     * 从请求体中读取 JSON 并解析为 Map
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> readBodyAsMap(HttpServletRequest request) {
+        try (BufferedReader reader = request.getReader()) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
+            String body = sb.toString().trim();
+            if (body.isEmpty()) {
+                return new HashMap<>();
+            }
+            Object parsed = JSON.parse(body);
+            if (parsed instanceof Map) {
+                return (Map<String, Object>) parsed;
+            }
+            // 如果不是 Map（如 JSONArray），包装一下
+            Map<String, Object> wrap = new HashMap<>();
+            wrap.put("data", parsed);
+            return wrap;
+        } catch (IOException e) {
+            log.warn("读取请求体失败: {}", e.getMessage());
+            return new HashMap<>();
+        }
     }
 
     private R<Object> execute(String apiCode, Map<String, Object> params) {
