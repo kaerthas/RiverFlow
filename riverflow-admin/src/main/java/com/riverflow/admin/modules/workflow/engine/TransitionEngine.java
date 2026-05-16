@@ -95,6 +95,14 @@ public class TransitionEngine {
         instance.setUpdateTime(LocalDateTime.now());
         flowInstanceService.updateById(instance);
 
+        // 如果是结束节点，直接完成，不创建 pending 任务
+        if (FlowNodeTypeEnum.END.getCode().equals(targetNode.getNodeType())) {
+            completeInstance(instance);
+            saveLog(instance.getId(), null, targetNodeId, "transition",
+                    String.format("从 [%s] 流转到 [%s]（流程结束）", currentNode.getNodeName(), targetNode.getNodeName()));
+            return;
+        }
+
         // 创建新任务
         FlowTask newTask = new FlowTask();
         newTask.setInstanceId(instance.getId());
@@ -108,11 +116,6 @@ public class TransitionEngine {
         // 记录流转日志
         saveLog(instance.getId(), newTask.getId(), targetNodeId, "transition",
                 String.format("从 [%s] 流转到 [%s]", currentNode.getNodeName(), targetNode.getNodeName()));
-
-        // 如果是结束节点，直接执行
-        if (FlowNodeTypeEnum.END.getCode().equals(targetNode.getNodeType())) {
-            completeInstance(instance);
-        }
     }
 
     private boolean matchEdgeCondition(FlowEdge edge, FlowContext context, NodeExecuteResult result) {
