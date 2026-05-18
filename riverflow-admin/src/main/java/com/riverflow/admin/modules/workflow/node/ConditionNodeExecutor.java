@@ -9,6 +9,9 @@ import com.riverflow.common.util.SpelUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * 条件判断节点执行器
  * 解析 configJson 中的 conditionExpression，使用 SpEL 求值
@@ -22,6 +25,15 @@ public class ConditionNodeExecutor implements NodeExecutor {
         return "condition";
     }
 
+//    public static void main(String[] args) {
+//        Map<String, Object> testMap = new HashMap<>();
+//        Map<String, Object> spelContext = new HashMap<>();
+//
+//        testMap.put("wsbz", "Y");
+//        spelContext.put("context", testMap);
+//        boolean testResult = SpelUtil.evaluateBoolean("#{context.wsbz == 'Y'}", spelContext);
+//        log.info("测试结果: {}", testResult);
+//    }
     @Override
     public NodeExecuteResult execute(FlowNode node, FlowContext context) {
         log.info("[流程实例:{}] 执行条件节点: {}", context.getInstanceId(), node.getNodeName());
@@ -39,9 +51,11 @@ public class ConditionNodeExecutor implements NodeExecutor {
             log.warn("条件节点缺少表达式: nodeId={}", node.getNodeId());
             return NodeExecuteResult.fail("条件节点缺少表达式");
         }
+        Map<String, Object> spelContext = new HashMap<>();
+        spelContext.put("context", context.toMap());
 
         try {
-            boolean result = SpelUtil.evaluateBoolean(expression, context.toMap());
+            boolean result = SpelUtil.evaluateBoolean(expression, spelContext);
             log.info("[流程实例:{}] 条件求值: expression=[{}], result={}",
                     context.getInstanceId(), expression, result);
 
