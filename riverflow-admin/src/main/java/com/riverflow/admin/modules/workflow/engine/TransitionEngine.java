@@ -21,7 +21,9 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -139,7 +141,11 @@ public class TransitionEngine {
                 return true;
             }
             context.set("_lastResult", result.getData());
-            return SpelUtil.evaluateBoolean(expression, context.toMap());
+            
+            Map<String, Object> spelContext = new HashMap<>();
+            spelContext.put("context", context.toMap());
+            
+            return SpelUtil.evaluateBoolean(expression, spelContext);
         }
 
         return false;
@@ -151,7 +157,7 @@ public class TransitionEngine {
         instance.setEndTime(LocalDateTime.now());
         instance.setUpdateTime(LocalDateTime.now());
         flowInstanceService.updateById(instance);
-        saveLog(instance.getId(), null, "end", "transition", "流程执行完成");
+        saveLog(instance.getId(), null, instance.getCurrentNodeId(), "transition", "流程执行完成");
     }
 
     private void saveLog(Long instanceId, Long taskId, String nodeId, String logType, String content) {
