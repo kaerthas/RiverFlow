@@ -1,0 +1,20 @@
+<!-- 分布式部署优化依赖 -->
+
+<!-- ShedLock: 分布式调度锁，确保同一时刻只有一个节点执行调度任务 -->
+<dependency>
+    <groupId>net.javacrumbs.shedlock</groupId>
+    <artifactId>shedlock-spring</artifactId>
+    <version>4.42.0</version>
+</dependency>
+<dependency>
+    <groupId>net.javacrumbs.shedlock</groupId>
+    <artifactId>shedlock-provider-redis-spring</artifactId>
+    <version>4.42.0</version>
+</dependency>
+
+<!-- Redisson: 更可靠的分布式锁实现，支持自动续期（看门狗机制） -->
+<dependency>
+    <groupId>org.redisson</groupId>
+    <artifactId>redisson-spring-boot-starter</artifactId>
+    <version>3.23.4</version>
+</dependency>
