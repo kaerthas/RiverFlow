@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- 耳朵 -->
+  <ellipse cx="28" cy="32" rx="12" ry="14" fill="#8D5524"/>
+  <ellipse cx="72" cy="32" rx="12" ry="14" fill="#8D5524"/>
+  <ellipse cx="28" cy="34" rx="7" ry="9" fill="#D4A373"/>
+  <ellipse cx="72" cy="34" rx="7" ry="9" fill="#D4A373"/>
+  
+  <!-- 脑袋 -->
+  <ellipse cx="50" cy="55" rx="38" ry="34" fill="#A0522D"/>
+  
+  <!-- 嘴部浅色区域 -->
+  <ellipse cx="50" cy="62" rx="18" ry="16" fill="#D4A373"/>
+  
+  <!-- 眼睛 -->
+  <circle cx="36" cy="50" r="4" fill="#2F1B0C"/>
+  <circle cx="37" cy="49" r="1.5" fill="white"/>
+  <circle cx="64" cy="50" r="4" fill="#2F1B0C"/>
+  <circle cx="65" cy="49" r="1.5" fill="white"/>
+  
+  <!-- 鼻子 -->
+  <ellipse cx="50" cy="56" rx="5" ry="3.5" fill="#2F1B0C"/>
+  
+  <!-- 大门牙 -->
+  <rect x="45" y="60" width="4.5" height="7" rx="1" fill="white"/>
+  <rect x="50.5" y="60" width="4.5" height="7" rx="1" fill="white"/>
+  
+  <!-- 胡须 -->
+  <line x1="30" y1="62" x2="20" y2="58" stroke="#8D5524" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="30" y1="66" x2="18" y2="66" stroke="#8D5524" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="70" y1="62" x2="80" y2="58" stroke="#8D5524" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="70" y1="66" x2="82" y2="66" stroke="#8D5524" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
