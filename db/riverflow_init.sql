@@ -379,3 +379,31 @@ CREATE TABLE IF NOT EXISTS sys_operation_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统操作日志';
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+-- 插件管理表
+CREATE TABLE IF NOT EXISTS sys_plugin (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+    plugin_name VARCHAR(100) NOT NULL COMMENT '插件名称',
+    plugin_type VARCHAR(50) NOT NULL COMMENT '插件类型标识',
+    plugin_version VARCHAR(20) COMMENT '插件版本',
+    category VARCHAR(50) COMMENT '插件分类',
+    description VARCHAR(500) COMMENT '插件描述',
+    jar_file VARCHAR(200) NOT NULL COMMENT 'JAR包文件名',
+    jar_path VARCHAR(500) NOT NULL COMMENT 'JAR包存储路径',
+    file_size BIGINT COMMENT '文件大小（字节）',
+    icon VARCHAR(50) COMMENT '图标',
+    status VARCHAR(20) DEFAULT 'enabled' COMMENT '状态：enabled/disabled',
+    loaded TINYINT(1) DEFAULT 0 COMMENT '是否已加载',
+    config_template TEXT COMMENT '配置模板JSON',
+    author VARCHAR(100) COMMENT '作者',
+    website VARCHAR(200) COMMENT '官网/文档地址',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    create_by VARCHAR(50) COMMENT '创建人',
+    update_by VARCHAR(50) COMMENT '更新人',
+    del_flag TINYINT(1) DEFAULT 0 COMMENT '删除标记',
+    UNIQUE KEY uk_plugin_type (plugin_type),
+    KEY idx_status (status),
+    KEY idx_category (category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='插件管理表';

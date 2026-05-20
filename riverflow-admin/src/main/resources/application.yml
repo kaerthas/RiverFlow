@@ -5,10 +5,18 @@ server:
       io: 4
       worker: 20
     buffer-size: 1024
+    max-entity-size: 104857600
 
 spring:
   application:
     name: riverflow-admin
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 100MB
+      location: ${java.io.tmpdir}/riverflow-upload
 
   # 数据源配置（dynamic-datasource 格式）
   datasource:
@@ -38,18 +46,18 @@ spring:
           login-password: admin
 
   # Redis配置
-#  redis:
-#    host: 127.0.0.1
-#    port: 6379
-#    password:
-#    database: 0
-#    timeout: 10s
-#    lettuce:
-#      pool:
-#        min-idle: 0
-#        max-idle: 8
-#        max-active: 8
-#        max-wait: -1ms
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    password:
+    database: 0
+    timeout: 10s
+    lettuce:
+      pool:
+        min-idle: 0
+        max-idle: 8
+        max-active: 8
+        max-wait: -1ms
 
   # Jackson配置
   jackson:
@@ -100,3 +108,8 @@ logging:
     org.springframework.security: warn
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+riverflow:
+  plugin:
+    # 启用插件系统
+    enabled: true
+    dir: plugins

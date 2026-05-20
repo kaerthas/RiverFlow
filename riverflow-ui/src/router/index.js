@@ -78,6 +78,12 @@ const routes = [
         name: 'Monitor',
         component: () => import('@/views/monitor/index.vue'),
         meta: { title: '运行监控', icon: 'Monitor' }
+      },
+      {
+        path: 'plugin',
+        name: 'Plugin',
+        component: () => import('@/views/plugin/PluginManager.vue'),
+        meta: { title: '插件管理', icon: 'Box' }
       }
     ]
   }

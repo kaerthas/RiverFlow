@@ -1,0 +1,8 @@
+# 插件系统配置示例
+
+riverflow:
+  plugin:
+    # 是否启用插件系统
+    enabled: true
+    # 插件目录（相对于工作目录）
+    dir: plugins

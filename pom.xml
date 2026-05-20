@@ -15,6 +15,7 @@
         <module>riverflow-common</module>
         <module>riverflow-api</module>
         <module>riverflow-admin</module>
+        <module>river-minio</module>
     </modules>
 
     <properties>
