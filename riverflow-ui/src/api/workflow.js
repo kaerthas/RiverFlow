@@ -45,6 +45,21 @@ export function offlineFlowDefinition(id) {
   })
 }
 
+export function copyFlowDefinition(id) {
+  return request({
+    url: `/workflow/definition/${id}/copy`,
+    method: 'post'
+  })
+}
+
+export function getFlowVersions(flowCode) {
+  return request({
+    url: '/workflow/definition/versions',
+    method: 'get',
+    params: { flowCode }
+  })
+}
+
 export function saveFlowGraph(flowId, data) {
   return request({
     url: `/workflow/definition/${flowId}/save-graph`,
@@ -133,9 +148,10 @@ export function getInstanceTasks(instanceId) {
   })
 }
 
-export function getInstanceLogs(instanceId) {
+export function getInstanceLogs(instanceId, page = 1, size = 5) {
   return request({
     url: `/workflow/instance/${instanceId}/logs`,
-    method: 'get'
+    method: 'get',
+    params: { page, size }
   })
 }
