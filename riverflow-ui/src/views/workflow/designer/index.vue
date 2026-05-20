@@ -44,8 +44,13 @@
       </div>
 
       <div class="toolbar-right">
-        <button class="btn-secondary" @click="handleSave">保存草稿</button>
-        <button class="btn-primary" @click="handlePublish">发布流程</button>
+        <button v-if="flowStatus === 1" class="btn-secondary" @click="handleCopyAndEdit">
+          <el-icon><CopyDocument /></el-icon> 创建新版本
+        </button>
+        <template v-else>
+          <button class="btn-secondary" @click="handleSave">保存草稿</button>
+          <button class="btn-primary" @click="handlePublish">发布流程</button>
+        </template>
         <button class="btn-accent" @click="handleTestRun" :disabled="!flowId">
           <el-icon><VideoPlay /></el-icon> 运行
         </button>
@@ -241,6 +246,11 @@
                     height="240px"
                     @change="updateNodeProperties"
                   />
+                  <div style="margin-top: 8px; text-align: right;">
+                    <el-button type="primary" size="small" @click="openScriptEditor">
+                      <el-icon><Edit /></el-icon> 编辑脚本
+                    </el-button>
+                  </div>
                 </el-form-item>
               </el-form>
               <el-alert class="form-tip" type="info" :closable="false" show-icon>
@@ -267,6 +277,62 @@
               <el-alert class="form-tip" type="info" :closable="false" show-icon>
                 <template #title>声明后输出映射会自动生成 <code>result.字段名 → context.字段名</code></template>
               </el-alert>
+            </template>
+
+            <!-- 插件节点配置 -->
+            <template v-if="isPluginNode(selectedNode?.type)">
+              <div class="section-title">插件配置</div>
+              <el-form label-position="top" size="default">
+                <template v-for="field in getPluginFields(selectedNode?.type)" :key="field.name">
+                  <el-form-item :label="field.label" :required="field.required">
+                    <el-input 
+                      v-if="field.type === 'text'"
+                      v-model="selectedNode.properties[field.name]" 
+                      :placeholder="field.placeholder" 
+                      @change="updateNodeProperties" 
+                    />
+                    <el-input 
+                      v-else-if="field.type === 'password'"
+                      v-model="selectedNode.properties[field.name]" 
+                      type="password"
+                      :placeholder="field.placeholder"
+                      show-password
+                      @change="updateNodeProperties" 
+                    />
+                    <el-input 
+                      v-else-if="field.type === 'textarea'"
+                      v-model="selectedNode.properties[field.name]" 
+                      type="textarea"
+                      :rows="3"
+                      :placeholder="field.placeholder"
+                      @change="updateNodeProperties" 
+                    />
+                    <el-select 
+                      v-else-if="field.type === 'select'"
+                      v-model="selectedNode.properties[field.name]" 
+                      :placeholder="field.placeholder || '请选择'"
+                      style="width: 100%"
+                      @change="updateNodeProperties"
+                    >
+                      <el-option 
+                        v-for="opt in field.options" 
+                        :key="opt.value" 
+                        :label="opt.label" 
+                        :value="opt.value" 
+                      />
+                    </el-select>
+                    <el-input-number 
+                      v-else-if="field.type === 'number'"
+                      v-model="selectedNode.properties[field.name]"
+                      style="width: 100%"
+                      @change="updateNodeProperties"
+                    />
+                  </el-form-item>
+                  <el-alert v-if="field.tip" class="form-tip" type="info" :closable="false" show-icon style="margin-bottom: 12px;">
+                    <template #title>{{ field.tip }}</template>
+                  </el-alert>
+                </template>
+              </el-form>
             </template>
 
             <!-- 输入映射 -->
@@ -436,6 +502,20 @@
         <div v-if="filteredVars.length === 0" class="var-empty">未找到匹配的变量</div>
       </div>
     </el-dialog>
+
+    <!-- 脚本编辑弹窗 -->
+    <el-dialog v-model="scriptEditorVisible" title="编辑脚本 (Groovy)" width="800px" class="script-editor-dialog" destroy-on-close>
+      <MonacoEditor
+        v-model="scriptEditorContent"
+        language="java"
+        theme="vs-dark"
+        height="480px"
+      />
+      <template #footer>
+        <el-button @click="scriptEditorVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveScriptContent">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -454,7 +534,7 @@ import {
 } from '@logicflow/extension'
 import '@logicflow/core/dist/style/index.css'
 import '@logicflow/extension/lib/style/index.css'
-import { saveFlowDefinition, saveFlowGraph, getFlowDefinitionDetail, publishFlowDefinition, startFlowInstance } from '@/api/workflow'
+import { saveFlowDefinition, saveFlowGraph, getFlowDefinitionDetail, publishFlowDefinition, startFlowInstance, copyFlowDefinition } from '@/api/workflow'
 import { getDatasourceList } from '@/api/datasource'
 import { getApiCatalogList, getApiParams } from '@/api/apiMgr'
 import request from '@/utils/request'
@@ -465,9 +545,10 @@ const router = useRouter()
 const canvasRef = ref(null)
 let lf = null
 
-const flowId = ref(route.query.id ? parseInt(route.query.id) : null)
+const flowId = ref(route.query.id ? String(route.query.id) : null)
 const flowName = ref('未命名流程')
 const flowStatus = ref(0)
+const version = ref(1)
 const isValid = ref(false)
 const testRunVisible = ref(false)
 const testBusinessKey = ref('TEST_' + Date.now())
@@ -489,7 +570,25 @@ const currentEditingTarget = ref('')
 const varSearch = ref('')
 const scriptOutputFields = ref('')
 
-const nodeGroups = [
+// 脚本编辑器
+const scriptEditorVisible = ref(false)
+const scriptEditorContent = ref('')
+
+function openScriptEditor() {
+  if (!selectedNode.value) return
+  scriptEditorContent.value = selectedNode.value.properties.scriptContent || ''
+  scriptEditorVisible.value = true
+}
+
+function saveScriptContent() {
+  if (!selectedNode.value) return
+  selectedNode.value.properties.scriptContent = scriptEditorContent.value
+  updateNodeProperties()
+  scriptEditorVisible.value = false
+  ElMessage.success('脚本内容已保存')
+}
+
+const baseNodeGroups = [
   {
     name: '基础节点',
     nodes: [
@@ -513,6 +612,135 @@ const nodeGroups = [
     ]
   }
 ]
+
+const nodeGroups = ref([...baseNodeGroups])
+const pluginSchemas = ref({})
+
+const loadPluginNodes = async () => {
+  try {
+    const res = await request({
+      url: '/plugin/loaded',
+      method: 'get'
+    })
+    
+    if (res && res.plugins && res.plugins.length > 0) {
+      const pluginNodes = res.plugins.map(plugin => {
+        if (plugin.configSchema) {
+          try {
+            pluginSchemas.value[plugin.nodeType] = JSON.parse(plugin.configSchema)
+          } catch (e) {
+            console.error('解析插件schema失败', plugin.nodeType, e)
+          }
+        }
+        
+        return {
+          type: plugin.nodeType,
+          label: plugin.nodeName,
+          desc: plugin.description || '插件节点',
+          icon: plugin.icon || 'Box',
+          color: '#6366f1',
+          configTemplate: plugin.configTemplate
+        }
+      })
+      
+      const pluginGroup = {
+        name: '插件节点',
+        nodes: pluginNodes
+      }
+      
+      nodeGroups.value = [...baseNodeGroups, pluginGroup]
+      
+      if (lf) {
+        pluginNodes.forEach(node => {
+          const NodeModel = class extends RectNodeModel {
+            initNodeData(data) {
+              super.initNodeData(data)
+              this.width = 148
+              this.height = 56
+            }
+            getNodeStyle() {
+              const style = super.getNodeStyle()
+              style.fill = 'transparent'
+              style.stroke = 'transparent'
+              style.strokeWidth = 0
+              return style
+            }
+            getTextStyle() {
+              const style = super.getTextStyle()
+              style.color = '#334155'
+              style.fontSize = 13
+              style.fontWeight = 600
+              return style
+            }
+          }
+
+          const NodeView = class extends RectNode {
+            getShape() {
+              const { model } = this.props
+              const { x, y, width, height, properties, isSelected } = model
+              const color = properties.color || node.color
+              const rx = 12
+              const ry = 12
+              const barW = 3
+              const pad = 2
+
+              return h('g', {}, [
+                h('rect', {
+                  x: x - width / 2,
+                  y: y - height / 2,
+                  width: width,
+                  height: height,
+                  rx,
+                  ry,
+                  fill: '#ffffff',
+                  stroke: isSelected ? color + '60' : '#e2e8f0',
+                  strokeWidth: isSelected ? 1.5 : 1
+                }),
+                h('rect', {
+                  x: x - width / 2 + pad,
+                  y: y - height / 2 + pad + 10,
+                  width: barW,
+                  height: height - pad * 2 - 20,
+                  rx: barW / 2,
+                  fill: color
+                }),
+                h('circle', {
+                  cx: x - width / 2 + 14,
+                  cy: y - height / 2 + 14,
+                  r: 3,
+                  fill: color,
+                  opacity: 0.9
+                })
+              ])
+            }
+          }
+
+          try {
+            lf.register({ type: node.type, model: NodeModel, view: NodeView })
+          } catch (e) {
+            console.log('节点已注册:', node.type)
+          }
+        })
+      }
+    }
+  } catch (error) {
+    console.error('加载插件节点失败', error)
+  }
+}
+
+const isPluginNode = (nodeType) => {
+  if (!nodeType) return false
+  const builtInTypes = ['start', 'end', 'api', 'db', 'script', 'condition', 'timer']
+  return !builtInTypes.includes(nodeType)
+}
+
+const getPluginFields = (nodeType) => {
+  const schema = pluginSchemas.value[nodeType]
+  if (!schema || !schema.fields) {
+    return []
+  }
+  return schema.fields
+}
 
 // 注册 LogicFlow 扩展
 LogicFlow.use(Menu)
@@ -614,19 +842,19 @@ function initLogicFlow() {
     ElMessage.warning(data.msg || '不允许的连线')
   })
 
-  // 如果有流程ID，加载已有数据
-  if (flowId.value) {
-    loadFlowData()
-  } else {
-    // 默认添加开始和结束节点
-    lf.render({
-      nodes: [
-        { id: 'start_1', type: 'start', x: 240, y: 320, text: '开始', properties: { name: '开始', code: 'start_1' } },
-        { id: 'end_1', type: 'end', x: 640, y: 320, text: '结束', properties: { name: '结束', code: 'end_1' } }
-      ],
-      edges: []
-    })
-  }
+  loadPluginNodes().then(() => {
+    if (flowId.value) {
+      loadFlowData()
+    } else {
+      lf.render({
+        nodes: [
+          { id: 'start_1', type: 'start', x: 240, y: 320, text: '开始', properties: { name: '开始', code: 'start_1' } },
+          { id: 'end_1', type: 'end', x: 640, y: 320, text: '结束', properties: { name: '结束', code: 'end_1' } }
+        ],
+        edges: []
+      })
+    }
+  })
 }
 
 function registerCustomNodes() {
@@ -796,10 +1024,26 @@ function registerCustomNodes() {
 }
 
 function handleDragStart(e, node) {
+  const properties = { 
+    name: node.label, 
+    code: `${node.type}_${Date.now()}` 
+  }
+  
+  if (isPluginNode(node.type)) {
+    const schema = pluginSchemas.value[node.type]
+    if (schema && schema.fields) {
+      schema.fields.forEach(field => {
+        if (field.defaultValue !== undefined) {
+          properties[field.name] = field.defaultValue
+        }
+      })
+    }
+  }
+  
   e.dataTransfer.setData('application/lf-node', JSON.stringify({
     type: node.type,
     text: node.label,
-    properties: { name: node.label, code: `${node.type}_${Date.now()}` }
+    properties
   }))
 }
 
@@ -1145,12 +1389,18 @@ function handleValidate() {
 
 async function handleSave() {
   if (!lf) return
+  if (flowStatus.value === 1) {
+    ElMessage.warning('已发布的流程不可修改，请创建新版本')
+    return
+  }
+  debugger
   const graphData = lf.getGraphData()
   const defData = {
     id: flowId.value,
-    flowCode: flowName.value ? 'FLOW_' + Date.now() : undefined,
+    flowCode: !flowId.value && flowName.value ? 'FLOW_' + Date.now() : undefined,
     flowName: flowName.value,
     status: 0,
+    version: version.value,
     graphJson: JSON.stringify(graphData)
   }
   try {
@@ -1160,7 +1410,7 @@ async function handleSave() {
       flowId.value = res
     }
 
-    // 2. 保存节点和边（核心修复：之前只保存了 graphJson 字符串，节点和边没拆表存储）
+    // 2. 保存节点和边
     if (flowId.value && graphData.nodes) {
       await saveFlowGraph(flowId.value, graphData)
     }
@@ -1177,11 +1427,32 @@ async function handlePublish() {
     return
   }
   try {
-    await publishFlowDefinition(flowId.value)
+    const newId = await publishFlowDefinition(flowId.value)
     flowStatus.value = 1
+    // 如果返回了新的ID，说明创建了新版，更新当前ID
+    if (newId && newId !== flowId.value) {
+      flowId.value = newId
+      // 更新URL参数
+      router.replace({ path: '/workflow/designer', query: { id: newId } })
+    }
     ElMessage.success('流程发布成功')
   } catch (e) {
     ElMessage.error('发布失败: ' + e.message)
+  }
+}
+
+async function handleCopyAndEdit() {
+  if (!flowId.value) return
+  try {
+    const newId = await copyFlowDefinition(flowId.value)
+    ElMessage.success('已创建新版本，正在跳转...')
+    router.replace({ path: '/workflow/designer', query: { id: newId } })
+    // 刷新页面数据
+    flowId.value = newId
+    flowStatus.value = 0
+    await loadFlowData()
+  } catch (e) {
+    ElMessage.error('创建新版本失败: ' + e.message)
   }
 }
 
@@ -1246,6 +1517,7 @@ async function loadFlowData() {
     if (def) {
       flowName.value = def.flowName || '未命名流程'
       flowStatus.value = def.status || 0
+      version.value = def.version || 1
       if (def.graphJson) {
         const graphData = JSON.parse(def.graphJson)
         lf.render(graphData)
@@ -2294,6 +2566,46 @@ $text-muted: #94a3b8;
       color: $text-muted;
       font-size: 12px;
     }
+  }
+
+  // 脚本预览区域
+  .script-preview {
+    background: #1e293b;
+    border-radius: 10px;
+    padding: 12px;
+    min-height: 120px;
+    max-height: 240px;
+    overflow-y: auto;
+    cursor: pointer;
+    border: 1px solid #334155;
+    transition: all 0.15s;
+
+    &:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+    }
+
+    pre {
+      margin: 0;
+      font-family: var(--font-mono, monospace);
+      font-size: 12px;
+      color: #e2e8f0;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .script-placeholder {
+      color: #94a3b8;
+      font-size: 12px;
+    }
+  }
+}
+
+// 脚本编辑弹窗
+.script-editor-dialog {
+  :deep(.el-dialog__body) {
+    padding: 16px 20px;
   }
 }
 </style>

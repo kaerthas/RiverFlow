@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.riverflow.admin.service.ApiCatalogService;
 import com.riverflow.admin.service.ApiParamService;
+import com.riverflow.admin.service.FlowDefinitionService;
 import com.riverflow.api.entity.ApiCatalog;
 import com.riverflow.api.entity.ApiParam;
+import com.riverflow.api.entity.FlowDefinition;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,9 +43,20 @@ public class ApiCatalogController {
         return R.ok(apiCatalogService.page(pageParam, qw));
     }
 
+    @Autowired
+    private FlowDefinitionService flowDefinitionService;
+
     @GetMapping("/{id}")
     public R<ApiCatalog> getById(@PathVariable Long id) {
-        return R.ok(apiCatalogService.getById(id));
+        ApiCatalog api = apiCatalogService.getById(id);
+        // 兼容旧数据：如果 triggerFlowCode 为空但 triggerFlowId 有值，自动回填 flowCode
+        if (api != null && (api.getTriggerFlowCode() == null || api.getTriggerFlowCode().isEmpty()) && api.getTriggerFlowId() != null) {
+            FlowDefinition def = flowDefinitionService.getById(api.getTriggerFlowId());
+            if (def != null) {
+                api.setTriggerFlowCode(def.getFlowCode());
+            }
+        }
+        return R.ok(api);
     }
 
     @GetMapping("/{id}/params")
@@ -52,15 +65,24 @@ public class ApiCatalogController {
     }
 
     @PostMapping
-    public R<Long> save(@RequestBody ApiCatalog apiCatalog) {
+    public R<String> save(@RequestBody ApiCatalog apiCatalog) {
+        normalizeTriggerFlow(apiCatalog);
         apiCatalogService.saveOrUpdate(apiCatalog);
-        return R.ok(apiCatalog.getId());
+        return R.ok(String.valueOf(apiCatalog.getId()));
     }
 
     @PutMapping
-    public R<Long> update(@RequestBody ApiCatalog apiCatalog) {
+    public R<String> update(@RequestBody ApiCatalog apiCatalog) {
+        normalizeTriggerFlow(apiCatalog);
         apiCatalogService.updateById(apiCatalog);
-        return R.ok(apiCatalog.getId());
+        return R.ok(String.valueOf(apiCatalog.getId()));
+    }
+
+    private void normalizeTriggerFlow(ApiCatalog api) {
+        // 优先使用 triggerFlowCode，有值时清空旧 triggerFlowId，避免混淆
+        if (api.getTriggerFlowCode() != null && !api.getTriggerFlowCode().isEmpty()) {
+            api.setTriggerFlowId(null);
+        }
     }
 
     @PostMapping("/{id}/params")

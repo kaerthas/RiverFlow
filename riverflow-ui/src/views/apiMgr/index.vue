@@ -198,8 +198,8 @@
               <el-row :gutter="16">
                 <el-col :span="12">
                   <el-form-item label="触发流程">
-                    <el-select v-model="form.triggerFlowId" placeholder="请选择要触发的流程" clearable style="width: 100%">
-                      <el-option v-for="flow in flowDefinitionOptions" :key="flow.id" :label="flow.flowName" :value="flow.id" />
+                    <el-select v-model="form.triggerFlowCode" placeholder="请选择要触发的流程（自动使用最新发布版本）" clearable style="width: 100%">
+                      <el-option v-for="flow in flowDefinitionOptions" :key="flow.flowCode" :label="`${flow.flowName} (v${flow.version})`" :value="flow.flowCode" />
                     </el-select>
                   </el-form-item>
                 </el-col>
@@ -339,6 +339,7 @@ const form = reactive({
   proxyPort: null,
   triggerEnabled: 0,
   triggerFlowId: null,
+  triggerFlowCode: '',
   triggerBizKeyField: '',
   status: 0
 })
@@ -504,6 +505,7 @@ function handleAdd() {
     proxyPort: null,
     triggerEnabled: 0,
     triggerFlowId: null,
+    triggerFlowCode: '',
     triggerBizKeyField: '',
     status: 0
   })

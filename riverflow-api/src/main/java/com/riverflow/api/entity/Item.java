@@ -61,6 +61,11 @@ public class Item extends BaseEntity {
     private Long flowId;
 
     /**
+     * 流程编码（解耦具体版本，启动时自动取最新发布版本）
+     */
+    private String flowCode;
+
+    /**
      * 状态：0-停用，1-启用
      */
     private Integer status;

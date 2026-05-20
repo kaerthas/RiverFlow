@@ -39,22 +39,6 @@
     <div class="rf-table-card">
       <el-table :data="tableData" class="rf-data-table" :fit="false" v-loading="loading" empty-text="暂无数据">
         <el-table-column type="index" label="#" width="52" align="center" />
-        <el-table-column label="实例ID" width="240">
-          <template #default="{ row }">
-            <span class="rf-code">{{ row.id }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="流程编码" width="220">
-          <template #default="{ row }">
-            <span class="rf-code">{{ row.flowCode }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="业务主键">
-          <template #default="{ row }">
-            <span class="rf-mono">{{ row.businessKey }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="currentNodeId" label="当前节点" min-width="220" show-overflow-tooltip />
         <el-table-column label="状态" width="120" align="center">
           <template #default="{ row }">
             <span v-if="row.status === 'running'" class="rf-status running"><span class="dot"></span>运行中</span>
@@ -65,6 +49,28 @@
             <span v-else class="rf-status">{{ row.status }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="实例ID" width="240">
+          <template #default="{ row }">
+            <span class="rf-code">{{ row.id }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="流程编码" width="180">
+          <template #default="{ row }">
+            <span class="rf-code">{{ row.flowCode }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="版本" width="80" align="center">
+          <template #default="{ row }">
+            <span class="rf-mono" style="font-size: 12px; color: var(--rf-text-muted)">v{{ row.version }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column width="300px" label="业务主键">
+          <template #default="{ row }">
+            <span class="rf-mono">{{ row.businessKey }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="currentNodeId" label="当前节点" min-width="220" show-overflow-tooltip />
+        
         <el-table-column label="启动时间" width="185">
           <template #default="{ row }">
             <span class="rf-time">{{ formatTime(row.startTime) }}</span>
@@ -126,7 +132,7 @@
             <el-option
               v-for="flow in flowDefinitionOptions"
               :key="flow.id"
-              :label="flow.flowName"
+              :label="`${flow.flowName} (v${flow.version})`"
               :value="flow.id"
             />
           </el-select>
@@ -147,14 +153,17 @@
         <el-row :gutter="16" class="info-row">
           <el-col :span="8"><span class="label">实例ID:</span> {{ currentInstance.id }}</el-col>
           <el-col :span="8"><span class="label">流程编码:</span> {{ currentInstance.flowCode }}</el-col>
-          <el-col :span="8"><span class="label">业务主键:</span> {{ currentInstance.businessKey }}</el-col>
+          <el-col :span="8"><span class="label">版本:</span> v{{ currentInstance.version }}</el-col>
         </el-row>
         <el-row :gutter="16" class="info-row">
+          <el-col :span="8"><span class="label">业务主键:</span> {{ currentInstance.businessKey }}</el-col>
           <el-col :span="8">
             <span class="label">状态:</span>
             <el-tag :type="statusType(currentInstance.status)">{{ statusText(currentInstance.status) }}</el-tag>
           </el-col>
           <el-col :span="8"><span class="label">当前节点:</span> {{ currentInstance.currentNodeId }}</el-col>
+        </el-row>
+        <el-row :gutter="16" class="info-row">
           <el-col :span="8"><span class="label">启动时间:</span> {{ currentInstance.startTime }}</el-col>
         </el-row>
 
@@ -173,6 +182,23 @@
                 </div>
               </el-timeline-item>
             </el-timeline>
+            
+            <div v-if="logHasMore" class="load-more-container">
+              <el-button 
+                type="primary" 
+                link 
+                :loading="logLoading"
+                @click="handleLoadMoreLogs"
+              >
+                {{ logLoading ? '加载中...' : '加载更多' }}
+              </el-button>
+            </div>
+            
+            <div v-if="!logHasMore && instanceLogs.length > 0" class="no-more-container">
+              <span class="no-more-text">没有更多日志了</span>
+            </div>
+            
+            <el-empty v-if="instanceLogs.length === 0 && !logLoading" description="暂无执行日志" />
           </el-tab-pane>
           <el-tab-pane label="任务列表" name="tasks">
             <el-table :data="instanceTasks" stripe size="small">
@@ -218,6 +244,11 @@ const activeTab = ref('logs')
 const instanceLogs = ref([])
 const instanceTasks = ref([])
 const flowDefinitionOptions = ref([])
+
+const logLoading = ref(false)
+const logHasMore = ref(true)
+const logPage = ref(1)
+const logPageSize = 5
 
 const startForm = reactive({
   flowId: null,
@@ -265,15 +296,51 @@ function handleReset() {
 async function handleDetail(row) {
   currentInstance.value = row
   detailVisible.value = true
+  
+  logPage.value = 1
+  logHasMore.value = true
+  instanceLogs.value = []
+  
   try {
     const [logsRes, tasksRes] = await Promise.all([
-      getInstanceLogs(row.id),
+      getInstanceLogs(row.id, logPage.value, logPageSize),
       getInstanceTasks(row.id)
     ])
-    instanceLogs.value = logsRes || []
+    
+    if (logsRes && logsRes.records) {
+      instanceLogs.value = logsRes.records
+      logHasMore.value = logsRes.records.length < (logsRes.total || 0)
+    } else {
+      instanceLogs.value = []
+      logHasMore.value = false
+    }
+    
     instanceTasks.value = tasksRes || []
   } catch (e) {
     console.error('加载详情失败', e)
+  }
+}
+
+async function handleLoadMoreLogs() {
+  if (logLoading.value || !logHasMore.value) return
+  
+  logLoading.value = true
+  logPage.value++
+  
+  try {
+    const logsRes = await getInstanceLogs(currentInstance.value.id, logPage.value, logPageSize)
+    
+    if (logsRes && logsRes.records && logsRes.records.length > 0) {
+      instanceLogs.value = [...instanceLogs.value, ...logsRes.records]
+      logHasMore.value = instanceLogs.value.length < (logsRes.total || 0)
+    } else {
+      logHasMore.value = false
+    }
+  } catch (e) {
+    console.error('加载更多日志失败', e)
+    logPage.value--
+  } finally {
+    logLoading.value = false
   }
 }
 
@@ -393,6 +460,23 @@ handleSearch()
   .log-item {
     strong { margin-right: 8px; color: #262626; }
     .log-msg { margin: 6px 0 0; font-size: 13px; color: #595959; line-height: 1.5; }
+  }
+
+  .load-more-container {
+    text-align: center;
+    padding: 16px 0;
+    margin-top: 8px;
+  }
+
+  .no-more-container {
+    text-align: center;
+    padding: 12px 0;
+    margin-top: 8px;
+    
+    .no-more-text {
+      font-size: 13px;
+      color: #8C8C8C;
+    }
   }
 }
 </style>

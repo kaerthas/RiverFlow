@@ -48,13 +48,19 @@ public class FlowEngine {
 
     /**
      * 启动流程实例
+     * @param flowId 流程定义ID（具体版本）
+     * @param flowCode 流程编码
+     * @param version 流程版本号
+     * @param businessKey 业务主键
+     * @param itemCode 事项编码
      */
-    public FlowInstance startInstance(Long flowId, String flowCode, String businessKey, String itemCode) {
-        log.info("启动流程实例: flowCode={}, businessKey={}", flowCode, businessKey);
+    public FlowInstance startInstance(Long flowId, String flowCode, Integer version, String businessKey, String itemCode) {
+        log.info("启动流程实例: flowCode={}, version={}, businessKey={}", flowCode, version, businessKey);
 
         FlowInstance instance = new FlowInstance();
         instance.setFlowId(flowId);
         instance.setFlowCode(flowCode);
+        instance.setVersion(version);
         instance.setBusinessKey(businessKey);
         instance.setStatus(FlowInstanceStatusEnum.RUNNING.getCode());
         instance.setStartTime(LocalDateTime.now());
@@ -71,7 +77,7 @@ public class FlowEngine {
         instance.setCurrentNodeId("");
         flowInstanceService.updateById(instance);
 
-        saveLog(instance.getId(), null, null, "start", "流程实例启动成功");
+        saveLog(instance.getId(), null, null, "start", "流程实例启动成功, version=" + version);
         return instance;
     }
 
@@ -108,7 +114,9 @@ public class FlowEngine {
                             .orderByDesc("create_time")
                             .last("LIMIT 1")
             );
-            if (latestTask != null && !FlowTaskStatusEnum.PENDING.getCode().equals(latestTask.getStatus())) {
+            if (latestTask != null
+                    && !FlowTaskStatusEnum.PENDING.getCode().equals(latestTask.getStatus())
+                    && !FlowTaskStatusEnum.WAITING.getCode().equals(latestTask.getStatus())) {
                 log.warn("[流程实例:{}] 二次校验失败，任务已被其他线程执行（status={}），释放锁并跳过",
                         instance.getId(), latestTask.getStatus());
                 return;
@@ -125,6 +133,25 @@ public class FlowEngine {
                     instance.getId(), node.getNodeName(), node.getNodeType());
 
             FlowTask task = getOrCreateTask(instance, node);
+
+            // 旧实例兼容：timer 节点已被 FlowScheduler 唤醒（WAITING 且 next_execute_time 已到达）
+            // 但上下文中没有 _timerTargetTime_，说明是旧代码产生的任务，直接完成并继续流转
+            if ("timer".equals(node.getNodeType())
+                    && FlowTaskStatusEnum.WAITING.getCode().equals(task.getStatus())
+                    && context.get("_timerTargetTime_" + node.getNodeId()) == null) {
+                log.info("[流程实例:{}] timer 节点旧实例兼容，直接完成", instance.getId());
+                task.setStatus(FlowTaskStatusEnum.SUCCESS.getCode());
+                task.setEndTime(LocalDateTime.now());
+                task.setExecuteCount(task.getExecuteCount() + 1);
+                flowTaskService.updateById(task);
+                saveLog(instance.getId(), task.getId(), node.getNodeId(), "execute", "定时节点完成（旧实例兼容）");
+                NodeExecuteResult result = NodeExecuteResult.success(new JSONObject());
+                transitionEngine.transition(instance, node, edges, nodes, context, result);
+                instance.setContextJson(context.toJsonString());
+                flowInstanceService.updateById(instance);
+                return;
+            }
+
             task.setStatus(FlowTaskStatusEnum.RUNNING.getCode());
             task.setStartTime(LocalDateTime.now());
             task.setInputContext(context.toJsonString());

@@ -1,5 +1,6 @@
 package com.riverflow.admin.controller;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
@@ -22,10 +23,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 工作流管理 Controller
@@ -59,14 +58,57 @@ public class WorkflowController {
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String flowCode,
-            @RequestParam(required = false) String flowName) {
-        Page<FlowDefinition> pageParam = new Page<>(page, size);
+            @RequestParam(required = false) String flowName,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Boolean showAllVersions) {
+
+        boolean allVersions = showAllVersions != null && showAllVersions;
+
         QueryWrapper<FlowDefinition> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);
-        if (flowCode != null && !flowCode.isEmpty()) qw.like("flow_code", flowCode);
+        if (flowCode != null && !flowCode.isEmpty()) qw.eq("flow_code", flowCode);
         if (flowName != null && !flowName.isEmpty()) qw.like("flow_name", flowName);
+        if (status != null) qw.eq("status", status);
         qw.orderByDesc("create_time");
-        return R.ok(flowDefinitionService.page(pageParam, qw));
+
+        if (allVersions) {
+            Page<FlowDefinition> pageParam = new Page<>(page, size);
+            return R.ok(flowDefinitionService.page(pageParam, qw));
+        }
+
+        // 默认只显示每个 flow_code 的最新版本
+        // 由于流程定义数据量通常不大，先全量查询再内存分页
+        List<FlowDefinition> allList = flowDefinitionService.list(qw);
+        Map<String, FlowDefinition> latestMap = new LinkedHashMap<>();
+        for (FlowDefinition def : allList) {
+            FlowDefinition existing = latestMap.get(def.getFlowCode());
+            if (existing == null || (def.getVersion() != null && existing.getVersion() != null
+                    && def.getVersion() > existing.getVersion())) {
+                latestMap.put(def.getFlowCode(), def);
+            }
+        }
+        List<FlowDefinition> latestList = new ArrayList<>(latestMap.values());
+        latestList.sort(Comparator.comparing(FlowDefinition::getCreateTime).reversed());
+
+        // 手动分页
+        int total = latestList.size();
+        int fromIndex = (page - 1) * size;
+        int toIndex = Math.min(fromIndex + size, total);
+        List<FlowDefinition> records = fromIndex < total ? latestList.subList(fromIndex, toIndex) : new ArrayList<>();
+
+        Page<FlowDefinition> resultPage = new Page<>(page, size, total);
+        resultPage.setRecords(records);
+        return R.ok(resultPage);
+    }
+
+    /**
+     * 查询某流程编码的所有历史版本
+     */
+    @GetMapping("/definition/versions")
+    public R<List<FlowDefinition>> listVersions(@RequestParam String flowCode) {
+        QueryWrapper<FlowDefinition> qw = new QueryWrapper<>();
+        qw.eq("flow_code", flowCode).eq("del_flag", 0).orderByDesc("version");
+        return R.ok(flowDefinitionService.list(qw));
     }
 
     @GetMapping("/definition/{id}")
@@ -77,18 +119,50 @@ public class WorkflowController {
     }
 
     @PostMapping("/definition")
-    public R<Long> saveDefinition(@RequestBody FlowDefinition definition) {
+    public R<String> saveDefinition(@RequestBody FlowDefinition definition) {
+        if (definition.getId() != null) {
+            FlowDefinition exist = flowDefinitionService.getById(definition.getId());
+            if (exist != null && exist.getStatus() != null && exist.getStatus() == 1) {
+                return R.fail("已发布的流程不可直接修改，请先创建新版本");
+            }
+        }
+        if (definition.getVersion() == null) {
+            definition.setVersion(1);
+        }
         flowDefinitionService.saveOrUpdate(definition);
-        return R.ok(definition.getId());
+        return R.ok(String.valueOf(definition.getId()));
     }
 
     @PutMapping("/definition/{id}/publish")
-    public R<Void> publishDefinition(@PathVariable Long id) {
+    @Transactional(rollbackFor = Exception.class)
+    public R<String> publishDefinition(@PathVariable Long id) {
         FlowDefinition def = flowDefinitionService.getById(id);
         if (def == null) return R.fail("流程定义不存在");
-        def.setStatus(1);
-        flowDefinitionService.updateById(def);
-        return R.ok();
+
+        if (def.getStatus() != null && def.getStatus() == 1) {
+            // 已经是已发布状态，直接返回当前ID
+            return R.ok(String.valueOf(def.getId()));
+        }
+
+        if (def.getStatus() != null && def.getStatus() == 0) {
+            // 草稿状态：直接发布（若版本号未设置则自动递增）
+            if (def.getVersion() == null || def.getVersion() == 0) {
+                Integer maxVersion = flowDefinitionService.getMaxVersion(def.getFlowCode());
+                def.setVersion((maxVersion == null ? 0 : maxVersion) + 1);
+            }
+            def.setStatus(1);
+            def.setUpdateTime(LocalDateTime.now());
+            flowDefinitionService.updateById(def);
+            return R.ok(String.valueOf(def.getId()));
+        }
+
+        // 下线状态(status=2) 或其他状态：复制为新版本再发布
+        Long newId = flowDefinitionService.copyAsNewVersion(id);
+        FlowDefinition newDef = flowDefinitionService.getById(newId);
+        newDef.setStatus(1);
+        newDef.setUpdateTime(LocalDateTime.now());
+        flowDefinitionService.updateById(newDef);
+        return R.ok(String.valueOf(newId));
     }
 
     @PutMapping("/definition/{id}/offline")
@@ -102,11 +176,24 @@ public class WorkflowController {
 
     @DeleteMapping("/definition/{id}")
     public R<Void> deleteDefinition(@PathVariable Long id) {
-        FlowDefinition def = new FlowDefinition();
-        def.setId(id);
+        FlowDefinition def = flowDefinitionService.getById(id);
+        if (def == null) return R.fail("流程定义不存在");
+        // 只允许删除草稿或已下线的版本
+        if (def.getStatus() != null && def.getStatus() == 1) {
+            return R.fail("已发布的流程版本不可删除");
+        }
         def.setDelFlag(1);
         flowDefinitionService.updateById(def);
         return R.ok();
+    }
+
+    /**
+     * 复制指定版本为新草稿
+     */
+    @PostMapping("/definition/{id}/copy")
+    public R<String> copyAsNewVersion(@PathVariable Long id) {
+        Long newId = flowDefinitionService.copyAsNewVersion(id);
+        return R.ok(String.valueOf(newId));
     }
 
     // ==================== 流程节点与边 ====================
@@ -126,6 +213,9 @@ public class WorkflowController {
     public R<Void> saveGraph(@PathVariable Long flowId, @RequestBody com.alibaba.fastjson2.JSONObject request) {
         FlowDefinition def = flowDefinitionService.getById(flowId);
         if (def == null) return R.fail("流程定义不存在");
+        if (def.getStatus() != null && def.getStatus() == 1) {
+            return R.fail("已发布的流程不可修改，请先创建新版本");
+        }
 
         // 保存节点（物理删除旧记录，避免唯一键冲突）
         flowNodeService.physicalDeleteByFlowId(flowId);
@@ -232,14 +322,14 @@ public class WorkflowController {
     }
 
     @PostMapping("/instance/{flowId}/start")
-    public R<Long> startInstance(@PathVariable Long flowId,
+    public R<String> startInstance(@PathVariable Long flowId,
                                   @RequestParam(required = false) String businessKey,
                                   @RequestParam(required = false) String itemCode) {
         FlowDefinition def = flowDefinitionService.getById(flowId);
         if (def == null) return R.fail("流程定义不存在");
         if (def.getStatus() != 1) return R.fail("流程未发布，无法启动");
 
-        FlowInstance instance = flowEngine.startInstance(flowId, def.getFlowCode(), businessKey, itemCode);
+        FlowInstance instance = flowEngine.startInstance(flowId, def.getFlowCode(), def.getVersion(), businessKey, itemCode);
 
         // 找到开始节点，创建首个任务
         List<FlowNode> nodes = flowNodeService.getNodesByFlowId(flowId);
@@ -261,7 +351,7 @@ public class WorkflowController {
             flowInstanceService.updateById(instance);
         }
 
-        return R.ok(instance.getId());
+        return R.ok(String.valueOf(instance.getId()));
     }
 
     @PutMapping("/instance/{id}/terminate")
@@ -313,7 +403,7 @@ public class WorkflowController {
         instance.setUpdateTime(LocalDateTime.now());
         flowInstanceService.updateById(instance);
 
-        // 2. 获取流程图
+        // 2. 获取流程图（始终使用实例绑定的版本定义）
         List<FlowNode> nodes = flowNodeService.getNodesByFlowId(instance.getFlowId());
         List<FlowEdge> edges = flowEdgeService.getEdgesByFlowId(instance.getFlowId());
 
@@ -370,9 +460,17 @@ public class WorkflowController {
     }
 
     @GetMapping("/instance/{instanceId}/logs")
-    public R<List<FlowLog>> getInstanceLogs(@PathVariable Long instanceId) {
-        return R.ok(flowLogService.list(new QueryWrapper<FlowLog>()
-                .eq("instance_id", instanceId).orderByDesc("create_time")));
+    public R<Page<FlowLog>> getInstanceLogs(
+            @PathVariable Long instanceId,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "5") Integer size) {
+        Page<FlowLog> pageParam = new Page<>(page, size);
+        QueryWrapper<FlowLog> qw = new QueryWrapper<>();
+        qw.eq("instance_id", instanceId);
+        qw.eq("del_flag", 0);
+        qw.orderByDesc("create_time");
+        qw.orderByDesc("id");
+        return R.ok(flowLogService.page(pageParam, qw));
     }
 
     /**

@@ -1,6 +1,8 @@
 package com.riverflow.api.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.riverflow.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -53,11 +55,13 @@ public class ApiCatalog extends BaseEntity {
     /**
      * SQL类型时绑定的数据源ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long dsId;
 
     /**
      * 脚本类型时绑定的脚本ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long scriptId;
 
     /**
@@ -91,9 +95,15 @@ public class ApiCatalog extends BaseEntity {
     private Integer triggerEnabled;
 
     /**
-     * 执行成功后触发的流程定义ID
+     * 执行成功后触发的流程定义ID（兼容旧数据）
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long triggerFlowId;
+
+    /**
+     * 触发流程编码（绑定编码，自动取最新发布版本）
+     */
+    private String triggerFlowCode;
 
     /**
      * 从请求参数中提取业务主键的字段名

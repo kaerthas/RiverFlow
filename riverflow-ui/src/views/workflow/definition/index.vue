@@ -36,6 +36,9 @@
           <el-option label="定时" value="cron" />
           <el-option label="事件" value="event" />
         </el-select>
+        <el-checkbox v-model="searchForm.showAllVersions" @change="handleSearch" style="margin-left: 8px">
+          显示所有版本
+        </el-checkbox>
       </div>
       <div class="search-actions">
         <button class="btn-search" @click="handleSearch">
@@ -95,7 +98,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="140" fixed="right" align="center">
+        <el-table-column label="操作" width="200" fixed="right" align="center">
           <template #default="{ row }">
             <div class="rf-actions">
               <el-tooltip content="设计" placement="top">
@@ -111,6 +114,16 @@
               <el-tooltip v-if="row.status === 1" content="下线" placement="top">
                 <button class="action-btn warning" @click="handleOffline(row)">
                   <el-icon><Download /></el-icon>
+                </button>
+              </el-tooltip>
+              <el-tooltip content="创建新版本" placement="top">
+                <button class="action-btn info" @click="handleCopyVersion(row)">
+                  <el-icon><CopyDocument /></el-icon>
+                </button>
+              </el-tooltip>
+              <el-tooltip content="查看历史版本" placement="top">
+                <button class="action-btn" @click="handleViewVersions(row)">
+                  <el-icon><Clock /></el-icon>
                 </button>
               </el-tooltip>
               <el-tooltip content="编辑" placement="top">
@@ -180,6 +193,37 @@
         <el-button type="primary" @click="confirmEdit" :loading="editLoading">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 历史版本弹窗 -->
+    <el-dialog v-model="versionVisible" :title="`历史版本 - ${versionFlowName}`" width="720px" destroy-on-close>
+      <el-table :data="versionData" v-loading="versionLoading" size="small">
+        <el-table-column prop="version" label="版本" width="80" align="center">
+          <template #default="{ row }">
+            <span class="rf-mono">v{{ row.version }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="flowName" label="流程名称" min-width="180" />
+        <el-table-column prop="status" label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <span :class="['rf-status', statusClass(row.status)]">
+              <span class="dot"></span>
+              {{ statusLabel(row.status) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="创建时间" width="180">
+          <template #default="{ row }">
+            <span class="rf-time">{{ formatTime(row.createTime) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="120" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="handleDesign(row)">设计</el-button>
+            <el-button link type="primary" size="small" @click="handleCopyVersion(row)">复制</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
@@ -187,7 +231,15 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getFlowDefinitionList, publishFlowDefinition, offlineFlowDefinition, deleteFlowDefinition, saveFlowDefinition } from '@/api/workflow'
+import {
+  getFlowDefinitionList,
+  publishFlowDefinition,
+  offlineFlowDefinition,
+  deleteFlowDefinition,
+  saveFlowDefinition,
+  copyFlowDefinition,
+  getFlowVersions
+} from '@/api/workflow'
 
 const router = useRouter()
 const loading = ref(false)
@@ -195,9 +247,15 @@ const editVisible = ref(false)
 const editLoading = ref(false)
 const editForm = reactive({ id: null, flowCode: '', flowName: '', itemCode: '', triggerType: 'manual' })
 
-const searchForm = reactive({ keyword: '', status: '', triggerType: '' })
+const searchForm = reactive({ keyword: '', status: '', triggerType: '', showAllVersions: false })
 const pagination = reactive({ page: 1, size: 10, total: 0 })
 const tableData = ref([])
+
+// 历史版本
+const versionVisible = ref(false)
+const versionLoading = ref(false)
+const versionFlowName = ref('')
+const versionData = ref([])
 
 function triggerLabel(type) {
   const map = { manual: '手动', cron: '定时', event: '事件' }
@@ -227,7 +285,8 @@ async function handleSearch() {
       size: pagination.size,
       flowName: searchForm.keyword || undefined,
       status: searchForm.status !== '' ? searchForm.status : undefined,
-      triggerType: searchForm.triggerType || undefined
+      triggerType: searchForm.triggerType || undefined,
+      showAllVersions: searchForm.showAllVersions || undefined
     })
     if (res && res.records) {
       tableData.value = res.records
@@ -244,6 +303,7 @@ function handleReset() {
   searchForm.keyword = ''
   searchForm.status = ''
   searchForm.triggerType = ''
+  searchForm.showAllVersions = false
   pagination.page = 1
   handleSearch()
 }
@@ -258,23 +318,56 @@ function handleDesign(row) {
 
 async function handlePublish(row) {
   try {
-    await ElMessageBox.confirm(`确认发布流程「${row.flowName}」？`, '发布确认', { type: 'warning' })
-    await publishFlowDefinition(row.id)
-    row.status = 1
-    ElMessage.success('流程发布成功')
+    await ElMessageBox.confirm(`确认发布流程「${row.flowName}」v${row.version}？发布后该版本将不可修改。`, '发布确认', { type: 'warning' })
+    const newId= await publishFlowDefinition(row.id)
+    // 如果返回了新的ID，说明创建了新版，跳转过去
+    if (newId && newId !== row.id) {
+      ElMessage.success('已创建新版本并发布')
+      router.push({ path: '/workflow/designer', query: { id: newId } })
+    } else {
+      row.status = 1
+      ElMessage.success('流程发布成功')
+    }
+    handleSearch()
   } catch (e) {
-    if (e !== 'cancel') ElMessage.error('发布失败: ' + e.message)
+    if (e !== 'cancel') ElMessage.error('发布失败: ' + (e.message || e))
   }
 }
 
 async function handleOffline(row) {
   try {
-    await ElMessageBox.confirm(`确认下线流程「${row.flowName}」？`, '下线确认', { type: 'warning' })
+    await ElMessageBox.confirm(`确认下线流程「${row.flowName}」v${row.version}？`, '下线确认', { type: 'warning' })
     await offlineFlowDefinition(row.id)
     row.status = 2
     ElMessage.success('流程已下线')
+    handleSearch()
   } catch (e) {
-    if (e !== 'cancel') ElMessage.error('下线失败: ' + e.message)
+    if (e !== 'cancel') ElMessage.error('下线失败: ' + (e.message || e))
+  }
+}
+
+async function handleCopyVersion(row) {
+  try {
+    await ElMessageBox.confirm(`基于「${row.flowName}」v${row.version} 创建新版本？`, '创建新版本', { type: 'info' })
+    const newId = await copyFlowDefinition(row.id)
+    ElMessage.success('新版本创建成功')
+    router.push({ path: '/workflow/designer', query: { id: newId } })
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error('创建失败: ' + (e.message || e))
+  }
+}
+
+async function handleViewVersions(row) {
+  versionFlowName.value = row.flowName
+  versionVisible.value = true
+  versionLoading.value = true
+  try {
+    const res = await getFlowVersions(row.flowCode)
+    versionData.value = res || []
+  } catch (e) {
+    ElMessage.error('加载历史版本失败')
+  } finally {
+    versionLoading.value = false
   }
 }
 
@@ -302,7 +395,7 @@ async function confirmEdit() {
     editVisible.value = false
     handleSearch()
   } catch (e) {
-    ElMessage.error('保存失败: ' + e.message)
+    ElMessage.error('保存失败: ' + (e.message || e))
   } finally {
     editLoading.value = false
   }
@@ -310,12 +403,12 @@ async function confirmEdit() {
 
 async function handleDelete(row) {
   try {
-    await ElMessageBox.confirm(`确认删除流程「${row.flowName}」？删除后不可恢复。`, '删除确认', { type: 'warning' })
+    await ElMessageBox.confirm(`确认删除流程「${row.flowName}」v${row.version}？删除后不可恢复。`, '删除确认', { type: 'warning' })
     await deleteFlowDefinition(row.id)
     ElMessage.success('删除成功')
     handleSearch()
   } catch (e) {
-    if (e !== 'cancel') ElMessage.error('删除失败: ' + e.message)
+    if (e !== 'cancel') ElMessage.error('删除失败: ' + (e.message || e))
   }
 }
 
@@ -364,6 +457,13 @@ onMounted(() => {
     &::before {
       display: none !important;
     }
+  }
+}
+
+.rf-actions {
+  .action-btn.info {
+    color: #3b82f6;
+    &:hover { background: #dbeafe; }
   }
 }
 </style>
