@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class NodePluginLoader {
 
-    @Value("${riverflow.plugin.dir:plugins}")
+    @Value("${riverflow.plugin.dir:${user.home}/riverflow/plugins}")
     private String pluginDirConfig;
 
     @Value("${riverflow.plugin.enabled:true}")
@@ -52,20 +52,19 @@ public class NodePluginLoader {
             return;
         }
 
-        File pluginDirectory = new File(pluginDirConfig);
-        if (!pluginDirectory.isAbsolute()) {
-            String userHome = System.getProperty("user.home");
-            pluginDir = userHome + File.separator + "riverflow" + File.separator + pluginDirConfig;
-        } else {
-            pluginDir = pluginDirConfig;
-        }
+        pluginDir = pluginDirConfig;
         
-        pluginDirectory = new File(pluginDir);
+        File pluginDirectory = new File(pluginDir);
         if (!pluginDirectory.exists()) {
-            pluginDirectory.mkdirs();
-            log.info("创建插件目录: {}", pluginDir);
+            boolean created = pluginDirectory.mkdirs();
+            if (created) {
+                log.info("创建插件目录: {}", pluginDir);
+            } else {
+                log.error("无法创建插件目录: {}", pluginDir);
+            }
         }
 
+        log.info("插件目录: {}", pluginDir);
         loadPluginsFromDatabase();
     }
 

@@ -112,4 +112,4 @@ riverflow:
   plugin:
     # 启用插件系统
     enabled: true
-    dir: plugins
+    dir: ${user.home}/riverflow/plugins
