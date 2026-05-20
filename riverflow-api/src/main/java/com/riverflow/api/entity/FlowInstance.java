@@ -28,6 +28,11 @@ public class FlowInstance extends BaseEntity {
     private String flowCode;
 
     /**
+     * 流程版本号（实例启动时的版本快照）
+     */
+    private Integer version;
+
+    /**
      * 业务主键（如办件流水号）
      */
     private String businessKey;
