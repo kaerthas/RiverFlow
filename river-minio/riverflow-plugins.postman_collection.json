@@ -1,0 +1,27 @@
+{
+	"info": {
+		"_postman_id": "f5438083-17fa-4988-8c7b-2add0367a0cb",
+		"name": "riverflow",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "http://localhost:8080/open/flow/start",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"flowCode\": \"minio-upload-demo\",\n    \"businessKey\": \"test-http-001\",\n    \"variables\": {\n        \"filePath\": \"http://via.placeholder.com/800x600.jpg\",\n        \"fileName\": \"placeholder.jpg\"\n    }\n}"
+				},
+				"url": "http://localhost:8080/open/flow/start"
+			},
+			"response": []
+		}
+	]
+}

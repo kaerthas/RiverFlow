@@ -67,6 +67,90 @@ public class OpenApiController {
     @Autowired
     private FlowTaskService flowTaskService;
 
+    @PostMapping("/flow/start")
+    public R<Map<String, Object>> startFlow(@RequestBody(required = false) Map<String, Object> params) {
+        if (params == null) {
+            params = new HashMap<>();
+        }
+        
+        String flowCode = (String) params.get("flowCode");
+        String businessKey = (String) params.get("businessKey");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> variables = (Map<String, Object>) params.get("variables");
+        
+        if (flowCode == null || flowCode.isEmpty()) {
+            return R.fail("flowCode不能为空");
+        }
+        
+        FlowDefinition def = flowDefinitionService.getLatestPublished(flowCode);
+        if (def == null) {
+            return R.fail("流程不存在或未发布: " + flowCode);
+        }
+        
+        if (businessKey == null || businessKey.isEmpty()) {
+            businessKey = String.valueOf(System.currentTimeMillis());
+        }
+        
+        FlowInstance instance = flowEngine.startInstance(
+            def.getId(),
+            def.getFlowCode(),
+            def.getVersion(),
+            businessKey,
+            def.getItemCode()
+        );
+        
+        if (variables != null && !variables.isEmpty()) {
+            try {
+                String existingContext = instance.getContextJson();
+                Map<String, Object> contextMap;
+                if (existingContext != null && !existingContext.isEmpty()) {
+                    contextMap = JSON.parseObject(existingContext, Map.class);
+                } else {
+                    contextMap = new HashMap<>();
+                }
+                contextMap.putAll(variables);
+                instance.setContextJson(JSON.toJSONString(contextMap));
+                flowInstanceService.updateById(instance);
+            } catch (Exception e) {
+                log.warn("保存流程上下文失败", e);
+            }
+        }
+        
+        List<FlowNode> nodes = flowNodeService.list(
+            new QueryWrapper<FlowNode>()
+                .eq("flow_id", def.getId())
+                .eq("del_flag", 0)
+        );
+        
+        FlowNode startNode = nodes.stream()
+            .filter(n -> FlowNodeTypeEnum.START.getCode().equals(n.getNodeType()))
+            .findFirst()
+            .orElse(null);
+        
+        if (startNode != null) {
+            FlowTask task = new FlowTask();
+            task.setInstanceId(instance.getId());
+            task.setNodeId(startNode.getNodeId());
+            task.setNodeName(startNode.getNodeName());
+            task.setNodeType(startNode.getNodeType());
+            task.setStatus(FlowTaskStatusEnum.PENDING.getCode());
+            task.setExecuteCount(0);
+            task.setCreateTime(java.time.LocalDateTime.now());
+            flowTaskService.save(task);
+            
+            instance.setCurrentNodeId(startNode.getNodeId());
+            flowInstanceService.updateById(instance);
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("instanceId", instance.getId());
+        result.put("flowCode", instance.getFlowCode());
+        result.put("businessKey", instance.getBusinessKey());
+        result.put("status", instance.getStatus());
+        
+        return R.ok(result);
+    }
+
     @PostMapping("/{apiCode}")
     public R<Object> executePost(@PathVariable("apiCode") String apiCode,
                                  HttpServletRequest request) {
@@ -255,22 +339,35 @@ public class OpenApiController {
 
     /**
      * 配置化流程触发
-     * 当接口配置了 triggerEnabled=1 且 triggerFlowId 不为空时，
-     * 在 SQL 执行成功后自动启动对应流程实例
+     * 当接口配置了 triggerEnabled=1 且 triggerFlowCode 不为空时，
+     * 自动查找最新发布的版本并启动流程实例
      */
     private void triggerFlowIfNeeded(ApiCatalog api, Map<String, Object> params, JSONObject resultData) {
-        if (api.getTriggerEnabled() == null || api.getTriggerEnabled() != 1 || api.getTriggerFlowId() == null) {
+        if (api.getTriggerEnabled() == null || api.getTriggerEnabled() != 1) {
             return;
         }
 
         try {
-            FlowDefinition def = flowDefinitionService.getById(api.getTriggerFlowId());
-            if (def == null) {
-                log.warn("流程触发失败：流程定义不存在, triggerFlowId={}", api.getTriggerFlowId());
-                return;
-            }
-            if (def.getStatus() == null || def.getStatus() != 1) {
-                log.warn("流程触发失败：流程未发布, triggerFlowId={}, status={}", api.getTriggerFlowId(), def.getStatus());
+            FlowDefinition def = null;
+            // 优先使用 triggerFlowCode（绑定编码，自动指向最新版本）
+            if (api.getTriggerFlowCode() != null && !api.getTriggerFlowCode().isEmpty()) {
+                def = flowDefinitionService.getLatestPublished(api.getTriggerFlowCode());
+                if (def == null) {
+                    log.warn("流程触发失败：流程编码 {} 无已发布版本", api.getTriggerFlowCode());
+                    return;
+                }
+            } else if (api.getTriggerFlowId() != null) {
+                // 兼容旧数据：使用 triggerFlowId（绑定具体版本）
+                def = flowDefinitionService.getById(api.getTriggerFlowId());
+                if (def == null) {
+                    log.warn("流程触发失败：流程定义不存在, triggerFlowId={}", api.getTriggerFlowId());
+                    return;
+                }
+                if (def.getStatus() == null || def.getStatus() != 1) {
+                    log.warn("流程触发失败：流程未发布, triggerFlowId={}, status={}", api.getTriggerFlowId(), def.getStatus());
+                    return;
+                }
+            } else {
                 return;
             }
 
@@ -288,10 +385,11 @@ public class OpenApiController {
                 log.warn("业务主键字段未配置或参数中不存在，使用时间戳作为 businessKey: apiCode={}", api.getApiCode());
             }
 
-            // 启动流程实例
+            // 启动流程实例（绑定到具体版本）
             FlowInstance instance = flowEngine.startInstance(
-                    api.getTriggerFlowId(),
+                    def.getId(),
                     def.getFlowCode(),
+                    def.getVersion(),
                     businessKey,
                     def.getItemCode()
             );
@@ -299,7 +397,7 @@ public class OpenApiController {
             // 创建开始节点的 pending 任务，让 FlowScheduler 能扫描并自动推进
             List<FlowNode> nodes = flowNodeService.list(
                     new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<FlowNode>()
-                            .eq("flow_id", api.getTriggerFlowId())
+                            .eq("flow_id", def.getId())
                             .eq("del_flag", 0)
             );
             FlowNode startNode = nodes.stream()
