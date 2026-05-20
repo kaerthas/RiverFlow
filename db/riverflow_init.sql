@@ -407,3 +407,47 @@ CREATE TABLE IF NOT EXISTS sys_plugin (
     KEY idx_status (status),
     KEY idx_category (category)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='插件管理表';
+
+-- ============================================================
+-- RiverFlow · 流程版本控制升级脚本
+-- 解决：流程无版本区分，修改流程会影响正在运行的实例
+-- ============================================================
+
+SET NAMES utf8mb4;
+
+-- 1. 流程实例表增加版本号字段（记录实例启动时的版本）
+ALTER TABLE wf_flow_instance
+    ADD COLUMN version INT DEFAULT 1 COMMENT '流程版本号' AFTER flow_code;
+
+-- 2. 事项表增加流程编码字段（解耦对具体版本ID的绑定）
+ALTER TABLE wf_item
+    ADD COLUMN flow_code VARCHAR(50) DEFAULT NULL COMMENT '流程编码' AFTER flow_id;
+
+-- 3. 为已有数据填充版本号（兼容历史数据）
+UPDATE wf_flow_instance fi
+    JOIN wf_flow_definition fd ON fi.flow_id = fd.id
+SET fi.version = fd.version
+WHERE fi.version IS NULL OR fi.version = 0;
+
+-- 4. 为已有事项填充 flow_code
+UPDATE wf_item i
+    JOIN wf_flow_definition fd ON i.flow_id = fd.id
+SET i.flow_code = fd.flow_code
+WHERE i.flow_code IS NULL AND i.flow_id IS NOT NULL;
+
+-- 5. 流程实例表增加版本索引
+ALTER TABLE wf_flow_instance ADD INDEX idx_flow_ver (flow_code, version);
+
+-- ============================================================
+-- ApiCatalog 流程触发升级：支持绑定 flowCode，自动指向最新版本
+-- ============================================================
+
+-- 1. 接口目录表增加 trigger_flow_code
+ALTER TABLE wf_api_catalog
+    ADD COLUMN trigger_flow_code VARCHAR(50) DEFAULT NULL COMMENT '触发流程编码（绑定编码，自动取最新发布版本）' AFTER trigger_flow_id;
+
+-- 2. 为已有数据回填 trigger_flow_code（根据 trigger_flow_id 反查）
+UPDATE wf_api_catalog ac
+    JOIN wf_flow_definition fd ON ac.trigger_flow_id = fd.id
+SET ac.trigger_flow_code = fd.flow_code
+WHERE ac.trigger_flow_id IS NOT NULL AND ac.trigger_flow_code IS NULL;
