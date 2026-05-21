@@ -153,6 +153,8 @@ public class WorkflowController {
             def.setStatus(1);
             def.setUpdateTime(LocalDateTime.now());
             flowDefinitionService.updateById(def);
+            // 将同流程的其他已发布版本下线，保证同一时刻只有一个已发布版本
+            offlineOtherPublishedVersions(def.getFlowCode(), def.getId());
             return R.ok(String.valueOf(def.getId()));
         }
 
@@ -162,6 +164,8 @@ public class WorkflowController {
         newDef.setStatus(1);
         newDef.setUpdateTime(LocalDateTime.now());
         flowDefinitionService.updateById(newDef);
+        // 将同流程的其他已发布版本下线，保证同一时刻只有一个已发布版本
+        offlineOtherPublishedVersions(newDef.getFlowCode(), newDef.getId());
         return R.ok(String.valueOf(newId));
     }
 
@@ -172,6 +176,20 @@ public class WorkflowController {
         def.setStatus(2);
         flowDefinitionService.updateById(def);
         return R.ok();
+    }
+
+    /**
+     * 将同流程编码下除指定版本外的其他已发布版本下线
+     */
+    private void offlineOtherPublishedVersions(String flowCode, Long excludeId) {
+        com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<FlowDefinition> updateWrapper =
+                new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<>();
+        updateWrapper.eq("flow_code", flowCode)
+                .eq("status", 1)
+                .ne("id", excludeId)
+                .set("status", 2)
+                .set("update_time", LocalDateTime.now());
+        flowDefinitionService.update(updateWrapper);
     }
 
     @DeleteMapping("/definition/{id}")
