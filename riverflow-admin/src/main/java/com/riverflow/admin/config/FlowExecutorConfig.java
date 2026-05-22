@@ -1,5 +1,6 @@
 package com.riverflow.admin.config;
 
+import com.riverflow.common.spring.SpringContextHolder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -16,6 +17,15 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Configuration
 public class FlowExecutorConfig {
+
+    /**
+     * Spring 上下文持有者
+     * 供插件等非 Spring 管理类获取 Bean
+     */
+    @Bean
+    public SpringContextHolder springContextHolder() {
+        return new SpringContextHolder();
+    }
 
     /**
      * 流程任务执行线程池

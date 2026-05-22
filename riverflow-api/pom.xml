@@ -40,6 +40,13 @@
             <artifactId>validation-api</artifactId>
         </dependency>
 
+        <!-- Spring Context（用于插件 init 接口） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

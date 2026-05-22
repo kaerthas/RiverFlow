@@ -1,6 +1,7 @@
 package com.riverflow.api.plugin;
 
 import com.riverflow.api.entity.FlowNode;
+import org.springframework.context.ApplicationContext;
 
 import java.util.Map;
 
@@ -78,6 +79,16 @@ public interface NodePlugin {
      */
     default String getConfigSchema() {
         return "{\"fields\":[]}";
+    }
+
+    /**
+     * 初始化插件，由主项目在加载完成后调用
+     * 插件可通过 ApplicationContext 获取主项目的 Spring Bean（如 RedisTemplate、JdbcTemplate 等）
+     *
+     * @param applicationContext Spring 应用上下文
+     */
+    default void init(ApplicationContext applicationContext) {
+        // 默认空实现，兼容旧插件
     }
 
     /**

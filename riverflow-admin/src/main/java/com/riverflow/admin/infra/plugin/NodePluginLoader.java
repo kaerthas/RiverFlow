@@ -6,6 +6,7 @@ import com.riverflow.admin.service.SysPluginService;
 import com.riverflow.api.entity.SysPlugin;
 import com.riverflow.api.plugin.NodePlugin;
 import com.riverflow.common.result.R;
+import com.riverflow.common.spring.SpringContextHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -180,6 +181,16 @@ public class NodePluginLoader {
                 if (pluginMap.containsKey(nodeType)) {
                     log.warn("插件类型冲突: {} 已存在，将被覆盖", nodeType);
                     unloadPlugin(nodeType);
+                }
+
+                // 初始化插件，注入 Spring 上下文（如果插件实现了 init 方法）
+                if (SpringContextHolder.isInitialized()) {
+                    try {
+                        plugin.init(SpringContextHolder.getApplicationContext());
+                        log.info("插件初始化完成: type={}", nodeType);
+                    } catch (Exception e) {
+                        log.warn("插件初始化回调失败（可能为旧插件）: type={}, error={}", nodeType, e.getMessage());
+                    }
                 }
 
                 pluginMap.put(nodeType, plugin);
