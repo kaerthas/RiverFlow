@@ -261,6 +261,8 @@ npm run dev
 - **脚本库**：Groovy 脚本用于请求前格式化、响应后处理。
 - **在线调试**：内置 Postman 式调试面板，即时验证接口可用性。
 
+![接口注册与调试](docs-site/img/a3c86483-052c-432b-8098-5badfdfbf522.png)
+
 ### 5.4 工作流引擎（核心）
 
 #### 节点类型
@@ -274,6 +276,8 @@ npm run dev
 | **条件节点** | ◇ | 使用 **SpEL 表达式** 判断分支走向 |
 | **定时节点** | ⏰ | 延迟执行或按 Cron 等待 |
 | **结束** | 🏁 | 流程终点 |
+
+![流程设计器](docs-site/img/b904ce35-294f-49e8-bd0a-677b5676ee56.png)
 
 #### 数据流转机制
 
@@ -298,6 +302,16 @@ npm run dev
 - **内嵌调度引擎**：基于 Spring `ThreadPoolTaskScheduler`，流程发布即自动注册/更新定时任务。
 - **分布式支持**：集群环境下通过 Redis 分布式锁防止任务重复执行。
 - **触发方式**：Cron 定时 / 外部事件推送 / 管理后台手动触发。
+
+### 5.5 插件系统
+
+基于 Java SPI 机制，支持运行时热加载插件。插件可通过 `init(ApplicationContext)` 获取主项目的 Spring Bean（如 RedisTemplate、JdbcTemplate）。
+
+已内置插件：
+- **MinIO 文件推送**：支持上传、下载、删除、元数据查询
+- **华为云 Token 认证**：支持 HmacSHA256 签名计算与 Token 自动刷新
+
+![插件管理](docs-site/img/e17c38ef-ac28-434f-a9c6-e0d56f02b0e9.png)
 
 ---
 
