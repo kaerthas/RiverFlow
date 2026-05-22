@@ -83,7 +83,17 @@ public interface NodePlugin {
 
     /**
      * 初始化插件，由主项目在加载完成后调用
-     * 插件可通过 ApplicationContext 获取主项目的 Spring Bean（如 RedisTemplate、JdbcTemplate 等）
+     *
+     * 插件可通过 ApplicationContext 获取主项目的 Spring Bean，例如：
+     * <pre>{@code
+     *   StringRedisTemplate redis = applicationContext.getBean(StringRedisTemplate.class);
+     *   JdbcTemplate jdbc = applicationContext.getBean(JdbcTemplate.class);
+     * }</pre>
+     *
+     * 使用方式：
+     * 1. 在插件 pom.xml 中将 Spring 相关依赖声明为 {@code <scope>provided</scope>}
+     * 2. 在插件类中重写此方法，获取需要的 Bean
+     * 3. 如果获取失败，建议优雅降级（如禁用缓存功能），避免流程执行中断
      *
      * @param applicationContext Spring 应用上下文
      */
