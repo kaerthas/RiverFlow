@@ -185,39 +185,20 @@
 
             <!-- 脚本类型配置 -->
             <template v-if="form.apiType === 'script'">
-              <el-row :gutter="16">
-                <el-col :span="12">
-                  <el-form-item label="绑定脚本">
-                    <el-select
-                      v-model="form.scriptId"
-                      placeholder="选择已有脚本或留空创建新脚本"
-                      clearable
-                      style="width: 100%"
-                      @change="onScriptChange"
-                    >
-                      <el-option
-                        v-for="s in scriptOptions"
-                        :key="s.id"
-                        :label="`${s.scriptName} (${s.scriptCode})`"
-                        :value="s.id"
-                      />
-                    </el-select>
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12" style="display: flex; align-items: center;">
-                  <el-button type="primary" size="small" @click="openScriptEditor">
-                    <el-icon><Edit /></el-icon> 编辑脚本
-                  </el-button>
-                </el-col>
-              </el-row>
-              <el-form-item label="脚本内容预览">
-                <el-input
-                  v-model="scriptContent"
-                  type="textarea"
-                  :rows="6"
-                  placeholder="请选择脚本或点击上方按钮编辑..."
-                  readonly
-                />
+              <el-form-item label="绑定脚本">
+                <el-select
+                  v-model="form.scriptId"
+                  placeholder="请选择要绑定的脚本"
+                  clearable
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="s in scriptOptions"
+                    :key="s.id"
+                    :label="`${s.scriptName} (${s.scriptCode})`"
+                    :value="s.id"
+                  />
+                </el-select>
               </el-form-item>
             </template>
 
@@ -319,28 +300,7 @@
       <ApiDebugger :url="debugRow?.url" :method="debugRow?.method" />
     </el-dialog>
 
-    <!-- 脚本编辑弹窗 -->
-    <el-dialog v-model="scriptEditorVisible" title="编辑 Groovy 脚本" width="800px" top="5vh" destroy-on-close :close-on-click-modal="false">
-      <el-form label-width="80px">
-        <el-form-item label="脚本编码">
-          <el-input v-model="currentScript.scriptCode" placeholder="脚本编码" :disabled="!!currentScript?.id" />
-        </el-form-item>
-        <el-form-item label="脚本名称">
-          <el-input v-model="currentScript.scriptName" placeholder="脚本名称" />
-        </el-form-item>
-      </el-form>
-      <el-input
-        v-model="scriptContent"
-        type="textarea"
-        :rows="18"
-        placeholder="请输入 Groovy 脚本内容..."
-        style="font-family: monospace; font-size: 13px;"
-      />
-      <template #footer>
-        <el-button @click="scriptEditorVisible = false">取消</el-button>
-        <el-button type="primary" @click="scriptEditorVisible = false">确定</el-button>
-      </template>
-    </el-dialog>
+
   </div>
 </template>
 
@@ -354,10 +314,7 @@ import {
   deleteApiCatalog,
   getApiParams,
   saveApiParams,
-  getApiScriptList,
-  getApiScriptDetail,
-  saveApiScript,
-  updateApiScript
+  getApiScriptList
 } from '@/api/apiMgr'
 import { getDatasourceList } from '@/api/datasource'
 import { getFlowDefinitionList } from '@/api/workflow'
@@ -387,8 +344,6 @@ const pagination = reactive({
 const apiList = ref([])
 const datasourceOptions = ref([])
 const flowDefinitionOptions = ref([])
-const scriptEditorVisible = ref(false)
-
 const form = reactive({
   id: null,
   apiCode: '',
@@ -413,8 +368,6 @@ const form = reactive({
 })
 
 const scriptOptions = ref([])
-const currentScript = ref({})
-const scriptContent = ref('')
 
 const formRules = {
   apiCode: [{ required: true, message: '请输入接口编码', trigger: 'blur' }],
@@ -583,36 +536,7 @@ function handleAdd() {
     status: 0
   })
   allParams.value = []
-  currentScript.value = null
-  scriptContent.value = ''
   dialogVisible.value = true
-}
-
-async function loadScriptDetail(scriptId) {
-  if (!scriptId) {
-    currentScript.value = {}
-    scriptContent.value = ''
-    return
-  }
-  try {
-    const res = await getApiScriptDetail(scriptId)
-    currentScript.value = res || {}
-    scriptContent.value = res?.scriptContent || ''
-  } catch (e) {
-    currentScript.value = {}
-    scriptContent.value = ''
-  }
-}
-
-function openScriptEditor() {
-  if (!currentScript.value || !currentScript.value.id) {
-    currentScript.value = {
-      scriptCode: form.apiCode || '',
-      scriptName: form.apiName || '',
-      scriptType: 'result'
-    }
-  }
-  scriptEditorVisible.value = true
 }
 
 async function loadScriptOptions() {
@@ -624,29 +548,14 @@ async function loadScriptOptions() {
   }
 }
 
-function onScriptChange(val) {
-  if (val) {
-    loadScriptDetail(val)
-  } else {
-    currentScript.value = null
-    scriptContent.value = ''
-  }
-}
-
 async function handleEdit(row) {
   dialogTitle.value = `编辑接口 - ${row.apiName}`
   activeTab.value = 'base'
   paramTab.value = 'header'
   Object.assign(form, { ...row })
   allParams.value = []
-  currentScript.value = null
-  scriptContent.value = ''
   dialogVisible.value = true
   await nextTick()
-  // 加载脚本内容
-  if (form.scriptId) {
-    await loadScriptDetail(form.scriptId)
-  }
   try {
     const params = await getApiParams(row.id)
     allParams.value = Array.isArray(params) ? params : []
@@ -688,30 +597,6 @@ async function handleSubmit() {
   if (!valid) return
   submitLoading.value = true
   try {
-    // script 类型：先保存/更新脚本
-    if (form.apiType === 'script' && scriptContent.value.trim()) {
-      if (form.scriptId) {
-        // 更新已有脚本
-        await updateApiScript({
-          id: form.scriptId,
-          scriptContent: scriptContent.value,
-          scriptType: currentScript.value?.scriptType || 'result',
-          scriptCode: currentScript.value?.scriptCode || form.apiCode,
-          scriptName: currentScript.value?.scriptName || form.apiName
-        })
-      } else {
-        // 新建脚本
-        const scriptRes = await saveApiScript({
-          scriptCode: form.apiCode,
-          scriptName: form.apiName,
-          scriptType: 'result',
-          scriptContent: scriptContent.value,
-          status: 1
-        })
-        form.scriptId = scriptRes
-      }
-    }
-
     let apiId = form.id
     if (form.id) {
       await updateApiCatalog(form)
@@ -761,10 +646,8 @@ async function handleStatusChange(row) {
 
 function handleDebug(row) {
   debugRow.value = { ...row }
-  // SQL 类型接口的调试地址需走 /api 代理（Vite proxy 会 rewrite 成 /open/{apiCode}）
-  if (row.apiType === 'sql') {
-    debugRow.value.url = `/api/open/${row.apiCode}`
-  }
+  // 所有接口调试统一走 /api/open/{apiCode}，避免跨域并测试代理/脚本逻辑
+  debugRow.value.url = `/api/open/${row.apiCode}`
   debugDialogVisible.value = true
 }
 

@@ -24,11 +24,15 @@ public class ApiScriptController {
     public R<Page<ApiScript>> list(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String scriptType) {
+            @RequestParam(required = false) String scriptType,
+            @RequestParam(required = false) String scriptCode,
+            @RequestParam(required = false) String scriptName) {
         Page<ApiScript> pageParam = new Page<>(page, size);
         QueryWrapper<ApiScript> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);
         if (scriptType != null && !scriptType.isEmpty()) qw.eq("script_type", scriptType);
+        if (scriptCode != null && !scriptCode.isEmpty()) qw.like("script_code", scriptCode);
+        if (scriptName != null && !scriptName.isEmpty()) qw.like("script_name", scriptName);
         qw.orderByDesc("create_time");
         return R.ok(apiScriptService.page(pageParam, qw));
     }

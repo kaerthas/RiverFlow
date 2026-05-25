@@ -43,3 +43,7 @@ export function saveApiScript(data) {
 export function updateApiScript(data) {
   return request({ url: '/api-script', method: 'put', data })
 }
+
+export function deleteApiScript(id) {
+  return request({ url: `/api-script/${id}`, method: 'delete' })
+}

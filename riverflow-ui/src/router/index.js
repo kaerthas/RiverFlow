@@ -84,6 +84,12 @@ const routes = [
         name: 'Plugin',
         component: () => import('@/views/plugin/PluginManager.vue'),
         meta: { title: '插件管理', icon: 'Box' }
+      },
+      {
+        path: 'script-mgr',
+        name: 'ScriptMgr',
+        component: () => import('@/views/scriptMgr/index.vue'),
+        meta: { title: '脚本管理', icon: 'DocumentCopy' }
       }
     ]
   }
