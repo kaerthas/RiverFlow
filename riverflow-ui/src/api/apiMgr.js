@@ -27,3 +27,19 @@ export function getApiParams(id) {
 export function saveApiParams(id, data) {
   return request({ url: `/api-catalog/${id}/params`, method: 'post', data })
 }
+
+export function getApiScriptList(params) {
+  return request({ url: '/api-script/list', method: 'get', params })
+}
+
+export function getApiScriptDetail(id) {
+  return request({ url: `/api-script/${id}`, method: 'get' })
+}
+
+export function saveApiScript(data) {
+  return request({ url: '/api-script', method: 'post', data })
+}
+
+export function updateApiScript(data) {
+  return request({ url: '/api-script', method: 'put', data })
+}

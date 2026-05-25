@@ -94,6 +94,12 @@
             <artifactId>hutool-all</artifactId>
         </dependency>
 
+        <!-- BouncyCastle -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+        </dependency>
+
         <!-- Fastjson2 -->
         <dependency>
             <groupId>com.alibaba.fastjson2</groupId>

@@ -5,6 +5,8 @@ import com.alibaba.fastjson2.JSONObject;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.DigestUtils;
 
@@ -27,6 +29,9 @@ public class GroovySandboxExecutor {
     /**
      * 默认脚本模板前缀：注入常用工具类
      */
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
     private static final String SCRIPT_TEMPLATE_PREFIX =
         "import com.alibaba.fastjson2.JSON\n" +
         "import com.alibaba.fastjson2.JSONObject\n" +
@@ -34,11 +39,15 @@ public class GroovySandboxExecutor {
         "import cn.hutool.core.util.StrUtil\n" +
         "import cn.hutool.core.date.DateUtil\n" +
         "import cn.hutool.crypto.SecureUtil\n" +
+        "import cn.hutool.http.HttpUtil\n" +
+        "import cn.hutool.http.HttpRequest\n" +
         "\n" +
         "def execute(Map args) {\n" +
         "    def context = args.context\n" +
         "    def ctx = args.ctx\n" +
-        "    def instanceId = args.instanceId\n";
+        "    def params = args.params ?: args.ctx\n" +
+        "    def instanceId = args.instanceId\n" +
+        "    def redis = args.redis\n";
 
     private static final String SCRIPT_TEMPLATE_SUFFIX = "\n}";
 

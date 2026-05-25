@@ -4,16 +4,19 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
+import com.riverflow.admin.infra.groovy.GroovySandboxExecutor;
 import com.riverflow.admin.infra.http.HttpRequestService;
 import com.riverflow.admin.infra.openapi.NestedParamResolver;
 import com.riverflow.admin.modules.workflow.engine.FlowEngine;
 import com.riverflow.admin.service.ApiCatalogService;
+import com.riverflow.admin.service.ApiScriptService;
 import com.riverflow.admin.service.DatasourceService;
 import com.riverflow.admin.service.FlowDefinitionService;
 import com.riverflow.admin.service.FlowInstanceService;
 import com.riverflow.admin.service.FlowNodeService;
 import com.riverflow.admin.service.FlowTaskService;
 import com.riverflow.api.entity.ApiCatalog;
+import com.riverflow.api.entity.ApiScript;
 import com.riverflow.api.entity.Datasource;
 import com.riverflow.api.entity.FlowDefinition;
 import com.riverflow.api.entity.FlowInstance;
@@ -24,6 +27,7 @@ import com.riverflow.api.enums.FlowTaskStatusEnum;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
@@ -66,6 +70,12 @@ public class OpenApiController {
     private FlowInstanceService flowInstanceService;
     @Autowired
     private FlowTaskService flowTaskService;
+    @Autowired
+    private ApiScriptService apiScriptService;
+    @Autowired
+    private GroovySandboxExecutor groovyExecutor;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     @PostMapping("/flow/start")
     public R<Map<String, Object>> startFlow(@RequestBody(required = false) Map<String, Object> params) {
@@ -216,6 +226,8 @@ public class OpenApiController {
             return executeSql(api, params);
         } else if ("proxy".equals(apiType)) {
             return executeProxy(api, params);
+        } else if ("script".equals(apiType)) {
+            return executeScript(api, params);
         } else {
             return R.fail("不支持的接口类型: " + apiType);
         }
@@ -428,6 +440,35 @@ public class OpenApiController {
         } catch (Exception e) {
             log.error("流程触发异常: apiCode={}, triggerFlowId={}", api.getApiCode(), api.getTriggerFlowId(), e);
             // 流程触发异常不影响 SQL 接口返回，仅记录日志
+        }
+    }
+
+    /**
+     * 执行脚本类型接口
+     */
+    private R<Object> executeScript(ApiCatalog api, Map<String, Object> params) {
+        Long scriptId = api.getScriptId();
+        if (scriptId == null) {
+            return R.fail("脚本接口未绑定脚本: apiCode=" + api.getApiCode());
+        }
+        ApiScript script = apiScriptService.getById(scriptId);
+        if (script == null || script.getScriptContent() == null || script.getScriptContent().trim().isEmpty()) {
+            return R.fail("脚本内容不存在或为空: scriptId=" + scriptId);
+        }
+
+        try {
+            Map<String, Object> variables = new HashMap<>();
+            variables.put("params", params);
+            variables.put("ctx", params);
+            variables.put("context", params);
+            variables.put("instanceId", "script-api-" + api.getApiCode());
+            variables.put("redis", redisTemplate);
+
+            JSONObject result = groovyExecutor.execute(script.getScriptContent(), variables);
+            return R.ok(result);
+        } catch (Exception e) {
+            log.error("脚本接口执行失败: apiCode={}, scriptId={}", api.getApiCode(), scriptId, e);
+            return R.fail("脚本执行失败: " + e.getMessage());
         }
     }
 }
