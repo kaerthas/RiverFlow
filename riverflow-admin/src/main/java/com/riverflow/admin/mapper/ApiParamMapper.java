@@ -11,6 +11,6 @@ import java.util.List;
 @Mapper
 public interface ApiParamMapper extends BaseMapper<ApiParam> {
 
-    @Select("SELECT * FROM wf_api_param WHERE api_id = #{apiId} ORDER BY sort_no")
+    @Select("SELECT * FROM wf_api_param WHERE api_id = #{apiId} AND del_flag = 0 ORDER BY sort_no")
     List<ApiParam> selectByApiId(@Param("apiId") Long apiId);
 }

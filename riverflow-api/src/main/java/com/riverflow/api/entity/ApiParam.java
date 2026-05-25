@@ -2,6 +2,8 @@ package com.riverflow.api.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.riverflow.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -19,6 +21,7 @@ public class ApiParam extends BaseEntity {
     /**
      * 所属接口ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     @TableField("api_id")
     private Long apiId;
 
@@ -31,6 +34,7 @@ public class ApiParam extends BaseEntity {
     /**
      * 父参数ID，支持嵌套
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     @TableField("parent_id")
     private Long parentId;
 

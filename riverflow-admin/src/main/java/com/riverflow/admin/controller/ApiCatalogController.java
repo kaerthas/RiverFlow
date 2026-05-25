@@ -1,7 +1,9 @@
 package com.riverflow.admin.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.riverflow.admin.mapper.ApiParamMapper;
 import com.riverflow.admin.service.ApiCatalogService;
 import com.riverflow.admin.service.ApiParamService;
 import com.riverflow.admin.service.FlowDefinitionService;
@@ -11,9 +13,11 @@ import com.riverflow.api.entity.FlowDefinition;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 接口目录管理
@@ -27,6 +31,8 @@ public class ApiCatalogController {
     private ApiCatalogService apiCatalogService;
     @Autowired
     private ApiParamService apiParamService;
+    @Autowired
+    private ApiParamMapper apiParamMapper;
 
     @GetMapping("/list")
     public R<Page<ApiCatalog>> list(
@@ -86,33 +92,53 @@ public class ApiCatalogController {
     }
 
     @PostMapping("/{id}/params")
+    @Transactional(rollbackFor = Exception.class)
     public R<Void> saveParams(@PathVariable Long id, @RequestBody List<ApiParam> params) {
-        apiParamService.remove(new QueryWrapper<ApiParam>().eq("api_id", id));
+        // 物理删除该接口下的所有旧参数
+        apiParamMapper.delete(new QueryWrapper<ApiParam>().eq("api_id", id));
+
+        if (params == null || params.isEmpty()) {
+            return R.ok();
+        }
+
+        // 过滤掉没有 paramKey 的参数
+        List<ApiParam> validParams = params.stream()
+                .filter(p -> p.getParamKey() != null && !p.getParamKey().trim().isEmpty())
+                .collect(Collectors.toList());
 
         // 建立 clientId -> dbId 映射
         Map<String, Long> clientIdMap = new HashMap<>();
 
-        // 第一轮：保存所有参数（parentId 先设为 0，id 置空让数据库自动生成）
-        for (ApiParam p : params) {
+        // 第一轮：保存所有参数（parentId 先设为 0）
+        for (ApiParam p : validParams) {
             p.setId(null);
             p.setApiId(id);
             p.setParentId(0L);
+            p.setDelFlag(0);
             apiParamService.save(p);
-            if (p.getClientId() != null && !p.getClientId().isEmpty()) {
-                clientIdMap.put(p.getClientId(), p.getId());
+            String clientId = p.getClientId();
+            if (clientId != null && !clientId.isEmpty()) {
+                clientIdMap.put(clientId, p.getId());
+                log.debug("参数保存成功: clientId={}, dbId={}", clientId, p.getId());
             }
         }
 
         // 第二轮：更新子参数的 parentId
-        for (ApiParam p : params) {
-            if (p.getParentClientId() != null && !p.getParentClientId().isEmpty()
-                    && !"0".equals(p.getParentClientId())) {
-                Long realParentId = clientIdMap.get(p.getParentClientId());
-                if (realParentId != null) {
-                    p.setParentId(realParentId);
-                    apiParamService.updateById(p);
-                }
+        for (ApiParam p : validParams) {
+            String parentClientId = p.getParentClientId();
+            if (parentClientId == null || parentClientId.isEmpty() || "0".equals(parentClientId)) {
+                continue;
             }
+            Long realParentId = clientIdMap.get(parentClientId);
+            if (realParentId == null) {
+                log.warn("未找到父参数映射: parentClientId={}, paramKey={}", parentClientId, p.getParamKey());
+                continue;
+            }
+            // 使用 UpdateWrapper 明确只更新 parent_id，避免其他字段干扰
+            apiParamService.update(new UpdateWrapper<ApiParam>()
+                    .eq("id", p.getId())
+                    .set("parent_id", realParentId));
+            log.debug("更新子参数 parentId: id={}, paramKey={}, parentId={}", p.getId(), p.getParamKey(), realParentId);
         }
 
         return R.ok();
