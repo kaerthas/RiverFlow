@@ -1,6 +1,7 @@
 package com.riverflow.admin.modules.workflow.node;
 
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.riverflow.admin.infra.plugin.NodePluginLoader;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
@@ -104,7 +105,45 @@ public class NodeExecutorFactory {
         public NodeExecuteResult execute(FlowNode node, FlowContext context) {
             Map<String, Object> contextMap = context.toMap();
             NodePluginResult pluginResult = plugin.execute(node, contextMap);
+            
+            // 自动将插件输出字段写入上下文
+            if (pluginResult.isSuccess() && pluginResult.getData() != null) {
+                autoMapPluginOutput(pluginResult.getData(), context);
+            }
+            
             return convertResult(pluginResult);
+        }
+        
+        private void autoMapPluginOutput(Object data, FlowContext context) {
+            String outputSchema = plugin.getOutputSchema();
+            if (outputSchema == null || outputSchema.isEmpty()) return;
+            try {
+                JSONObject schema = JSON.parseObject(outputSchema);
+                if (schema == null) return;
+                JSONArray fields = schema.getJSONArray("fields");
+                if (fields == null || fields.isEmpty()) return;
+                
+                // data 可能是 Map 或 JSONObject，统一转为 JSONObject
+                JSONObject dataJson;
+                if (data instanceof JSONObject) {
+                    dataJson = (JSONObject) data;
+                } else {
+                    dataJson = JSON.parseObject(JSON.toJSONString(data));
+                }
+                
+                for (int i = 0; i < fields.size(); i++) {
+                    JSONObject field = fields.getJSONObject(i);
+                    if (field == null) continue;
+                    String fieldName = field.getString("name");
+                    if (fieldName == null || fieldName.isEmpty()) continue;
+                    Object value = dataJson.get(fieldName);
+                    if (value != null) {
+                        context.set(fieldName, value);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("插件输出字段自动映射失败: nodeType={}", plugin.getNodeType(), e);
+            }
         }
 
         private NodeExecuteResult convertResult(NodePluginResult pluginResult) {

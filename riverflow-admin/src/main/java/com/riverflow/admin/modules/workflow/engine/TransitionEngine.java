@@ -3,6 +3,8 @@ package com.riverflow.admin.modules.workflow.engine;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
+import com.riverflow.admin.modules.workflow.node.NodeExecutor;
+import com.riverflow.admin.modules.workflow.node.NodeExecutorFactory;
 import com.riverflow.admin.service.FlowInstanceService;
 import com.riverflow.admin.service.FlowLogService;
 import com.riverflow.admin.service.FlowTaskService;
@@ -39,6 +41,8 @@ public class TransitionEngine {
     private FlowTaskService flowTaskService;
     @Autowired
     private FlowLogService flowLogService;
+    @Autowired
+    private NodeExecutorFactory nodeExecutorFactory;
 
     public void transition(FlowInstance instance, FlowNode currentNode,
                            List<FlowEdge> edges, List<FlowNode> nodes,
@@ -53,6 +57,7 @@ public class TransitionEngine {
 
         if (outEdges.isEmpty()) {
             if (FlowNodeTypeEnum.END.getCode().equals(currentNode.getNodeType())) {
+                executeEndNode(instance, currentNode, context);
                 completeInstance(instance);
             } else {
                 log.warn("[流程实例:{}] 节点 {} 没有出边，流程挂起", instance.getId(), currentNode.getNodeName());
@@ -97,8 +102,9 @@ public class TransitionEngine {
         instance.setUpdateTime(LocalDateTime.now());
         flowInstanceService.updateById(instance);
 
-        // 如果是结束节点，直接完成，不创建 pending 任务
+        // 如果是结束节点，执行输入映射后完成，不创建 pending 任务
         if (FlowNodeTypeEnum.END.getCode().equals(targetNode.getNodeType())) {
+            executeEndNode(instance, targetNode, context);
             completeInstance(instance);
             saveLog(instance.getId(), null, targetNodeId, "transition",
                     String.format("从 [%s] 流转到 [%s]（流程结束）", currentNode.getNodeName(), targetNode.getNodeName()));
@@ -149,6 +155,19 @@ public class TransitionEngine {
         }
 
         return false;
+    }
+
+    private void executeEndNode(FlowInstance instance, FlowNode endNode, FlowContext context) {
+        try {
+            NodeExecutor endExecutor = nodeExecutorFactory.getExecutor(endNode.getNodeType());
+            NodeExecuteResult endResult = endExecutor.execute(endNode, context);
+            if (endResult.getData() != null) {
+                context.set("nodeResult_" + endNode.getNodeId(), endResult.getData());
+            }
+            instance.setContextJson(context.toJsonString());
+        } catch (Exception e) {
+            log.error("[流程实例:{}] 执行结束节点失败", instance.getId(), e);
+        }
     }
 
     private void completeInstance(FlowInstance instance) {
