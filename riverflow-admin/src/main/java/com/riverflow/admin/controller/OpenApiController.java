@@ -108,8 +108,11 @@ public class OpenApiController {
             businessKey,
             def.getItemCode()
         );
-        
-        if (variables != null && !variables.isEmpty()) {
+
+        // 合并流程默认入参与外部传入参数（外部参数优先级高）
+        Map<String, Object> mergedVars = mergeFlowInputParams(def.getInputParams(), variables);
+
+        if (mergedVars != null && !mergedVars.isEmpty()) {
             try {
                 String existingContext = instance.getContextJson();
                 Map<String, Object> contextMap;
@@ -118,7 +121,7 @@ public class OpenApiController {
                 } else {
                     contextMap = new HashMap<>();
                 }
-                contextMap.putAll(variables);
+                contextMap.putAll(mergedVars);
                 instance.setContextJson(JSON.toJSONString(contextMap));
                 flowInstanceService.updateById(instance);
             } catch (Exception e) {
@@ -159,6 +162,82 @@ public class OpenApiController {
         result.put("status", instance.getStatus());
         
         return R.ok(result);
+    }
+
+    /**
+     * 同步执行流程
+     * 在当前线程内串行驱动节点执行，直到流程结束或异常，立即返回最终结果
+     * 适用场景：短链路 API 编排（A→B→C），第三方同步集成
+     *
+     * @param params flowCode-流程编码（必填）, businessKey-业务主键（可选）,
+     *               variables-初始上下文变量（可选）, timeoutMs-超时毫秒（可选，默认30000）
+     */
+    @PostMapping("/flow/executeSync")
+    public R<Map<String, Object>> executeSync(@RequestBody(required = false) Map<String, Object> params) {
+        if (params == null) {
+            params = new HashMap<>();
+        }
+
+        String flowCode = (String) params.get("flowCode");
+        String businessKey = (String) params.get("businessKey");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> variables = (Map<String, Object>) params.get("variables");
+        Object timeoutObj = params.get("timeoutMs");
+
+        if (flowCode == null || flowCode.isEmpty()) {
+            return R.fail("flowCode不能为空");
+        }
+
+        FlowDefinition def = flowDefinitionService.getLatestPublished(flowCode);
+        if (def == null) {
+            return R.fail("流程不存在或未发布: " + flowCode);
+        }
+
+        if (businessKey == null || businessKey.isEmpty()) {
+            businessKey = String.valueOf(System.currentTimeMillis());
+        }
+
+        long timeoutMs = 30000L; // 默认30秒
+        if (timeoutObj != null) {
+            try {
+                timeoutMs = Long.parseLong(timeoutObj.toString());
+                if (timeoutMs < 1000L) {
+                    timeoutMs = 1000L;
+                }
+                if (timeoutMs > 120000L) {
+                    timeoutMs = 120000L; // 最大120秒
+                }
+            } catch (NumberFormatException e) {
+                log.warn("timeoutMs格式错误，使用默认值30000: {}", timeoutObj);
+            }
+        }
+
+        // 同步执行只允许 SYNC 模式的流程
+        if (!"SYNC".equals(def.getExecutionMode())) {
+            return R.fail("该流程不是同步流程，请使用 /open/flow/start 异步启动");
+        }
+
+        // 合并流程默认入参与外部传入参数（外部参数优先级高）
+        Map<String, Object> mergedVars = mergeFlowInputParams(def.getInputParams(), variables);
+
+        try {
+            Map<String, Object> result = flowEngine.executeSync(
+                    def.getId(),
+                    def.getFlowCode(),
+                    def.getVersion(),
+                    businessKey,
+                    def.getItemCode(),
+                    mergedVars,
+                    timeoutMs
+            );
+            return R.ok(result);
+        } catch (com.riverflow.common.exception.BusinessException e) {
+            log.warn("同步流程执行失败: flowCode={}, error={}", flowCode, e.getMessage());
+            return R.fail(e.getMessage());
+        } catch (Exception e) {
+            log.error("同步流程执行异常: flowCode={}", flowCode, e);
+            return R.fail("同步流程执行异常: " + e.getMessage());
+        }
     }
 
     @PostMapping("/{apiCode}")
@@ -206,6 +285,28 @@ public class OpenApiController {
             log.warn("读取请求体失败: {}", e.getMessage());
             return new HashMap<>();
         }
+    }
+
+    /**
+     * 合并流程默认入参与外部传入参数（外部参数优先级高）
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> mergeFlowInputParams(String inputParams, Map<String, Object> variables) {
+        Map<String, Object> merged = new HashMap<>();
+        if (inputParams != null && !inputParams.isEmpty()) {
+            try {
+                Map<String, Object> defaultVars = JSON.parseObject(inputParams, Map.class);
+                if (defaultVars != null) {
+                    merged.putAll(defaultVars);
+                }
+            } catch (Exception e) {
+                log.warn("解析流程默认入参失败: {}", inputParams, e);
+            }
+        }
+        if (variables != null && !variables.isEmpty()) {
+            merged.putAll(variables);
+        }
+        return merged;
     }
 
     private R<Object> execute(String apiCode, Map<String, Object> params) {
@@ -405,6 +506,25 @@ public class OpenApiController {
                     businessKey,
                     def.getItemCode()
             );
+
+            // 注入流程默认入参
+            Map<String, Object> defaultVars = mergeFlowInputParams(def.getInputParams(), null);
+            if (defaultVars != null && !defaultVars.isEmpty()) {
+                try {
+                    String existingContext = instance.getContextJson();
+                    Map<String, Object> contextMap;
+                    if (existingContext != null && !existingContext.isEmpty()) {
+                        contextMap = JSON.parseObject(existingContext, Map.class);
+                    } else {
+                        contextMap = new HashMap<>();
+                    }
+                    contextMap.putAll(defaultVars);
+                    instance.setContextJson(JSON.toJSONString(contextMap));
+                    flowInstanceService.updateById(instance);
+                } catch (Exception e) {
+                    log.warn("注入流程默认入参失败", e);
+                }
+            }
 
             // 创建开始节点的 pending 任务，让 FlowScheduler 能扫描并自动推进
             List<FlowNode> nodes = flowNodeService.list(
