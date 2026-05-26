@@ -39,6 +39,7 @@
         <groovy.version>3.0.19</groovy.version>
         <jjwt.version>0.11.5</jjwt.version>
         <jasypt.version>3.0.5</jasypt.version>
+        <bcprov.version>1.78</bcprov.version>
 
         <!-- 文档 -->
         <knife4j.version>4.3.0</knife4j.version>
@@ -97,6 +98,13 @@
                 <groupId>cn.hutool</groupId>
                 <artifactId>hutool-all</artifactId>
                 <version>${hutool.version}</version>
+            </dependency>
+
+            <!-- BouncyCastle -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bcprov.version}</version>
             </dependency>
 
             <!-- Fastjson2 -->

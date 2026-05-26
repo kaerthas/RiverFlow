@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,6 +32,10 @@ public class HttpRequestService {
      * @return 响应结果
      */
     public JSONObject execute(ApiCatalog apiCatalog, Map<String, String> headers, Object body) {
+        return execute(apiCatalog, headers, body, null);
+    }
+
+    public JSONObject execute(ApiCatalog apiCatalog, Map<String, String> headers, Object body, Map<String, String> queryParams) {
         String method = apiCatalog.getMethod();
         String url = apiCatalog.getUrl();
         String contentType = apiCatalog.getContentType();
@@ -39,32 +45,35 @@ public class HttpRequestService {
         String proxyHost = apiCatalog.getProxyHost();
         int proxyPort = apiCatalog.getProxyPort() != null ? apiCatalog.getProxyPort() : 0;
 
+        // 将 query 参数拼接到 URL
+        String finalUrl = buildUrlWithQueryParams(url, queryParams);
+
         try {
             JSONObject result;
             switch (method != null ? method.toUpperCase() : "GET") {
                 case "GET":
                     result = executorFactory.createGetExecutor(useProxy, proxyHost, proxyPort)
-                            .execute(url, headers, convertToStringMap(body), timeout);
+                            .execute(finalUrl, headers, convertToStringMap(body), timeout);
                     break;
                 case "POST":
                     if (contentType != null && contentType.contains("xml")) {
                         result = executorFactory.createXmlPostExecutor(useProxy, proxyHost, proxyPort)
-                                .execute(url, headers, body != null ? body.toString() : null, timeout);
+                                .execute(finalUrl, headers, body != null ? body.toString() : null, timeout);
                     } else if (contentType != null && contentType.contains("form")) {
                         result = executorFactory.createFormPostExecutor(useProxy, proxyHost, proxyPort)
-                                .execute(url, headers, convertToStringMap(body), timeout);
+                                .execute(finalUrl, headers, convertToStringMap(body), timeout);
                     } else {
                         result = executorFactory.createJsonPostExecutor(useProxy, proxyHost, proxyPort)
-                                .execute(url, headers, body, timeout);
+                                .execute(finalUrl, headers, body, timeout);
                     }
                     break;
                 case "PUT":
                     result = executorFactory.createJsonPostExecutor(useProxy, proxyHost, proxyPort)
-                            .execute(url, headers, body, timeout);
+                            .execute(finalUrl, headers, body, timeout);
                     break;
                 case "DELETE":
                     result = executorFactory.createGetExecutor(useProxy, proxyHost, proxyPort)
-                            .execute(url, headers, convertToStringMap(body), timeout);
+                            .execute(finalUrl, headers, convertToStringMap(body), timeout);
                     break;
                 default:
                     throw new IllegalArgumentException("不支持的请求方式: " + method);
@@ -96,5 +105,29 @@ public class HttpRequestService {
             return result;
         }
         return new HashMap<>();
+    }
+
+    private static String buildUrlWithQueryParams(String url, Map<String, String> queryParams) {
+        if (queryParams == null || queryParams.isEmpty()) {
+            return url;
+        }
+        StringBuilder sb = new StringBuilder(url);
+        sb.append(url.contains("?") ? "&" : "?");
+        for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+            sb.append(urlEncode(entry.getKey()))
+                    .append("=")
+                    .append(urlEncode(entry.getValue()))
+                    .append("&");
+        }
+        sb.deleteCharAt(sb.length() - 1);
+        return sb.toString();
+    }
+
+    private static String urlEncode(String value) {
+        try {
+            return URLEncoder.encode(value, "UTF-8");
+        } catch (java.io.UnsupportedEncodingException e) {
+            throw new RuntimeException("UTF-8 encoding not supported", e);
+        }
     }
 }
