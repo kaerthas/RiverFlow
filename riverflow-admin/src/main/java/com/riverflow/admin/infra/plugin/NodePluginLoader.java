@@ -10,6 +10,8 @@ import com.riverflow.common.spring.SpringContextHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
-public class NodePluginLoader {
+public class NodePluginLoader implements SmartInitializingSingleton {
 
     @Value("${riverflow.plugin.dir:${user.home}/riverflow/plugins}")
     private String pluginDirConfig;
@@ -41,6 +43,9 @@ public class NodePluginLoader {
 
     @Autowired
     private SysPluginService sysPluginService;
+
+    @Autowired
+    private ApplicationContext applicationContext;
 
     private String pluginDir;
     private final Map<String, NodePlugin> pluginMap = new ConcurrentHashMap<>();
@@ -66,6 +71,14 @@ public class NodePluginLoader {
         }
 
         log.info("插件目录: {}", pluginDir);
+    }
+
+    @Override
+    public void afterSingletonsInstantiated() {
+        if (!pluginEnabled) {
+            return;
+        }
+        log.info("所有Spring Bean初始化完成，开始加载插件...");
         loadPluginsFromDatabase();
     }
 
@@ -183,14 +196,16 @@ public class NodePluginLoader {
                     unloadPlugin(nodeType);
                 }
 
-                // 初始化插件，注入 Spring 上下文（如果插件实现了 init 方法）
-                if (SpringContextHolder.isInitialized()) {
+                // 初始化插件，注入 Spring 上下文
+                if (applicationContext != null) {
                     try {
-                        plugin.init(SpringContextHolder.getApplicationContext());
+                        plugin.init(applicationContext);
                         log.info("插件初始化完成: type={}", nodeType);
                     } catch (Exception e) {
-                        log.warn("插件初始化回调失败（可能为旧插件）: type={}, error={}", nodeType, e.getMessage());
+                        log.error("插件初始化失败: type={}, error={}", nodeType, e.getMessage(), e);
                     }
+                } else {
+                    log.warn("ApplicationContext 未就绪，插件 {} 未初始化", nodeType);
                 }
 
                 pluginMap.put(nodeType, plugin);

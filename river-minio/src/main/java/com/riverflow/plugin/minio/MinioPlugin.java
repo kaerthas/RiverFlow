@@ -71,6 +71,60 @@ public class MinioPlugin implements NodePlugin {
     }
 
     @Override
+    public String getOutputSchema() {
+        JSONObject schema = new JSONObject();
+        JSONObject[] fields = new JSONObject[9];
+
+        fields[0] = new JSONObject();
+        fields[0].put("name", "success");
+        fields[0].put("label", "操作是否成功");
+        fields[0].put("type", "boolean");
+
+        fields[1] = new JSONObject();
+        fields[1].put("name", "bucket");
+        fields[1].put("label", "存储桶名称");
+        fields[1].put("type", "string");
+
+        fields[2] = new JSONObject();
+        fields[2].put("name", "objectName");
+        fields[2].put("label", "对象名称");
+        fields[2].put("type", "string");
+
+        fields[3] = new JSONObject();
+        fields[3].put("name", "url");
+        fields[3].put("label", "文件访问URL(仅upload)");
+        fields[3].put("type", "string");
+
+        fields[4] = new JSONObject();
+        fields[4].put("name", "sourceType");
+        fields[4].put("label", "来源类型(仅upload)");
+        fields[4].put("type", "string");
+
+        fields[5] = new JSONObject();
+        fields[5].put("name", "downloadPath");
+        fields[5].put("label", "本地下载路径(仅download)");
+        fields[5].put("type", "string");
+
+        fields[6] = new JSONObject();
+        fields[6].put("name", "size");
+        fields[6].put("label", "文件大小(仅stat)");
+        fields[6].put("type", "long");
+
+        fields[7] = new JSONObject();
+        fields[7].put("name", "contentType");
+        fields[7].put("label", "文件类型(仅stat)");
+        fields[7].put("type", "string");
+
+        fields[8] = new JSONObject();
+        fields[8].put("name", "lastModified");
+        fields[8].put("label", "最后修改时间(仅stat)");
+        fields[8].put("type", "string");
+
+        schema.put("fields", fields);
+        return schema.toJSONString();
+    }
+
+    @Override
     public String getConfigSchema() {
         JSONObject schema = new JSONObject();
         JSONObject[] fields = new JSONObject[8];

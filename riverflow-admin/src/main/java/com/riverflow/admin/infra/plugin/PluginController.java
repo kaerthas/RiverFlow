@@ -85,6 +85,7 @@ public class PluginController {
             pluginInfo.put("description", plugin.getDescription());
             pluginInfo.put("configTemplate", plugin.getConfigTemplate());
             pluginInfo.put("configSchema", plugin.getConfigSchema());
+            pluginInfo.put("outputSchema", plugin.getOutputSchema());
             plugins.add(pluginInfo);
         }
 

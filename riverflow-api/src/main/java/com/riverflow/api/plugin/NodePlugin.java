@@ -111,6 +111,24 @@ public interface NodePlugin {
     NodePluginResult execute(FlowNode node, Map<String, Object> context);
 
     /**
+     * 获取输出字段 Schema（JSON格式）
+     * 描述插件执行后向流程上下文注入的字段
+     *
+     * Schema格式示例：
+     * {
+     *   "fields": [
+     *     {"name": "token", "label": "访问令牌", "type": "string"},
+     *     {"name": "expireTime", "label": "过期时间", "type": "long"}
+     *   ]
+     * }
+     *
+     * @return 输出字段定义 JSON，默认空数组
+     */
+    default String getOutputSchema() {
+        return "{\"fields\":[]}";
+    }
+
+    /**
      * 验证节点配置是否有效
      *
      * @param configJson 配置JSON
