@@ -155,3 +155,14 @@ export function getInstanceLogs(instanceId, page = 1, size = 5) {
     params: { page, size }
   })
 }
+
+// ==================== 同步流程执行（对外接口，管理后台调试使用）====================
+
+export function executeSyncFlow(data) {
+  return request({
+    url: '/open/flow/executeSync',
+    method: 'post',
+    data,
+    timeout: 120000 // 同步执行最长支持 120 秒
+  })
+}
