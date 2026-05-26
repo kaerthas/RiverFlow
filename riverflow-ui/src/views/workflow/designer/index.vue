@@ -74,6 +74,7 @@
                 v-for="node in group.nodes"
                 :key="node.type"
                 class="node-item"
+                :class="{ disabled: flowExecutionMode === 'SYNC' && node.type === 'timer' }"
                 draggable="true"
                 @dragstart="handleDragStart($event, node)"
               >
@@ -257,25 +258,8 @@
                 <template #title>支持 Groovy 语法，可访问 <code>args</code> 上下文变量</template>
               </el-alert>
 
-              <!-- 脚本输出字段快捷声明 -->
-              <div class="section-title">
-                <span>输出字段声明</span>
-                <el-button link type="primary" size="small" @click="generateScriptOutputMappings">
-                  <el-icon><Plus /></el-icon> 生成映射
-                </el-button>
-              </div>
-              <el-form label-position="top" size="default">
-                <el-form-item>
-                  <el-input
-                    v-model="scriptOutputFields"
-                    placeholder="用逗号分隔字段名，如: projectName,projectNo"
-                    size="small"
-                    @change="generateScriptOutputMappings"
-                  />
-                </el-form-item>
-              </el-form>
-              <el-alert class="form-tip" type="info" :closable="false" show-icon>
-                <template #title>声明后输出映射会自动生成 <code>result.字段名 → context.字段名</code></template>
+              <el-alert class="form-tip" type="success" :closable="false" show-icon>
+                <template #title>脚本中 <code>context.set("key", value)</code> 会自动把变量写入上下文，下游节点可直接使用</template>
               </el-alert>
             </template>
 
@@ -338,30 +322,46 @@
             <!-- 输入映射 -->
             <template v-if="selectedNode?.type === 'api' && currentApiParams.length > 0">
               <div class="section-title">接口入参绑定</div>
-              <div class="api-param-mapping-list">
-                <div v-for="param in currentApiParams" :key="param.id || param.paramKey" class="mapping-card api-param-card">
-                  <div class="mapping-row api-param-row">
-                    <span class="param-badge" :class="param.paramType">{{ param.paramType }}</span>
-                    <div class="param-info">
-                      <span class="param-key">{{ param.paramKey }}</span>
-                      <span v-if="param.paramName" class="param-name">{{ param.paramName }}</span>
-                      <span v-if="param.isRequired" class="param-required">*</span>
+              <el-tabs v-model="apiParamActiveTab" class="api-param-tabs">
+                <el-tab-pane v-for="ptype in ['body','header','query']" :key="ptype" :label="apiParamTypeLabels[ptype]" :name="ptype">
+                  <div class="api-param-mapping-list">
+                    <div v-for="param in apiParamsByType[ptype]" :key="param.id || param.paramKey" class="mapping-card api-param-card">
+                      <div class="mapping-row api-param-row">
+                        <span class="param-badge" :class="param.paramType">{{ param.paramType }}</span>
+                        <div class="param-info">
+                          <span class="param-key">{{ getApiParamDisplayKey(param) }}</span>
+                          <span v-if="param.paramName" class="param-name">{{ param.paramName }}</span>
+                          <span v-if="param.isRequired" class="param-required">*</span>
+                        </div>
+                        <el-icon class="mapping-arrow"><Right /></el-icon>
+                        <el-input
+                          :model-value="getInputSource(getApiTarget(param))"
+                          @update:model-value="setInputSource(getApiTarget(param), $event)"
+                          :placeholder="getInputType(getApiTarget(param)) === 'var' ? '来源(上下文变量)' : '输入常量值'"
+                          size="small"
+                          @change="updateNodeProperties"
+                        >
+                          <template #prefix>
+                            <el-button
+                              size="small"
+                              :type="getInputType(getApiTarget(param)) === 'var' ? 'primary' : ''"
+                              text
+                              style="padding: 0 4px; font-size: 11px; margin-right: 4px;"
+                              @click.stop="toggleInputType(getApiTarget(param))"
+                            >
+                              {{ getInputType(getApiTarget(param)) === 'var' ? '变量' : '常量' }}
+                            </el-button>
+                          </template>
+                          <template #suffix>
+                            <el-icon v-if="getInputType(getApiTarget(param)) === 'var'" class="var-picker-trigger" @click="openVarPicker(getApiTarget(param))"><ArrowDownBold /></el-icon>
+                          </template>
+                        </el-input>
+                      </div>
                     </div>
-                    <el-icon class="mapping-arrow"><Right /></el-icon>
-                    <el-input
-                      :model-value="getInputSource(getApiTarget(param))"
-                      @update:model-value="setInputSource(getApiTarget(param), $event)"
-                      placeholder="来源(上下文变量)"
-                      size="small"
-                      @change="updateNodeProperties"
-                    >
-                      <template #suffix>
-                        <el-icon class="var-picker-trigger" @click="openVarPicker(getApiTarget(param))"><ArrowDownBold /></el-icon>
-                      </template>
-                    </el-input>
+                    <div v-if="apiParamsByType[ptype].length === 0" class="mapping-empty">暂无 {{ apiParamTypeLabels[ptype] }} 参数</div>
                   </div>
-                </div>
-              </div>
+                </el-tab-pane>
+              </el-tabs>
 
               <!-- 自定义映射 -->
               <div class="section-title">
@@ -373,9 +373,20 @@
               <div class="mapping-list">
                 <div v-for="(map, idx) in customInputMappings" :key="idx" class="mapping-card">
                   <div class="mapping-row">
-                    <el-input v-model="map.source" placeholder="来源(上下文)" size="small" @change="updateNodeProperties">
+                    <el-input v-model="map.source" :placeholder="(map.type || 'var') === 'var' ? '来源(上下文)' : '输入常量值'" size="small" @change="updateNodeProperties">
+                      <template #prefix>
+                        <el-button
+                          size="small"
+                          :type="(map.type || 'var') === 'var' ? 'primary' : ''"
+                          text
+                          style="padding: 0 4px; font-size: 11px; margin-right: 4px;"
+                          @click.stop="map.type = (map.type || 'var') === 'var' ? 'const' : 'var'; updateNodeProperties()"
+                        >
+                          {{ (map.type || 'var') === 'var' ? '变量' : '常量' }}
+                        </el-button>
+                      </template>
                       <template #suffix>
-                        <el-icon class="var-picker-trigger" @click="openVarPicker(map.target)"><ArrowDownBold /></el-icon>
+                        <el-icon v-if="(map.type || 'var') === 'var'" class="var-picker-trigger" @click="openVarPicker(map.target)"><ArrowDownBold /></el-icon>
                       </template>
                     </el-input>
                     <el-icon class="mapping-arrow"><Right /></el-icon>
@@ -387,23 +398,99 @@
               </div>
             </template>
 
-            <template v-else>
+            <!-- API 返回参数映射 -->
+            <template v-if="selectedNode?.type === 'api' && currentResponseParams.length > 0">
+              <div class="section-title">返回参数映射</div>
+              <div class="mapping-tip">节点执行后，以下返回字段自动写入上下文</div>
+              <div class="api-param-mapping-list">
+                <div v-for="param in currentResponseParams" :key="param.id || param.paramKey" class="mapping-card api-param-card">
+                  <div class="mapping-row api-param-row">
+                    <span class="param-badge response">RESPONSE</span>
+                    <div class="param-info">
+                      <span class="param-key">{{ param.paramKey }}</span>
+                      <span v-if="param.paramName" class="param-name">{{ param.paramName }}</span>
+                    </div>
+                    <el-icon class="mapping-arrow"><Right /></el-icon>
+                    <el-input
+                      :model-value="getApiOutputTarget(param.paramKey)"
+                      @update:model-value="setApiOutputTarget(param.paramKey, $event)"
+                      placeholder="context.变量名"
+                      size="small"
+                      @change="updateNodeProperties"
+                    />
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <!-- end 节点：流程返回参数绑定 -->
+            <template v-if="selectedNode?.type === 'end' && filteredFlowOutputParams.length > 0">
+              <div class="section-title">流程返回参数绑定</div>
+              <div class="mapping-tip">选择上下文变量作为流程返回结果字段</div>
+              <div class="api-param-mapping-list">
+                <div v-for="param in filteredFlowOutputParams" :key="param.value" class="mapping-card api-param-card">
+                  <div class="mapping-row api-param-row">
+                    <el-input
+                      :model-value="getEndParamSource(param.value.replace(/^context\./, ''))"
+                      @update:model-value="setEndParamSource(param.value.replace(/^context\./, ''), $event)"
+                      placeholder="context.变量名"
+                      size="small"
+                      @change="updateNodeProperties"
+                    >
+                      <template #suffix>
+                        <el-icon class="var-picker-trigger" @click="openVarPickerForInputMapping(getEndParamMappingIndex(param.value.replace(/^context\./, '')))"><ArrowDownBold /></el-icon>
+                      </template>
+                    </el-input>
+                    <el-icon class="mapping-arrow"><Right /></el-icon>
+                    <div class="param-info">
+                      <span class="param-key">{{ param.label }}</span>
+                    </div>
+                    <span class="param-badge" :class="param.type">{{ param.type }}</span>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <template v-else-if="!['start', 'api', 'end'].includes(selectedNode?.type)">
               <div class="section-title">
                 <span>输入映射</span>
                 <el-button link type="primary" size="small" @click="addInputMapping">
                   <el-icon><Plus /></el-icon> 添加
                 </el-button>
               </div>
+              <div class="mapping-tip">
+                <template v-if="selectedNode?.type === 'script'">
+                  为脚本注入 <code>args</code> 参数，脚本中通过 <code>args.xxx</code> 读取上游变量
+                </template>
+                <template v-else>
+                  节点执行前，从上下文变量取值映射为节点入参
+                </template>
+              </div>
               <div class="mapping-list">
                 <div v-for="(map, idx) in inputMappings" :key="idx" class="mapping-card">
                   <div class="mapping-row">
-                    <el-input v-model="map.source" placeholder="来源(上下文)" size="small" @change="updateNodeProperties" />
+                    <el-input v-model="map.source" :placeholder="(map.type || 'var') === 'var' ? '来源变量，如 context.userId' : '输入常量值'" size="small" @change="updateNodeProperties">
+                      <template #prefix>
+                        <el-button
+                          size="small"
+                          :type="(map.type || 'var') === 'var' ? 'primary' : ''"
+                          text
+                          style="padding: 0 4px; font-size: 11px; margin-right: 4px;"
+                          @click.stop="map.type = (map.type || 'var') === 'var' ? 'const' : 'var'; updateNodeProperties()"
+                        >
+                          {{ (map.type || 'var') === 'var' ? '变量' : '常量' }}
+                        </el-button>
+                      </template>
+                      <template #suffix>
+                        <el-icon v-if="(map.type || 'var') === 'var'" class="var-picker-trigger" @click="openVarPickerForInputMapping(idx)"><ArrowDownBold /></el-icon>
+                      </template>
+                    </el-input>
                     <el-icon class="mapping-arrow"><Right /></el-icon>
-                    <el-input v-model="map.target" placeholder="目标(节点入参)" size="small" @change="updateNodeProperties" />
+                    <el-input v-model="map.target" placeholder="节点入参字段" size="small" @change="updateNodeProperties" />
                   </div>
                   <el-icon class="mapping-delete" @click="removeInputMapping(idx)"><Close /></el-icon>
                 </div>
-                <div v-if="inputMappings.length === 0" class="mapping-empty">暂无输入映射</div>
+                <div v-if="inputMappings.length === 0" class="mapping-empty">暂无输入映射，点击上方「添加」配置</div>
               </div>
             </template>
 
@@ -419,24 +506,27 @@
               </div>
             </template>
 
-            <!-- 输出映射 -->
-            <div class="section-title">
-              <span>输出映射</span>
-              <el-button link type="primary" size="small" @click="addOutputMapping">
-                <el-icon><Plus /></el-icon> 添加
-              </el-button>
-            </div>
-            <div class="mapping-list">
-              <div v-for="(map, idx) in outputMappings" :key="idx" class="mapping-card">
-                <div class="mapping-row">
-                  <el-input v-model="map.source" :placeholder="selectedNode?.type === 'script' ? '来源(result.字段名)' : '来源(节点返回)'" size="small" @change="updateNodeProperties" />
-                  <el-icon class="mapping-arrow"><Right /></el-icon>
-                  <el-input v-model="map.target" placeholder="目标(上下文)" size="small" @change="updateNodeProperties" />
-                </div>
-                <el-icon class="mapping-delete" @click="removeOutputMapping(idx)"><Close /></el-icon>
+            <!-- 输出映射：script/start/end 节点不需要 -->
+            <template v-if="!['script','start','end'].includes(selectedNode?.type)">
+              <div class="section-title">
+                <span>自定义输出映射</span>
+                <el-button link type="primary" size="small" @click="addOutputMapping">
+                  <el-icon><Plus /></el-icon> 添加
+                </el-button>
               </div>
-              <div v-if="outputMappings.length === 0" class="mapping-empty">暂无输出映射</div>
-            </div>
+              <div class="mapping-tip">节点执行后，自定义字段写入上下文（高级用法）</div>
+              <div class="mapping-list">
+                <div v-for="(map, idx) in outputMappings" :key="idx" class="mapping-card">
+                  <div class="mapping-row">
+                    <el-input v-model="map.source" placeholder="来源：节点返回字段" size="small" @change="updateNodeProperties" />
+                    <el-icon class="mapping-arrow"><Right /></el-icon>
+                    <el-input v-model="map.target" placeholder="目标：context.变量名" size="small" @change="updateNodeProperties" />
+                  </div>
+                  <el-icon class="mapping-delete" @click="removeOutputMapping(idx)"><Close /></el-icon>
+                </div>
+                <div v-if="outputMappings.length === 0" class="mapping-empty">暂无自定义映射，通常无需手动配置</div>
+              </div>
+            </template>
           </div>
 
           <div v-else-if="selectedEdge" class="property-form">
@@ -488,7 +578,7 @@
     </el-dialog>
 
     <!-- 变量选择器弹窗 -->
-    <el-dialog v-model="varPickerVisible" title="选择变量" width="340px" class="var-picker-dialog" destroy-on-close>
+    <el-dialog v-model="varPickerVisible" title="选择变量" width="560px" class="var-picker-dialog" destroy-on-close>
       <el-input v-model="varSearch" placeholder="搜索变量..." size="small" clearable style="margin-bottom: 12px">
         <template #prefix><el-icon><Search /></el-icon></template>
       </el-input>
@@ -496,7 +586,13 @@
         <div v-for="group in filteredVars" :key="group.name" class="var-group">
           <div class="var-group-title">{{ group.name }}</div>
           <div v-for="item in group.items" :key="item.value" class="var-item" @click="selectVar(item.value)">
-            <code class="var-value">{{ item.value }}</code>
+            <el-tooltip :content="item.value" placement="top" :show-after="300">
+              <div class="var-line" :style="{ paddingLeft: ((item.level || 0) * 24 + 12) + 'px' }">
+                <span v-for="n in (item.level || 0)" :key="n" class="var-indent-mark"></span>
+                <span class="var-name">{{ item.label }}</span>
+                <span v-if="item.type" class="var-type" :class="'type-' + item.type">{{ item.type }}</span>
+              </div>
+            </el-tooltip>
           </div>
         </div>
         <div v-if="filteredVars.length === 0" class="var-empty">未找到匹配的变量</div>
@@ -548,7 +644,47 @@ let lf = null
 const flowId = ref(route.query.id ? String(route.query.id) : null)
 const flowName = ref('未命名流程')
 const flowStatus = ref(0)
+const flowExecutionMode = ref('ASYNC')
 const version = ref(1)
+const flowInputParams = ref([])
+const flowOutputParams = ref([])
+
+const filteredFlowOutputParams = computed(() => {
+  return flowOutputParams.value.filter(p => p.type !== 'object')
+})
+
+function flattenInputParams(obj, prefix = 'context', level = 0) {
+  const items = []
+  if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) return items
+  for (const [key, value] of Object.entries(obj)) {
+    const fullPath = `${prefix}.${key}`
+    let type = 'string'
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      type = 'object'
+    } else if (typeof value === 'number') {
+      type = Number.isInteger(value) ? 'int' : 'double'
+    } else if (typeof value === 'boolean') {
+      type = 'boolean'
+    }
+    items.push({ label: key, value: fullPath, level, type })
+    if (type === 'object') {
+      items.push(...flattenInputParams(value, fullPath, level + 1))
+    }
+  }
+  return items
+}
+
+// 解析脚本内容中 context.set("key", ...) 或 context.set('key', ...) 的变量名
+function parseScriptContextVars(script) {
+  const vars = new Set()
+  if (!script || typeof script !== 'string') return []
+  const regex = /context\.set\s*\(\s*["']([^"']+)["']/g
+  let match
+  while ((match = regex.exec(script)) !== null) {
+    vars.add(match[1])
+  }
+  return Array.from(vars)
+}
 const isValid = ref(false)
 const testRunVisible = ref(false)
 const testBusinessKey = ref('TEST_' + Date.now())
@@ -563,10 +699,13 @@ const apiCatalogOptions = ref([])
 const parsedColumns = ref([])
 const parsingColumns = ref(false)
 const currentApiParams = ref([])
+const currentResponseParams = ref([])
+const allApiParams = ref([])
 
 // 变量选择器
 const varPickerVisible = ref(false)
 const currentEditingTarget = ref('')
+const currentEditingInputMappingIdx = ref(-1)
 const varSearch = ref('')
 const scriptOutputFields = ref('')
 
@@ -615,6 +754,7 @@ const baseNodeGroups = [
 
 const nodeGroups = ref([...baseNodeGroups])
 const pluginSchemas = ref({})
+const pluginOutputSchemas = ref({})
 
 const loadPluginNodes = async () => {
   try {
@@ -630,6 +770,13 @@ const loadPluginNodes = async () => {
             pluginSchemas.value[plugin.nodeType] = JSON.parse(plugin.configSchema)
           } catch (e) {
             console.error('解析插件schema失败', plugin.nodeType, e)
+          }
+        }
+        if (plugin.outputSchema) {
+          try {
+            pluginOutputSchemas.value[plugin.nodeType] = JSON.parse(plugin.outputSchema)
+          } catch (e) {
+            console.error('解析插件输出schema失败', plugin.nodeType, e)
           }
         }
         
@@ -742,6 +889,14 @@ const getPluginFields = (nodeType) => {
   return schema.fields
 }
 
+const getPluginOutputFields = (nodeType) => {
+  const schema = pluginOutputSchemas.value[nodeType]
+  if (!schema || !schema.fields) {
+    return []
+  }
+  return schema.fields
+}
+
 // 注册 LogicFlow 扩展
 LogicFlow.use(Menu)
 LogicFlow.use(SelectionSelect)
@@ -789,6 +944,8 @@ function initLogicFlow() {
       selectedNode.value = null
       selectedEdge.value = data
       currentApiParams.value = []
+      currentResponseParams.value = []
+      allApiParams.value = []
     } else {
       selectedEdge.value = null
       selectedNode.value = data
@@ -805,8 +962,22 @@ function initLogicFlow() {
       parsedColumns.value = []
       // 加载 API 参数定义
       currentApiParams.value = []
+      currentResponseParams.value = []
+      allApiParams.value = []
       if (data.type === 'api' && data.properties?.apiCode) {
         await loadApiParamsByCode(data.properties.apiCode)
+        syncApiInputMappings()
+      }
+      // end 节点：自动为流程出参创建默认输入映射
+      if (data.type === 'end' && filteredFlowOutputParams.value.length > 0) {
+        for (const param of filteredFlowOutputParams.value) {
+          const targetKey = param.value.replace(/^context\./, '')
+          const source = param.value
+          if (!inputMappings.value.some(m => m.target === targetKey)) {
+            inputMappings.value.push({ source, target: targetKey })
+          }
+        }
+        updateNodeProperties()
       }
       // Script 节点：从 outputMapping 反推字段声明
       scriptOutputFields.value = ''
@@ -824,18 +995,22 @@ function initLogicFlow() {
     selectedEdge.value = null
     parsedColumns.value = []
     currentApiParams.value = []
+    currentResponseParams.value = []
+    allApiParams.value = []
   })
 
   lf.on('node:delete', () => {
     selectedNode.value = null
     selectedEdge.value = null
     parsedColumns.value = []
+    currentResponseParams.value = []
   })
 
   lf.on('edge:delete', () => {
     selectedNode.value = null
     selectedEdge.value = null
     parsedColumns.value = []
+    currentResponseParams.value = []
   })
 
   lf.on('connection:not-allowed', (data) => {
@@ -843,9 +1018,11 @@ function initLogicFlow() {
   })
 
   loadPluginNodes().then(() => {
+    console.log('[Designer] init complete', { flowId: flowId.value })
     if (flowId.value) {
       loadFlowData()
     } else {
+      console.log('[Designer] render default nodes')
       lf.render({
         nodes: [
           { id: 'start_1', type: 'start', x: 240, y: 320, text: '开始', properties: { name: '开始', code: 'start_1' } },
@@ -1024,6 +1201,12 @@ function registerCustomNodes() {
 }
 
 function handleDragStart(e, node) {
+  console.log('[Designer] dragstart', { executionMode: flowExecutionMode.value, nodeType: node.type })
+  if (flowExecutionMode.value === 'SYNC' && node.type === 'timer') {
+    ElMessage.warning('同步流程不支持定时(timer)节点')
+    e.preventDefault()
+    return
+  }
   const properties = { 
     name: node.label, 
     code: `${node.type}_${Date.now()}` 
@@ -1049,12 +1232,25 @@ function handleDragStart(e, node) {
 
 function handleDrop(e) {
   const dataStr = e.dataTransfer.getData('application/lf-node')
-  if (!dataStr || !lf) return
+  console.log('[Designer] drop', { dataStr, hasLf: !!lf, executionMode: flowExecutionMode.value })
+  if (!dataStr || !lf) {
+    console.warn('[Designer] drop skipped', { reason: !dataStr ? 'no dataStr' : 'no lf' })
+    return
+  }
   try {
     const data = JSON.parse(dataStr)
+    console.log('[Designer] drop parsed', { type: data.type, text: data.text, properties: data.properties })
+    if (flowExecutionMode.value === 'SYNC' && data.type === 'timer') {
+      ElMessage.warning('同步流程不支持定时(timer)节点')
+      return
+    }
     const rect = canvasRef.value.getBoundingClientRect()
-    const x = e.clientX - rect.left + lf.getTransform().translateX
-    const y = e.clientY - rect.top + lf.getTransform().translateY
+    const transform = lf.getTransform ? lf.getTransform() : { translateX: 0, translateY: 0 }
+    const tx = transform?.translateX || 0
+    const ty = transform?.translateY || 0
+    const x = e.clientX - rect.left + tx
+    const y = e.clientY - rect.top + ty
+    console.log('[Designer] addNode', { type: data.type, x, y, rect: { left: rect.left, top: rect.top }, client: { x: e.clientX, y: e.clientY }, transform: { tx, ty } })
     lf.addNode({
       type: data.type,
       x,
@@ -1062,8 +1258,9 @@ function handleDrop(e) {
       text: data.text,
       properties: data.properties
     })
+    console.log('[Designer] addNode success')
   } catch (err) {
-    console.error('添加节点失败', err)
+    console.error('[Designer] 添加节点失败', err)
   }
 }
 
@@ -1078,6 +1275,8 @@ function updateNodeProperties() {
     if (text) {
       lf.updateText(selectedNode.value.id, text)
     }
+    // 强制更新引用，触发 computed（如 availableVariables）重新计算
+    selectedNode.value = { ...selectedNode.value }
   }
 }
 
@@ -1148,7 +1347,7 @@ function addAllColumnsToOutput() {
   ElMessage.success(`已批量添加 ${added} 个字段至输出映射`)
 }
 
-function addInputMapping() { inputMappings.value.push({ source: '', target: '' }) }
+function addInputMapping() { inputMappings.value.push({ source: '', target: '', type: 'var' }) }
 function removeInputMapping(idx) { inputMappings.value.splice(idx, 1); updateNodeProperties() }
 function removeCustomInputMapping(target) {
   const idx = inputMappings.value.findIndex(m => m.target === target)
@@ -1182,22 +1381,130 @@ function generateScriptOutputMappings() {
 
 // API 参数相关辅助函数
 function getApiTarget(param) {
+  // 支持嵌套 body 参数，如 body.params.a0188
+  if (param.paramType === 'body' && param.parentId && param.parentId != 0) {
+    const parts = [param.paramType]
+    function buildPath(p) {
+      if (p.parentId && p.parentId != 0) {
+        const parent = allApiParams.value.find(ap => ap.id === p.parentId)
+        if (parent) {
+          buildPath(parent)
+        }
+      }
+      parts.push(p.paramKey)
+    }
+    buildPath(param)
+    return parts.join('.')
+  }
   return `${param.paramType}.${param.paramKey}`
 }
 
+function getApiParamDisplayKey(param) {
+  // 嵌套参数显示完整路径，如 params.a0188
+  if (param.paramType === 'body' && param.parentId && param.parentId != 0) {
+    const parent = allApiParams.value.find(ap => ap.id === param.parentId)
+    if (parent) {
+      return `${parent.paramKey}.${param.paramKey}`
+    }
+  }
+  return param.paramKey
+}
+
+function syncApiInputMappings() {
+  for (const param of currentApiParams.value) {
+    const target = getApiTarget(param)
+    const oldTarget = `${param.paramType}.${param.paramKey}`
+    // 强制清理旧格式的扁平 target（如 body.a0188），无论新 target 是否已存在
+    if (oldTarget !== target) {
+      const oldIdx = inputMappings.value.findIndex(m => m.target === oldTarget)
+      if (oldIdx >= 0) {
+        // 如果新 target 还不存在，把旧 source 迁移过去
+        if (!inputMappings.value.some(m => m.target === target)) {
+          const oldMap = inputMappings.value[oldIdx]
+          inputMappings.value.push({ source: oldMap.source, target, type: oldMap.type })
+        }
+        // 删除旧映射
+        inputMappings.value.splice(oldIdx, 1)
+      }
+    }
+    if (!inputMappings.value.some(m => m.target === target)) {
+      inputMappings.value.push({ source: '', target })
+    }
+  }
+}
+
+const getApiOutputTarget = (paramKey) => {
+  const map = outputMappings.value.find(m => m.source === `body.${paramKey}`)
+  return map ? map.target : `context.${paramKey}`
+}
+
+const setApiOutputTarget = (paramKey, target) => {
+  const source = `body.${paramKey}`
+  const idx = outputMappings.value.findIndex(m => m.source === source)
+  const finalTarget = target && target.trim() ? target.trim() : `context.${paramKey}`
+  if (idx >= 0) {
+    outputMappings.value[idx].target = finalTarget
+  } else {
+    outputMappings.value.push({ source, target: finalTarget })
+  }
+  updateNodeProperties()
+}
+
+// end 节点流程出参绑定
+const getEndParamSource = (targetKey) => {
+  const map = inputMappings.value.find(m => m.target === targetKey)
+  return map ? map.source : `context.${targetKey}`
+}
+
+const setEndParamSource = (targetKey, source) => {
+  const map = inputMappings.value.find(m => m.target === targetKey)
+  if (map) {
+    map.source = source && source.trim() ? source.trim() : `context.${targetKey}`
+    updateNodeProperties()
+  }
+}
+
+function getEndParamMappingIndex(targetKey) {
+  let idx = inputMappings.value.findIndex(m => m.target === targetKey)
+  if (idx === -1) {
+    inputMappings.value.push({ source: `context.${targetKey}`, target: targetKey })
+    idx = inputMappings.value.length - 1
+    updateNodeProperties()
+  }
+  return idx
+}
+
 async function loadApiParamsByCode(apiCode) {
+  // 如果接口目录未加载，先兜底加载（避免设计器刚打开时点击节点无数据）
+  if (!apiCatalogOptions.value || apiCatalogOptions.value.length === 0) {
+    try {
+      await loadApiCatalogOptions()
+    } catch (e) {
+      console.warn('加载接口目录失败', e)
+    }
+  }
   const api = apiCatalogOptions.value.find(a => a.apiCode === apiCode)
   if (api?.id) {
     try {
       const params = await getApiParams(api.id)
-      currentApiParams.value = (Array.isArray(params) ? params : []).filter(
-        p => ['header', 'query', 'body'].includes(p.paramType)
+      allApiParams.value = Array.isArray(params) ? params : []
+      currentApiParams.value = allApiParams.value.filter(
+        p => ['header', 'query', 'body'].includes(p.paramType) && p.dataType !== 'object'
+      )
+      currentResponseParams.value = allApiParams.value.filter(
+        p => p.paramType === 'response' && (p.parentId == 0 || p.parentId == null)
       )
     } catch (e) {
+      console.warn('加载接口参数失败', apiCode, e)
       currentApiParams.value = []
+      currentResponseParams.value = []
+      allApiParams.value = []
     }
   } else {
+    console.warn('接口目录中未找到', apiCode)
     currentApiParams.value = []
+    currentResponseParams.value = []
+    allApiParams.value = []
   }
 }
 
@@ -1207,16 +1514,25 @@ async function handleApiCodeChange() {
   if (apiCode) {
     await loadApiParamsByCode(apiCode)
     // 自动为接口参数创建空的输入映射项（保留已有 source）
-    for (const param of currentApiParams.value) {
-      const target = getApiTarget(param)
-      if (!inputMappings.value.some(m => m.target === target)) {
-        inputMappings.value.push({ source: '', target })
+    syncApiInputMappings()
+    // 自动为接口返回参数创建输出映射项
+    for (const param of currentResponseParams.value) {
+      const source = `body.${param.paramKey}`
+      const target = `context.${param.paramKey}`
+      if (!outputMappings.value.some(m => m.source === source)) {
+        outputMappings.value.push({ source, target })
       }
     }
     updateNodeProperties()
   } else {
     currentApiParams.value = []
+    currentResponseParams.value = []
   }
+}
+
+function getInputType(target) {
+  const mapping = inputMappings.value.find(m => m.target === target)
+  return mapping ? (mapping.type || 'var') : 'var'
 }
 
 function getInputSource(target) {
@@ -1224,12 +1540,28 @@ function getInputSource(target) {
   return mapping ? mapping.source : ''
 }
 
-function setInputSource(target, source) {
+function setInputSource(target, source, type) {
   const idx = inputMappings.value.findIndex(m => m.target === target)
   if (idx > -1) {
     inputMappings.value[idx].source = source
+    if (type) inputMappings.value[idx].type = type
   } else {
-    inputMappings.value.push({ source, target })
+    inputMappings.value.push({ source, target, type: type || 'var' })
+  }
+  updateNodeProperties()
+}
+
+function toggleInputType(target) {
+  const current = getInputType(target)
+  const next = current === 'var' ? 'const' : 'var'
+  const idx = inputMappings.value.findIndex(m => m.target === target)
+  if (idx > -1) {
+    inputMappings.value[idx].type = next
+    if (next === 'var' && !inputMappings.value[idx].source.startsWith('context.')) {
+      inputMappings.value[idx].source = ''
+    }
+  } else {
+    inputMappings.value.push({ source: '', target, type: next })
   }
   updateNodeProperties()
 }
@@ -1241,6 +1573,18 @@ const customInputMappings = computed(() => {
   const apiTargets = new Set(currentApiParams.value.map(p => getApiTarget(p)))
   return inputMappings.value.filter(m => !apiTargets.has(m.target))
 })
+
+const apiParamsByType = computed(() => {
+  const groups = { header: [], query: [], body: [] }
+  for (const param of currentApiParams.value) {
+    const type = param.paramType
+    if (groups[type]) groups[type].push(param)
+  }
+  return groups
+})
+
+const apiParamTypeLabels = { header: 'HEADER', query: 'QUERY', body: 'BODY' }
+const apiParamActiveTab = ref('body')
 
 // 获取当前节点的所有上游节点ID（拓扑排序）
 function getUpstreamNodeIds(currentId, graphData) {
@@ -1264,13 +1608,20 @@ function getUpstreamNodeIds(currentId, graphData) {
 // 变量选择器：可用变量列表（仅上游节点）
 const availableVariables = computed(() => {
   const groups = []
+  // 流程入参
+  if (flowInputParams.value && flowInputParams.value.length > 0) {
+    groups.push({
+      name: '流程入参',
+      items: flowInputParams.value
+    })
+  }
   // 系统变量
   groups.push({
     name: '系统变量',
     items: [
-      { label: '_businessKey', value: 'context._businessKey' },
-      { label: '_instanceId', value: 'context._instanceId' },
-      { label: '_currentTime', value: 'context._currentTime' }
+      { label: '_businessKey', value: 'context._businessKey', level: 0, type: '' },
+      { label: '_instanceId', value: 'context._instanceId', level: 0, type: '' },
+      { label: '_currentTime', value: 'context._currentTime', level: 0, type: '' }
     ]
   })
   // 上游节点变量
@@ -1285,31 +1636,38 @@ const availableVariables = computed(() => {
         if (node.type === 'end') continue  // 结束节点无输出
         const nodeName = node.properties?.name || node.text?.value || node.id
         const items = []
-        // 节点执行结果变量
-        items.push({ label: `nodeResult_${node.id}`, value: `context.nodeResult_${node.id}` })
         // DB 节点：resultVarName
         if (node.type === 'db' && node.properties?.resultVarName) {
           items.push({ label: node.properties.resultVarName, value: `context.${node.properties.resultVarName}` })
         }
-        // Script 节点：从 outputMapping 中展开已声明的字段
+        // Script 节点：自动解析脚本内容中的 context.set("key", ...) 声明
         if (node.type === 'script') {
-          const outputMapping = node.properties?.outputMapping
-          if (outputMapping) {
-            try {
-              const mappings = typeof outputMapping === 'string' ? JSON.parse(outputMapping) : outputMapping
-              for (const m of mappings) {
-                if (m.source && m.source.startsWith('result.')) {
-                  const field = m.source.substring(7)
-                  items.push({ label: field, value: `context.nodeResult_${node.id}.${field}` })
-                }
-              }
-            } catch (e) {}
+          const scriptContent = node.properties?.scriptContent
+          if (scriptContent) {
+            const vars = parseScriptContextVars(scriptContent)
+            vars.forEach(v => {
+              items.push({ label: v, value: `context.${v}`, level: 0, type: '' })
+            })
           }
         }
         // API 节点：尝试展开 response 参数
         if (node.type === 'api' && node.properties?.apiCode) {
           // 从当前已加载的 apiCatalogOptions 中找该 API 的 response 参数
           // 由于异步加载较复杂，这里仅展示主结果变量
+        }
+        // 插件节点：从 outputSchema 解析输出字段
+        if (isPluginNode(node.type)) {
+          const schema = pluginOutputSchemas.value[node.type]
+          if (schema && schema.fields) {
+            schema.fields.forEach(field => {
+              items.push({
+                label: field.label || field.name,
+                value: `context.${field.name}`,
+                level: 0,
+                type: field.type
+              })
+            })
+          }
         }
         if (items.length > 0) {
           groups.push({ name: `${nodeName}`, items })
@@ -1360,13 +1718,29 @@ const dataSources = computed(() => {
 
 function openVarPicker(target) {
   currentEditingTarget.value = target
+  currentEditingInputMappingIdx.value = -1
+  varSearch.value = ''
+  varPickerVisible.value = true
+}
+
+function openVarPickerForInputMapping(idx) {
+  currentEditingTarget.value = ''
+  currentEditingInputMappingIdx.value = idx
   varSearch.value = ''
   varPickerVisible.value = true
 }
 
 function selectVar(varValue) {
-  if (currentEditingTarget.value) {
-    setInputSource(currentEditingTarget.value, varValue)
+  if (currentEditingInputMappingIdx.value > -1) {
+    const map = inputMappings.value[currentEditingInputMappingIdx.value]
+    if (map) {
+      map.source = varValue
+      map.type = 'var'
+      updateNodeProperties()
+    }
+    currentEditingInputMappingIdx.value = -1
+  } else if (currentEditingTarget.value) {
+    setInputSource(currentEditingTarget.value, varValue, 'var')
   }
   varPickerVisible.value = false
   currentEditingTarget.value = ''
@@ -1401,6 +1775,7 @@ async function handleSave() {
     flowName: flowName.value,
     status: 0,
     version: version.value,
+    executionMode: flowExecutionMode.value,
     graphJson: JSON.stringify(graphData)
   }
   try {
@@ -1517,10 +1892,34 @@ async function loadFlowData() {
     if (def) {
       flowName.value = def.flowName || '未命名流程'
       flowStatus.value = def.status || 0
+      flowExecutionMode.value = def.executionMode || 'ASYNC'
       version.value = def.version || 1
+      if (def.inputParams) {
+        try {
+          const obj = JSON.parse(def.inputParams)
+          flowInputParams.value = flattenInputParams(obj)
+        } catch (e) {
+          flowInputParams.value = []
+        }
+      } else {
+        flowInputParams.value = []
+      }
+      if (def.outputParams) {
+        try {
+          const obj = JSON.parse(def.outputParams)
+          flowOutputParams.value = flattenInputParams(obj)
+        } catch (e) {
+          flowOutputParams.value = []
+        }
+      } else {
+        flowOutputParams.value = []
+      }
+      console.log('[Designer] loadFlowData', { executionMode: flowExecutionMode.value, flowId: flowId.value })
       if (def.graphJson) {
         const graphData = JSON.parse(def.graphJson)
         lf.render(graphData)
+      } else {
+        lf.render({ nodes: [], edges: [] })
       }
     }
   } catch (e) {
@@ -1920,6 +2319,17 @@ $text-muted: #94a3b8;
       transform: scale(0.98);
     }
 
+    &.disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      background: #f1f5f9;
+
+      .node-label,
+      .node-desc {
+        color: #94a3b8;
+      }
+    }
+
     .node-icon-wrap {
       width: 30px;
       height: 30px;
@@ -2175,6 +2585,29 @@ $text-muted: #94a3b8;
     }
   }
 
+  .mapping-tip {
+    position: relative;
+    padding: 10px 12px 10px 36px;
+    background: #f0f9ff;
+    border: 1px solid #e0f2fe;
+    border-radius: 8px;
+    color: #0284c7;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-bottom: 8px;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 12px;
+      top: 10px;
+      width: 16px;
+      height: 16px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230284c7'%3E%3Cpath d='M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-11v6h2v-6h-2zm0-4v2h2V7h-2z'/%3E%3C/svg%3E") no-repeat center;
+      background-size: contain;
+    }
+  }
+
   .mapping-list {
     display: flex;
     flex-direction: column;
@@ -2235,6 +2668,30 @@ $text-muted: #94a3b8;
     }
   }
 
+  // API 参数入参绑定 Tab
+  .api-param-tabs {
+    margin-bottom: 12px;
+
+    :deep(.el-tabs__header) {
+      margin-bottom: 8px;
+    }
+
+    :deep(.el-tabs__item) {
+      font-size: 12px;
+      padding: 0 12px;
+      height: 32px;
+      line-height: 32px;
+    }
+
+    :deep(.el-tabs__content) {
+      padding: 4px 0 0;
+    }
+
+    .api-param-mapping-list {
+      margin-bottom: 0;
+    }
+  }
+
   // API 参数入参绑定
   .api-param-mapping-list {
     display: flex;
@@ -2271,6 +2728,11 @@ $text-muted: #94a3b8;
           &.body {
             background: #dcfce7;
             color: #16a34a;
+          }
+
+          &.response {
+            background: #f3e8ff;
+            color: #9333ea;
           }
         }
 
@@ -2540,22 +3002,58 @@ $text-muted: #94a3b8;
       }
 
       .var-item {
-        padding: 6px 10px;
-        border-radius: 8px;
+        padding: 5px 16px;
+        border-radius: 6px;
         cursor: pointer;
-        transition: all 0.15s;
-        margin-bottom: 2px;
+        transition: background 0.2s;
+        margin-bottom: 1px;
 
         &:hover {
           background: #f1f5f9;
         }
 
-        .var-value {
-          font-family: var(--font-mono, monospace);
-          font-size: 12px;
-          color: $text-primary;
-          background: none;
-          padding: 0;
+        .var-line {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          position: relative;
+        }
+
+        .var-indent-mark {
+          position: absolute;
+          left: 0;
+          top: 4px;
+          bottom: 4px;
+          width: 2px;
+          background: #e2e8f0;
+          border-radius: 1px;
+        }
+
+        .var-name {
+          font-size: 14px;
+          color: #334155;
+          font-weight: 500;
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .var-type {
+          font-size: 10px;
+          padding: 1px 7px;
+          border-radius: 10px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+          flex-shrink: 0;
+          line-height: 1.5;
+
+          &.type-string { color: #2563eb; background: #dbeafe; }
+          &.type-int { color: #16a34a; background: #dcfce7; }
+          &.type-double { color: #0891b2; background: #cffafe; }
+          &.type-boolean { color: #7c3aed; background: #ede9fe; }
+          &.type-object { color: #ea580c; background: #ffedd5; }
         }
       }
     }
