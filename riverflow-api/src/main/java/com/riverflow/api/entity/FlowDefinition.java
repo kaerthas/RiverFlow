@@ -51,6 +51,21 @@ public class FlowDefinition extends BaseEntity {
     private Integer status;
 
     /**
+     * 执行模式：ASYNC-异步(默认) SYNC-同步
+     */
+    private String executionMode;
+
+    /**
+     * 同步流程默认入参(JSON)，启动时自动注入上下文
+     */
+    private String inputParams;
+
+    /**
+     * 同步流程输出参数(JSON)，用于声明流程返回结果结构
+     */
+    private String outputParams;
+
+    /**
      * 流程图JSON（LogicFlow格式）
      */
     private String graphJson;

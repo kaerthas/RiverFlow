@@ -68,6 +68,9 @@ public class FlowDefinitionServiceImpl extends ServiceImpl<FlowDefinitionMapper,
         target.setTriggerType(source.getTriggerType());
         target.setTriggerConfig(source.getTriggerConfig());
         target.setStatus(0); // 草稿
+        target.setExecutionMode(source.getExecutionMode());
+        target.setInputParams(source.getInputParams());
+        target.setOutputParams(source.getOutputParams());
         target.setGraphJson(source.getGraphJson());
         target.setCreateTime(LocalDateTime.now());
         target.setUpdateTime(LocalDateTime.now());

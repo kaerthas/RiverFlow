@@ -125,9 +125,38 @@ public class WorkflowController {
             if (exist != null && exist.getStatus() != null && exist.getStatus() == 1) {
                 return R.fail("已发布的流程不可直接修改，请先创建新版本");
             }
+            // 编辑已有流程时，若未传 version，保持原值，避免唯一键冲突
+            if (definition.getVersion() == null && exist != null) {
+                definition.setVersion(exist.getVersion());
+            }
+            // 编辑已有流程时，若未传字段，保留旧值
+            if (exist != null) {
+                if (definition.getInputParams() == null) {
+                    definition.setInputParams(exist.getInputParams());
+                }
+                if (definition.getOutputParams() == null) {
+                    definition.setOutputParams(exist.getOutputParams());
+                }
+                if (definition.getExecutionMode() == null || definition.getExecutionMode().isEmpty()) {
+                    definition.setExecutionMode(exist.getExecutionMode());
+                }
+                if (definition.getTriggerType() == null || definition.getTriggerType().isEmpty()) {
+                    definition.setTriggerType(exist.getTriggerType());
+                }
+                if (definition.getItemCode() == null || definition.getItemCode().isEmpty()) {
+                    definition.setItemCode(exist.getItemCode());
+                }
+            }
         }
         if (definition.getVersion() == null) {
             definition.setVersion(1);
+        }
+        // 执行模式校验与默认值
+        if (definition.getExecutionMode() == null || definition.getExecutionMode().isEmpty()) {
+            definition.setExecutionMode("ASYNC");
+        }
+        if (!"ASYNC".equals(definition.getExecutionMode()) && !"SYNC".equals(definition.getExecutionMode())) {
+            return R.fail("执行模式只能是 ASYNC 或 SYNC");
         }
         flowDefinitionService.saveOrUpdate(definition);
         return R.ok(String.valueOf(definition.getId()));
@@ -138,6 +167,15 @@ public class WorkflowController {
     public R<String> publishDefinition(@PathVariable Long id) {
         FlowDefinition def = flowDefinitionService.getById(id);
         if (def == null) return R.fail("流程定义不存在");
+
+        // 同步流程发布前校验：不能包含 timer 节点
+        if ("SYNC".equals(def.getExecutionMode())) {
+            List<FlowNode> nodes = flowNodeService.getNodesByFlowId(id);
+            boolean hasTimer = nodes.stream().anyMatch(n -> "timer".equals(n.getNodeType()));
+            if (hasTimer) {
+                return R.fail("同步流程不能包含定时(timer)节点，请修改流程图后重新发布");
+            }
+        }
 
         if (def.getStatus() != null && def.getStatus() == 1) {
             // 已经是已发布状态，直接返回当前ID
@@ -235,9 +273,20 @@ public class WorkflowController {
             return R.fail("已发布的流程不可修改，请先创建新版本");
         }
 
+        com.alibaba.fastjson2.JSONArray nodes = request.getJSONArray("nodes");
+
+        // 同步流程校验：不能包含 timer 节点
+        if ("SYNC".equals(def.getExecutionMode()) && nodes != null) {
+            for (int i = 0; i < nodes.size(); i++) {
+                com.alibaba.fastjson2.JSONObject nodeJson = nodes.getJSONObject(i);
+                if ("timer".equals(nodeJson.getString("type"))) {
+                    return R.fail("同步流程不支持定时(timer)节点，请删除后保存");
+                }
+            }
+        }
+
         // 保存节点（物理删除旧记录，避免唯一键冲突）
         flowNodeService.physicalDeleteByFlowId(flowId);
-        com.alibaba.fastjson2.JSONArray nodes = request.getJSONArray("nodes");
         if (nodes != null && !nodes.isEmpty()) {
             List<FlowNode> nodeList = new ArrayList<>();
             for (int i = 0; i < nodes.size(); i++) {
@@ -348,6 +397,27 @@ public class WorkflowController {
         if (def.getStatus() != 1) return R.fail("流程未发布，无法启动");
 
         FlowInstance instance = flowEngine.startInstance(flowId, def.getFlowCode(), def.getVersion(), businessKey, itemCode);
+
+        // 注入流程默认入参
+        if (def.getInputParams() != null && !def.getInputParams().isEmpty()) {
+            try {
+                String existingContext = instance.getContextJson();
+                Map<String, Object> contextMap;
+                if (existingContext != null && !existingContext.isEmpty()) {
+                    contextMap = com.alibaba.fastjson2.JSON.parseObject(existingContext, Map.class);
+                } else {
+                    contextMap = new HashMap<>();
+                }
+                Map<String, Object> defaultVars = com.alibaba.fastjson2.JSON.parseObject(def.getInputParams(), Map.class);
+                if (defaultVars != null) {
+                    contextMap.putAll(defaultVars);
+                    instance.setContextJson(com.alibaba.fastjson2.JSON.toJSONString(contextMap));
+                    flowInstanceService.updateById(instance);
+                }
+            } catch (Exception e) {
+                log.warn("注入流程默认入参失败", e);
+            }
+        }
 
         // 找到开始节点，创建首个任务
         List<FlowNode> nodes = flowNodeService.getNodesByFlowId(flowId);
