@@ -38,7 +38,7 @@
             <span class="rf-code">{{ row.apiCode }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="apiName" label="接口名称" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="apiName" label="接口名称" min-width="180" class-name="cell-wrap" />
         <el-table-column prop="method" label="请求方式" width="120" align="center">
           <template #default="{ row }">
             <span :class="['rf-tag', row.method?.toLowerCase()]">{{ row.method }}</span>
