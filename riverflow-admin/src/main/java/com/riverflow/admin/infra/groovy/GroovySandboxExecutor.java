@@ -41,13 +41,15 @@ public class GroovySandboxExecutor {
         "import cn.hutool.crypto.SecureUtil\n" +
         "import cn.hutool.http.HttpUtil\n" +
         "import cn.hutool.http.HttpRequest\n" +
+        "import com.riverflow.admin.infra.groovy.GroovyUtils\n" +
         "\n" +
         "def execute(Map args) {\n" +
         "    def context = args.context\n" +
         "    def ctx = args.ctx\n" +
         "    def params = args.params ?: args.ctx\n" +
         "    def instanceId = args.instanceId\n" +
-        "    def redis = args.redis\n";
+        "    def redis = args.redis\n" +
+        "    def utils = args.utils\n";
 
     private static final String SCRIPT_TEMPLATE_SUFFIX = "\n}";
 
@@ -67,6 +69,9 @@ public class GroovySandboxExecutor {
         if (containsDangerousKeyword(scriptContent)) {
             throw new SecurityException("脚本包含非法关键字，已被拦截");
         }
+
+        // 注入 GroovyUtils 工具类，脚本中可通过 utils 或 GroovyUtils 直接调用
+        args.putIfAbsent("utils", new GroovyUtils());
 
         String fullScript = SCRIPT_TEMPLATE_PREFIX + scriptContent + SCRIPT_TEMPLATE_SUFFIX;
         String scriptMd5 = DigestUtils.md5DigestAsHex(fullScript.getBytes());
