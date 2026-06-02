@@ -39,22 +39,28 @@
           </template>
         </el-table-column>
         <el-table-column prop="apiName" label="接口名称" min-width="180" class-name="cell-wrap" />
-        <el-table-column prop="method" label="请求方式" width="120" align="center">
-          <template #default="{ row }">
-            <span :class="['rf-tag', row.method?.toLowerCase()]">{{ row.method }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="apiType" label="类型" width="110" align="center">
+        <el-table-column prop="apiType" label="类型" width="100" align="center">
           <template #default="{ row }">
             <span :class="['rf-tag', row.apiType]">
               {{ row.apiType === 'proxy' ? '代理' : row.apiType === 'sql' ? 'SQL' : row.apiType === 'script' ? '脚本' : '数据' }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="请求地址" min-width="280" class-name="cell-wrap">
+        <el-table-column label="原始接口" min-width="240" class-name="cell-wrap">
           <template #default="{ row }">
-            <span v-if="row.apiType === 'sql'" class="rf-code">/open/{{ row.apiCode }}</span>
-            <span v-else>{{ row.url }}</span>
+            <div class="endpoint-row">
+              <span :class="['rf-tag', row.method?.toLowerCase()]">{{ row.method }}</span>
+              <span v-if="row.apiType === 'sql'" class="endpoint-url endpoint-sql">SQL语句</span>
+              <span v-else class="endpoint-url">{{ row.url }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="代理接口" min-width="200" class-name="cell-wrap">
+          <template #default="{ row }">
+            <div class="endpoint-row">
+              <span :class="['rf-tag', row.openMethod?.toLowerCase()]">{{ row.openMethod }}</span>
+              <span class="rf-code">/open{{ row.openPath || '/' + row.apiCode }}</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="120" align="center">
@@ -139,13 +145,29 @@
             </el-row>
             <el-form-item v-if="form.apiType === 'sql'" label="SQL 语句" prop="url">
               <el-input v-model="form.url" type="textarea" :rows="4" placeholder="请输入 SQL 语句，如 INSERT INTO..." />
-              <div v-if="form.apiCode" style="margin-top: 6px; font-size: 12px; color: var(--rf-text-muted)">
-                调用路径：<span class="rf-code">/open/{{ form.apiCode }}</span>
-              </div>
             </el-form-item>
-            <el-form-item v-else label="请求地址" prop="url">
+            <el-form-item v-else label="原始请求地址" prop="url">
               <el-input v-model="form.url" placeholder="http(s)://..." />
             </el-form-item>
+
+            <el-row :gutter="16">
+              <el-col :span="12">
+                <el-form-item label="代理后路径" prop="openPath">
+                  <el-input v-model="form.openPath" placeholder="如 /user/list" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="代理后方式" prop="openMethod">
+                  <el-select v-model="form.openMethod" placeholder="请选择" style="width: 100%">
+                    <el-option label="GET" value="GET" />
+                    <el-option label="POST" value="POST" />
+                    <el-option label="PUT" value="PUT" />
+                    <el-option label="DELETE" value="DELETE" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <div class="proxy-path-hint">外部调用和调试均使用上述代理后的路径和请求方式</div>
             <el-row :gutter="16">
               <el-col :span="12">
                 <el-form-item label="Content-Type">
@@ -202,7 +224,7 @@
               </el-form-item>
             </template>
 
-            <el-form-item label="代理设置">
+            <el-form-item v-if="form.apiType === 'proxy'" label="代理设置">
               <el-switch v-model="form.proxyEnabled" :active-value="1" :inactive-value="0" />
               <template v-if="form.proxyEnabled === 1">
                 <el-input v-model="form.proxyHost" placeholder="代理主机" style="width: 180px; margin-left: 12px" />
@@ -351,6 +373,8 @@ const form = reactive({
   apiType: 'proxy',
   method: 'POST',
   url: '',
+  openPath: '',
+  openMethod: 'POST',
   contentType: 'application/json',
   authType: 'none',
   dsId: null,
@@ -374,7 +398,9 @@ const formRules = {
   apiName: [{ required: true, message: '请输入接口名称', trigger: 'blur' }],
   apiType: [{ required: true, message: '请选择接口类型', trigger: 'change' }],
   method: [{ required: true, message: '请选择请求方式', trigger: 'change' }],
-  url: [{ required: true, message: '请输入请求地址', trigger: 'blur' }]
+  url: [{ required: true, message: '请输入请求地址', trigger: 'blur' }],
+  openPath: [{ required: true, message: '请输入代理后路径', trigger: 'blur' }],
+  openMethod: [{ required: true, message: '请选择代理后请求方式', trigger: 'change' }]
 }
 
 const allParams = ref([])
@@ -520,6 +546,8 @@ function handleAdd() {
     apiType: 'proxy',
     method: 'POST',
     url: '',
+    openPath: '',
+    openMethod: 'POST',
     contentType: 'application/json',
     authType: 'none',
     dsId: null,
@@ -553,6 +581,8 @@ async function handleEdit(row) {
   activeTab.value = 'base'
   paramTab.value = 'header'
   Object.assign(form, { ...row })
+  if (!form.openPath) form.openPath = `/${row.apiCode}`
+  if (!form.openMethod) form.openMethod = row.method || 'POST'
   allParams.value = []
   dialogVisible.value = true
   await nextTick()
@@ -595,6 +625,14 @@ async function handleSubmit() {
   }
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
+  // 自动补全 openPath 前缀并校验
+  if (form.openPath && !form.openPath.startsWith('/')) {
+    form.openPath = '/' + form.openPath
+  }
+  if (!form.openPath || form.openPath.trim() === '/' || form.openPath.trim() === '') {
+    ElMessage.warning('代理后路径不能为空')
+    return
+  }
   submitLoading.value = true
   try {
     let apiId = form.id
@@ -646,8 +684,9 @@ async function handleStatusChange(row) {
 
 function handleDebug(row) {
   debugRow.value = { ...row }
-  // 所有接口调试统一走 /api/open/{apiCode}，避免跨域并测试代理/脚本逻辑
-  debugRow.value.url = `/api/open/${row.apiCode}`
+  // 调试使用用户配置的代理后路径和方式
+  debugRow.value.url = `/api/open${row.openPath || '/' + row.apiCode}`
+  debugRow.value.method = row.openMethod || row.method || 'POST'
   debugDialogVisible.value = true
 }
 
@@ -674,5 +713,42 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+}
+
+.endpoint-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  .endpoint-url {
+    font-size: 13px;
+    color: var(--rf-text-secondary);
+    word-break: break-all;
+    &.endpoint-sql {
+      color: var(--rf-text-muted);
+      font-style: italic;
+    }
+  }
+}
+
+.proxy-path-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  .placeholder {
+    color: #94a3b8;
+    background: #f1f5f9;
+  }
+}
+
+.proxy-path-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--rf-text-muted);
 }
 </style>

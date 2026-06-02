@@ -42,8 +42,8 @@ import java.util.regex.Pattern;
 
 /**
  * 通用开放接口执行器
- * 根据 wf_api_catalog 配置动态暴露接口，支持 sql / proxy 类型
- * 调用方式：POST /open/{apiCode} 或 GET /open/{apiCode}
+ * 根据 wf_api_catalog 配置动态暴露接口，支持 sql / proxy / script 类型
+ * 调用方式：{openMethod} /open{openPath}（由用户自定义路径和请求方式）
  */
 @Slf4j
 @RestController
@@ -240,22 +240,46 @@ public class OpenApiController {
         }
     }
 
-    @PostMapping("/{apiCode}")
-    public R<Object> executePost(@PathVariable("apiCode") String apiCode,
-                                 HttpServletRequest request) {
-        String contentType = request.getContentType();
-        Map<String, Object> params;
-        if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
-            params = NestedParamResolver.resolve(request);
-        } else {
-            params = readBodyAsMap(request);
+    /**
+     * 动态开放接口执行器
+     * 根据用户配置的 open_path + open_method 匹配并执行
+     */
+    @RequestMapping(value = "/**", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
+    public R<Object> executeDynamic(HttpServletRequest request) {
+        String path = extractOpenPath(request);
+        String method = request.getMethod();
+
+        ApiCatalog api = apiCatalogService.getOne(
+                new QueryWrapper<ApiCatalog>()
+                        .eq("open_path", path)
+                        .eq("open_method", method)
+                        .eq("status", 1)
+                        .eq("del_flag", 0)
+        );
+        if (api == null) {
+            return R.fail("接口不存在: " + method + " " + path);
         }
-        return execute(apiCode, params);
+
+        Map<String, Object> params = readRequestParams(request);
+        return execute(api, params);
     }
 
-    @GetMapping("/{apiCode}")
-    public R<Object> executeGet(@PathVariable("apiCode") String apiCode, @RequestParam Map<String, Object> params) {
-        return execute(apiCode, params);
+    private String extractOpenPath(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        return uri.substring((contextPath + "/open").length());
+    }
+
+    private Map<String, Object> readRequestParams(HttpServletRequest request) {
+        String method = request.getMethod();
+        if ("GET".equals(method) || "DELETE".equals(method)) {
+            return NestedParamResolver.resolve(request);
+        }
+        String contentType = request.getContentType();
+        if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
+            return NestedParamResolver.resolve(request);
+        }
+        return readBodyAsMap(request);
     }
 
     /**
@@ -309,17 +333,9 @@ public class OpenApiController {
         return merged;
     }
 
-    private R<Object> execute(String apiCode, Map<String, Object> params) {
-        ApiCatalog api = apiCatalogService.getOne(
-                new QueryWrapper<ApiCatalog>()
-                        .eq("api_code", apiCode)
-                        .eq("del_flag", 0)
-        );
-        if (api == null) {
-            return R.fail("接口不存在: " + apiCode);
-        }
+    private R<Object> execute(ApiCatalog api, Map<String, Object> params) {
         if (api.getStatus() == null || api.getStatus() != 1) {
-            return R.fail("接口未发布: " + apiCode);
+            return R.fail("接口未发布: " + api.getApiCode());
         }
 
         String apiType = api.getApiType();

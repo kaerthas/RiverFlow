@@ -1,7 +1,8 @@
 <template>
   <div class="api-debugger">
     <el-form label-width="80px" size="small">
-      <el-form-item label="请求地址">
+      <el-form-item label="代理后地址">
+        <div class="debug-hint">此地址为平台统一暴露的代理路径，请求将经由平台转发处理</div>
         <el-input v-model="debugUrl" placeholder="http://...">
           <template #prepend>
             <el-select v-model="debugMethod" style="width: 90px">
@@ -152,6 +153,12 @@ async function sendRequest() {
     gap: 8px;
     margin-bottom: 8px;
     align-items: center;
+  }
+  .debug-hint {
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #8c8c8c;
+    line-height: 1.5;
   }
   .response-panel {
     margin-top: 16px;

@@ -33,14 +33,24 @@ public class ApiCatalog extends BaseEntity {
     private String apiType;
 
     /**
-     * 请求方式：GET/POST/PUT/DELETE
+     * 请求方式：GET/POST/PUT/DELETE（原始目标接口的请求方式）
      */
     private String method;
 
     /**
-     * 请求地址
+     * 请求地址（原始目标接口地址，proxy类型为下游URL，sql类型为SQL语句）
      */
     private String url;
+
+    /**
+     * 代理后暴露路径，如 /user/list
+     */
+    private String openPath;
+
+    /**
+     * 代理后请求方式：GET/POST/PUT/DELETE
+     */
+    private String openMethod;
 
     /**
      * 请求体类型
