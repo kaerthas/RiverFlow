@@ -31,7 +31,7 @@
     </div>
 
     <div class="rf-table-card">
-      <el-table :data="apiList" stripe v-loading="loading" class="rf-data-table" :fit="false" empty-text="暂无数据">
+      <el-table :data="apiList" stripe v-loading="loading" class="rf-data-table" :fit="false" style="width: 100%" empty-text="暂无数据">
         <el-table-column type="index" label="#" width="52" align="center" />
         <el-table-column prop="apiCode" label="接口编码" width="240">
           <template #default="{ row }">
@@ -46,7 +46,7 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="原始接口" min-width="240" class-name="cell-wrap">
+        <!-- <el-table-column label="原始接口" min-width="240" class-name="cell-wrap">
           <template #default="{ row }">
             <div class="endpoint-row">
               <span :class="['rf-tag', row.method?.toLowerCase()]">{{ row.method }}</span>
@@ -54,8 +54,8 @@
               <span v-else class="endpoint-url">{{ row.url }}</span>
             </div>
           </template>
-        </el-table-column>
-        <el-table-column label="代理接口" min-width="200" class-name="cell-wrap">
+        </el-table-column> -->
+        <el-table-column label="代理接口" min-width="300" class-name="cell-wrap">
           <template #default="{ row }">
             <div class="endpoint-row">
               <span :class="['rf-tag', row.openMethod?.toLowerCase()]">{{ row.openMethod }}</span>
