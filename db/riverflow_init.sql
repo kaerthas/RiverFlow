@@ -1135,3 +1135,44 @@ CREATE TABLE `wf_transfer_queue`  (
 -- ----------------------------
 
 SET FOREIGN_KEY_CHECKS = 1;
+-- 为 wf_api_catalog 表增加代理后路径和请求方式字段
+-- 支持用户自定义对外暴露的路径和请求方式
+
+-- 1. 新增 open_path 字段（代理后暴露路径）
+ALTER TABLE wf_api_catalog
+    ADD COLUMN open_path VARCHAR(200) DEFAULT NULL COMMENT '代理后暴露路径，如 /user/list' AFTER url;
+
+-- 2. 新增 open_method 字段（代理后请求方式）
+ALTER TABLE wf_api_catalog
+    ADD COLUMN open_method VARCHAR(10) DEFAULT 'POST' COMMENT '代理后请求方式：GET/POST/PUT/DELETE' AFTER method;
+
+-- 3. 迁移现有数据：open_path 默认使用 /{apiCode}，open_method 默认使用原 method
+UPDATE wf_api_catalog
+SET open_path = CONCAT('/', api_code),
+    open_method = method
+WHERE open_path IS NULL;
+
+-- 4. 增加唯一约束，防止路径和方式冲突
+ALTER TABLE wf_api_catalog
+    ADD UNIQUE KEY uk_open_path_method (open_path, open_method);
+
+
+-- ----------------------------
+-- 接口注册模块插件化支持
+-- 日期: 2026-06-04
+-- ----------------------------
+
+-- 1. sys_plugin 增加 plugin_scope 字段，区分插件作用域
+ALTER TABLE `sys_plugin`
+    ADD COLUMN `plugin_scope` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci
+    NULL DEFAULT 'node' COMMENT '插件作用域：node-流程节点 api-接口注册 both-两者皆可' AFTER `plugin_version`,
+    ADD INDEX `idx_scope` (`plugin_scope`);
+
+-- 2. wf_api_catalog 增加 plugin_type 字段
+ALTER TABLE `wf_api_catalog`
+    ADD COLUMN `plugin_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+    NULL DEFAULT NULL COMMENT '插件类型标识，api_type=plugin 时生效' AFTER `script_id`,
+    ADD INDEX `idx_plugin_type` (`plugin_type`);
+
+-- 3. 更新 sys_plugin 现有数据的作用域为 node（兼容历史数据）
+UPDATE `sys_plugin` SET `plugin_scope` = 'node' WHERE `plugin_scope` IS NULL;
