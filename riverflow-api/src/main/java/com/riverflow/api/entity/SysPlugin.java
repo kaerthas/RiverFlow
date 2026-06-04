@@ -31,6 +31,11 @@ public class SysPlugin extends BaseEntity {
     private String pluginVersion;
 
     /**
+     * 插件作用域：node-流程节点 api-接口注册 both-两者皆可
+     */
+    private String pluginScope;
+
+    /**
      * 插件分类
      */
     private String category;

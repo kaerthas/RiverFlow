@@ -7,6 +7,7 @@ import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
 import com.riverflow.admin.infra.groovy.GroovySandboxExecutor;
 import com.riverflow.admin.infra.http.HttpRequestService;
 import com.riverflow.admin.infra.openapi.NestedParamResolver;
+import com.riverflow.admin.infra.plugin.ApiPluginLoader;
 import com.riverflow.admin.modules.workflow.engine.FlowEngine;
 import com.riverflow.admin.service.ApiCatalogService;
 import com.riverflow.admin.service.ApiScriptService;
@@ -76,6 +77,8 @@ public class OpenApiController {
     private GroovySandboxExecutor groovyExecutor;
     @Autowired
     private StringRedisTemplate redisTemplate;
+    @Autowired
+    private ApiPluginLoader apiPluginLoader;
 
     @PostMapping("/flow/start")
     public R<Map<String, Object>> startFlow(@RequestBody(required = false) Map<String, Object> params) {
@@ -345,6 +348,8 @@ public class OpenApiController {
             return executeProxy(api, params);
         } else if ("script".equals(apiType)) {
             return executeScript(api, params);
+        } else if ("plugin".equals(apiType)) {
+            return executePlugin(api, params);
         } else {
             return R.fail("不支持的接口类型: " + apiType);
         }
@@ -576,6 +581,28 @@ public class OpenApiController {
         } catch (Exception e) {
             log.error("流程触发异常: apiCode={}, triggerFlowId={}", api.getApiCode(), api.getTriggerFlowId(), e);
             // 流程触发异常不影响 SQL 接口返回，仅记录日志
+        }
+    }
+
+    /**
+     * 执行 PLUGIN 类型接口（调用 SDK 插件）
+     */
+    private R<Object> executePlugin(ApiCatalog api, Map<String, Object> params) {
+        String pluginType = api.getPluginType();
+        if (pluginType == null || pluginType.isEmpty()) {
+            return R.fail("插件接口未绑定插件类型: apiCode=" + api.getApiCode());
+        }
+
+        if (!apiPluginLoader.hasPlugin(pluginType)) {
+            return R.fail("插件未加载: " + pluginType);
+        }
+
+        try {
+            Object result = apiPluginLoader.getPlugin(pluginType).execute(api, params);
+            return R.ok(result);
+        } catch (Exception e) {
+            log.error("插件接口执行失败: apiCode={}, pluginType={}", api.getApiCode(), pluginType, e);
+            return R.fail("插件接口执行失败: " + e.getMessage());
         }
     }
 

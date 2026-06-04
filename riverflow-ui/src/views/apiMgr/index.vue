@@ -42,7 +42,7 @@
         <el-table-column prop="apiType" label="类型" width="100" align="center">
           <template #default="{ row }">
             <span :class="['rf-tag', row.apiType]">
-              {{ row.apiType === 'proxy' ? '代理' : row.apiType === 'sql' ? 'SQL' : row.apiType === 'script' ? '脚本' : '数据' }}
+              {{ { proxy: '代理', sql: 'SQL', script: '脚本', data: '数据', plugin: '插件' }[row.apiType] || row.apiType }}
             </span>
           </template>
         </el-table-column>
@@ -129,6 +129,7 @@
                     <el-option label="SQL服务" value="sql" />
                     <el-option label="数据服务" value="data" />
                     <el-option label="脚本服务" value="script" />
+                    <el-option label="插件接口" value="plugin" />
                   </el-select>
                 </el-form-item>
               </el-col>
@@ -145,6 +146,9 @@
             </el-row>
             <el-form-item v-if="form.apiType === 'sql'" label="SQL 语句" prop="url">
               <el-input v-model="form.url" type="textarea" :rows="4" placeholder="请输入 SQL 语句，如 INSERT INTO..." />
+            </el-form-item>
+            <el-form-item v-else-if="form.apiType === 'plugin'" label="插件配置" prop="url">
+              <el-input v-model="form.url" type="textarea" :rows="4" placeholder='请输入插件配置 JSON，如 {"operation":"upload","bucket":"xxx"}' />
             </el-form-item>
             <el-form-item v-else label="原始请求地址" prop="url">
               <el-input v-model="form.url" placeholder="http(s)://..." />
@@ -221,6 +225,31 @@
                     :value="s.id"
                   />
                 </el-select>
+              </el-form-item>
+            </template>
+
+            <!-- 插件类型配置 -->
+            <template v-if="form.apiType === 'plugin'">
+              <el-form-item label="插件类型" prop="pluginType">
+                <el-select
+                  v-model="form.pluginType"
+                  placeholder="请选择已加载的插件"
+                  clearable
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="p in pluginOptions"
+                    :key="p.pluginType"
+                    :label="`${p.pluginName} (${p.pluginType})`"
+                    :value="p.pluginType"
+                  />
+                </el-select>
+                <div v-if="pluginOptions.length === 0" style="color: #f56c6c; font-size: 12px; margin-top: 4px;">
+                  未检测到已加载的插件，请检查插件管理页面是否已上传并启用（当前内存插件数: {{ pluginOptions.length }}）
+                </div>
+                <div v-else style="color: #67c23a; font-size: 12px; margin-top: 4px;">
+                  已加载 {{ pluginOptions.length }} 个插件: {{ pluginOptions.map(p => p.pluginType).join(', ') }}
+                </div>
               </el-form-item>
             </template>
 
@@ -336,7 +365,8 @@ import {
   deleteApiCatalog,
   getApiParams,
   saveApiParams,
-  getApiScriptList
+  getApiScriptList,
+  getApiPluginList
 } from '@/api/apiMgr'
 import { getDatasourceList } from '@/api/datasource'
 import { getFlowDefinitionList } from '@/api/workflow'
@@ -379,6 +409,7 @@ const form = reactive({
   authType: 'none',
   dsId: null,
   scriptId: null,
+  pluginType: '',
   timeout: 30000,
   retryTimes: 0,
   proxyEnabled: 0,
@@ -392,6 +423,7 @@ const form = reactive({
 })
 
 const scriptOptions = ref([])
+const pluginOptions = ref([])
 
 const formRules = {
   apiCode: [{ required: true, message: '请输入接口编码', trigger: 'blur' }],
@@ -552,6 +584,7 @@ function handleAdd() {
     authType: 'none',
     dsId: null,
     scriptId: null,
+    pluginType: '',
     timeout: 30000,
     retryTimes: 0,
     proxyEnabled: 0,
@@ -573,6 +606,18 @@ async function loadScriptOptions() {
     scriptOptions.value = res.list || res.records || res || []
   } catch (e) {
     scriptOptions.value = []
+  }
+}
+
+async function loadPluginOptions() {
+  try {
+    const res = await getApiPluginList()
+    console.log('[DEBUG] /plugin/api-loaded 返回:', res)
+    pluginOptions.value = res.plugins || []
+    console.log('[DEBUG] pluginOptions:', pluginOptions.value)
+  } catch (e) {
+    console.error('[DEBUG] /plugin/api-loaded 请求失败:', e)
+    pluginOptions.value = []
   }
 }
 
@@ -703,6 +748,7 @@ onMounted(() => {
   loadDatasourceOptions()
   loadFlowDefinitionOptions()
   loadScriptOptions()
+  loadPluginOptions()
   loadList()
 })
 </script>

@@ -257,15 +257,8 @@ public class NodePluginLoader implements SmartInitializingSingleton {
         SysPlugin sysPlugin = sysPluginService.getOne(wrapper);
         
         if (sysPlugin != null) {
-            try {
-                Path jarPath = Paths.get(sysPlugin.getJarPath());
-                Files.deleteIfExists(jarPath);
-                log.info("删除插件JAR文件: {}", jarPath);
-            } catch (IOException e) {
-                log.error("删除JAR文件失败", e);
-            }
-
-            sysPluginService.removeById(sysPlugin.getId());
+            sysPluginService.getBaseMapper().deleteById(sysPlugin.getId());
+            log.info("物理删除插件记录: {}", nodeType);
             return true;
         }
         return false;

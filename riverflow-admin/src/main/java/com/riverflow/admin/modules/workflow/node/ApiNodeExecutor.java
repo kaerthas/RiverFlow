@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.riverflow.admin.infra.http.HttpRequestService;
+import com.riverflow.admin.infra.plugin.ApiPluginLoader;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
 import com.riverflow.admin.modules.workflow.engine.NodeExecuteResult;
 import com.riverflow.admin.service.ApiCatalogService;
@@ -33,6 +34,8 @@ public class ApiNodeExecutor implements NodeExecutor {
     private ApiCatalogService apiCatalogService;
     @Autowired
     private ApiParamService apiParamService;
+    @Autowired
+    private ApiPluginLoader apiPluginLoader;
 
     @Override
     public String getNodeType() {
@@ -103,16 +106,35 @@ public class ApiNodeExecutor implements NodeExecutor {
                 context.getInstanceId(), headers, body, queryParams);
 
         try {
-            // 执行 HTTP 请求
-            JSONObject result = httpRequestService.execute(apiCatalog, headers, body, queryParams);
-            int statusCode = result.getIntValue("statusCode");
-            log.info("[流程实例:{}] 接口调用完成: status={}",
-                    context.getInstanceId(), statusCode);
+            JSONObject result;
 
-            // 检查 HTTP 状态码，非 2xx 视为失败
-            if (statusCode < 200 || statusCode >= 300) {
-                String errorMsg = result.getString("body");
-                return NodeExecuteResult.fail("接口调用失败, HTTP状态码: " + statusCode + ", 响应: " + errorMsg);
+            if ("plugin".equals(apiCatalog.getApiType())) {
+                // 插件类型接口（SDK 调用）
+                String pluginType = apiCatalog.getPluginType();
+                if (pluginType == null || pluginType.isEmpty()) {
+                    return NodeExecuteResult.fail("插件接口未绑定插件类型: " + apiCode);
+                }
+                if (!apiPluginLoader.hasPlugin(pluginType)) {
+                    return NodeExecuteResult.fail("插件未加载: " + pluginType);
+                }
+                Object pluginResult = apiPluginLoader.getPlugin(pluginType).execute(apiCatalog, body != null ? (Map<String, Object>) body : new HashMap<>());
+                result = new JSONObject();
+                result.put("body", pluginResult != null ? JSON.toJSONString(pluginResult) : null);
+                result.put("statusCode", 200);
+                log.info("[流程实例:{}] 插件接口调用完成: pluginType={}",
+                        context.getInstanceId(), pluginType);
+            } else {
+                // 执行 HTTP 请求
+                result = httpRequestService.execute(apiCatalog, headers, body, queryParams);
+                int statusCode = result.getIntValue("statusCode");
+                log.info("[流程实例:{}] 接口调用完成: status={}",
+                        context.getInstanceId(), statusCode);
+
+                // 检查 HTTP 状态码，非 2xx 视为失败
+                if (statusCode < 200 || statusCode >= 300) {
+                    String errorMsg = result.getString("body");
+                    return NodeExecuteResult.fail("接口调用失败, HTTP状态码: " + statusCode + ", 响应: " + errorMsg);
+                }
             }
 
             // 检查业务响应码（如果响应体是统一包装格式 R<T>）

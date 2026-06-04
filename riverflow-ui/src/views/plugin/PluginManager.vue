@@ -46,6 +46,13 @@
       <el-table :data="plugins" v-loading="loading" border stripe>
         <el-table-column prop="pluginName" label="插件名称" width="180" />
         <el-table-column prop="pluginType" label="类型标识" width="120" />
+        <el-table-column prop="pluginScope" label="作用域" width="100">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.pluginScope === 'both' ? 'success' : row.pluginScope === 'api' ? 'primary' : 'info'">
+              {{ { node: '节点', api: '接口', both: '两者' }[row.pluginScope] || row.pluginScope || '节点' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="category" label="分类" width="100">
           <template #default="{ row }">
             <el-tag size="small">{{ row.category }}</el-tag>
@@ -281,8 +288,8 @@ const reloadPlugin = async (row) => {
 const deletePlugin = async (row) => {
   try {
     await ElMessageBox.confirm(
-      '删除插件将同时删除JAR文件，确定要删除吗？',
-      '警告',
+      '确定要删除该插件吗？',
+      '提示',
       {
         type: 'warning',
         confirmButtonText: '确定',

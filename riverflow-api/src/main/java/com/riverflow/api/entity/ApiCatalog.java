@@ -75,6 +75,11 @@ public class ApiCatalog extends BaseEntity {
     private Long scriptId;
 
     /**
+     * 插件类型标识，api_type=plugin 时生效
+     */
+    private String pluginType;
+
+    /**
      * 超时毫秒
      */
     private Integer timeout;

@@ -47,3 +47,7 @@ export function updateApiScript(data) {
 export function deleteApiScript(id) {
   return request({ url: `/api-script/${id}`, method: 'delete' })
 }
+
+export function getApiPluginList() {
+  return request({ url: '/plugin/api-loaded', method: 'get' })
+}
