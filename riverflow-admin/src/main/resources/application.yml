@@ -101,13 +101,13 @@ jwt:
   header: Authorization
   token-prefix: "Bearer "
 
-# 日志
+# 日志配置（具体格式与滚动策略由 logback-spring.xml 控制）
 logging:
+  file:
+    path: ./logs
   level:
     com.riverflow: debug
     org.springframework.security: warn
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
 riverflow:
   plugin:
     # 启用插件系统

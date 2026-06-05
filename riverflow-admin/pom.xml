@@ -94,6 +94,18 @@
             <artifactId>hutool-all</artifactId>
         </dependency>
 
+        <!-- ZXing（二维码插件需要） -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.5.1</version>
+        </dependency>
+
         <!-- BouncyCastle -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
