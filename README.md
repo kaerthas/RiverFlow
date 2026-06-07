@@ -2,7 +2,7 @@
 
 > **让数据像河水一样流动** —— 可视化、可编排、可观测的政务数据协同中枢
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.7.18-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.12-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot)
 [![Vue.js](https://img.shields.io/badge/Vue-3.4-4FC08D?logo=vue.js)](https://vuejs.org/)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql)](https://www.mysql.com/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
@@ -49,6 +49,9 @@
 │                           基础设施层                                          │
 │  HTTP 执行器 │ Groovy 沙箱 │ 动态数据源 (dynamic-datasource) │ Redis 缓存   │
 ├─────────────────────────────────────────────────────────────────────────────┤
+│                           插件扩展层 (Java SPI)                               │
+│         MinIO 文件推送  │  更多插件可热加载扩展（详见插件开发指南）              │
+├─────────────────────────────────────────────────────────────────────────────┤
 │                              数据层                                           │
 │                         MySQL 8.0 (主库)  +  Redis                            │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -62,14 +65,14 @@
 
 | 技术 | 版本 | 用途 |
 |------|------|------|
-| **Spring Boot** | 2.7.18 | 核心框架 |
-| **MyBatis-Plus** | 3.5.5 | ORM 框架 |
-| **dynamic-datasource** | 3.6.1 | 多数据源动态切换 |
-| **Druid** | 1.2.21 | 数据库连接池 |
-| **Spring Security** | 5.7.x | 安全认证与授权 |
+| **Spring Boot** | 3.2.12 | 核心框架 |
+| **MyBatis-Plus** | 3.5.8 | ORM 框架 |
+| **dynamic-datasource** | 4.3.1 | 多数据源动态切换 |
+| **Druid** | 1.2.23 | 数据库连接池 |
+| **Spring Security** | 6.2.x | 安全认证与授权 |
 | **JJWT** | 0.11.x | JWT Token 生成与校验 |
 | **Spring SpEL** | 内置 | 流程条件表达式引擎 |
-| **Groovy** | 3.0.x | 动态脚本执行 |
+| **Groovy** | 4.0.x | 动态脚本执行 |
 | **Redis + Lettuce** | - | 分布式缓存与锁 |
 | **Knife4j** | 4.3.0 | API 文档 |
 
@@ -179,9 +182,15 @@ riverflow/
 │   ├── package.json
 │   └── vite.config.js
 │
+├── 🟧 river-minio/                       # 插件示例（MinIO 文件推送）
+│   ├── src/                              # 插件源码
+│   ├── pom.xml                           # 独立构建
+│   └── README.md                         # 插件使用说明
+│
 └── 📁 db/                                # 数据库脚本
     ├── riverflow_init.sql                # 初始化表结构
-    └── riverflow_data.sql                # 初始数据
+    ├── init_data.sql                     # 初始数据
+    ├── workflow_example_init.sql         # 流程示例数据（可选）
 ```
 
 ---
@@ -190,7 +199,7 @@ riverflow/
 
 ### 环境要求
 
-- JDK 1.8+
+- JDK 17+
 - Maven 3.8+
 - MySQL 8.0+
 - Redis 6.0+
@@ -207,7 +216,7 @@ cd riverflow
 
 ```bash
 mysql -u root -p < db/riverflow_init.sql
-mysql -u root -p < db/riverflow_data.sql
+mysql -u root -p < db/init_data.sql
 ```
 
 ### 3. 启动后端
@@ -307,9 +316,9 @@ npm run dev
 
 基于 Java SPI 机制，支持运行时热加载插件。插件可通过 `init(ApplicationContext)` 获取主项目的 Spring Bean（如 RedisTemplate、JdbcTemplate）。
 
-已内置插件：
-- **MinIO 文件推送**：支持上传、下载、删除、元数据查询
-- **华为云 Token 认证**：支持 HmacSHA256 签名计算与 Token 自动刷新
+已提供插件：
+- **MinIO 文件推送**：支持上传、下载、删除、元数据查询（源码见 `river-minio/`）
+- **华为云 Token 认证**：HmacSHA256 签名计算与 Token 刷新示例（详见《插件开发指南》）
 
 ![插件管理](docs-site/img/e17c38ef-ac28-434f-a9c6-e0d56f02b0e9.png)
 
@@ -337,11 +346,11 @@ npm run dev
 ## 📈 路线图
 
 - [x] 项目骨架搭建与 README
-- [ ] Phase 1：底座搭建（事项管理、数据源管理）
-- [ ] Phase 2：动态表与自动 API
-- [ ] Phase 3：第三方接口注册与调试
-- [ ] Phase 4：工作流引擎核心（设计器 + 执行器 + 上下文）
-- [ ] Phase 5：内置调度引擎与流程监控
+- [x] Phase 1：底座搭建（事项管理、数据源管理）
+- [x] Phase 2：动态表与自动 API
+- [x] Phase 3：第三方接口注册与调试
+- [x] Phase 4：工作流引擎核心（设计器 + 执行器 + 上下文）
+- [x] Phase 5：内置调度引擎与流程监控
 - [ ] Phase 6：性能优化、数据迁移、生产部署文档
 
 ---
