@@ -9,9 +9,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,7 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  */
 @Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     @Autowired
@@ -38,33 +39,33 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             // 启用 CORS，禁用 CSRF（前后端分离，使用 JWT）
-            .cors().and()
-            .csrf().disable()
+            .cors(AbstractHttpConfigurer::disable)
+            .csrf(AbstractHttpConfigurer::disable)
             // 禁用 Session，使用无状态 JWT
-            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             // 禁用默认 logout（项目使用自定义 /logout Controller）
-            .logout().disable()
+            .logout(AbstractHttpConfigurer::disable)
             // 异常处理
-            .exceptionHandling()
-            .authenticationEntryPoint(authenticationEntryPoint())
-            .accessDeniedHandler(accessDeniedHandler())
-            .and()
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(authenticationEntryPoint())
+                .accessDeniedHandler(accessDeniedHandler())
+            )
             // 请求授权
-            .authorizeRequests()
-            // 允许匿名访问的路径
-            .antMatchers("/login").permitAll()
-            .antMatchers("/refresh").permitAll()
-            .antMatchers("/doc.html").permitAll()
-            .antMatchers("/webjars/**").permitAll()
-            .antMatchers("/swagger-resources/**").permitAll()
-            .antMatchers("/v3/api-docs/**").permitAll()
-            .antMatchers("/open/**").permitAll()
-            .antMatchers("/example/**").permitAll()
-            .antMatchers("/plugin/**").permitAll()
-            .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-            // 其他请求需要认证
-            .anyRequest().authenticated();
+            .authorizeHttpRequests(auth -> auth
+                // 允许匿名访问的路径
+                .requestMatchers("/login").permitAll()
+                .requestMatchers("/refresh").permitAll()
+                .requestMatchers("/doc.html").permitAll()
+                .requestMatchers("/webjars/**").permitAll()
+                .requestMatchers("/swagger-resources/**").permitAll()
+                .requestMatchers("/v3/api-docs/**").permitAll()
+                .requestMatchers("/open/**").permitAll()
+                .requestMatchers("/example/**").permitAll()
+                .requestMatchers("/plugin/**").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // 其他请求需要认证
+                .anyRequest().authenticated()
+            );
 
         // 添加 JWT 过滤器
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
