@@ -1133,7 +1133,6 @@ CREATE TABLE `wf_transfer_queue`  (
 -- ----------------------------
 -- Records of wf_transfer_queue
 -- ----------------------------
-
 SET FOREIGN_KEY_CHECKS = 1;
 -- 为 wf_api_catalog 表增加代理后路径和请求方式字段
 -- 支持用户自定义对外暴露的路径和请求方式
@@ -1176,3 +1175,28 @@ ALTER TABLE `wf_api_catalog`
 
 -- 3. 更新 sys_plugin 现有数据的作用域为 node（兼容历史数据）
 UPDATE `sys_plugin` SET `plugin_scope` = 'node' WHERE `plugin_scope` IS NULL;
+
+
+-- 接口应用/目录表
+CREATE TABLE IF NOT EXISTS `wf_api_app` (
+  `id` bigint(20) NOT NULL COMMENT '主键ID',
+  `app_code` varchar(50) NOT NULL COMMENT '应用编码',
+  `app_name` varchar(100) NOT NULL COMMENT '应用名称',
+  `description` varchar(500) DEFAULT NULL COMMENT '应用描述',
+  `icon` varchar(50) DEFAULT NULL COMMENT '应用图标',
+  `sort_no` int(11) DEFAULT 0 COMMENT '排序号',
+  `status` tinyint(4) DEFAULT 1 COMMENT '0-禁用 1-启用',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `create_by` varchar(64) DEFAULT NULL,
+  `update_by` varchar(64) DEFAULT NULL,
+  `del_flag` tinyint(4) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_app_code` (`app_code`),
+  KEY `idx_status` (`status`),
+  KEY `idx_sort_no` (`sort_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='接口应用/目录';
+
+-- 为 wf_api_catalog 增加应用关联
+ALTER TABLE `wf_api_catalog` ADD COLUMN `app_id` bigint(20) DEFAULT NULL COMMENT '所属应用ID' AFTER `id`;
+ALTER TABLE `wf_api_catalog` ADD INDEX `idx_app_id` (`app_id`);

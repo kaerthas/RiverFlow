@@ -18,6 +18,12 @@ public class ApiCatalog extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
     /**
+     * 所属应用ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long appId;
+
+    /**
      * 接口编码
      */
     private String apiCode;

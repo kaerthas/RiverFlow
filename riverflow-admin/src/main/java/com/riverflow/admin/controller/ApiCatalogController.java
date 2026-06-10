@@ -39,10 +39,12 @@ public class ApiCatalogController {
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String apiCode,
-            @RequestParam(required = false) String apiName) {
+            @RequestParam(required = false) String apiName,
+            @RequestParam(required = false) Long appId) {
         Page<ApiCatalog> pageParam = new Page<>(page, size);
         QueryWrapper<ApiCatalog> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);
+        if (appId != null) qw.eq("app_id", appId);
         if (apiCode != null && !apiCode.isEmpty()) qw.like("api_code", apiCode);
         if (apiName != null && !apiName.isEmpty()) qw.like("api_name", apiName);
         qw.orderByDesc("create_time");
