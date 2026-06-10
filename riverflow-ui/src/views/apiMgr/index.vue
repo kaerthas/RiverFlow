@@ -1,108 +1,205 @@
 <template>
-  <div class="rf-list-page">
-    <div class="rf-list-header">
-      <div>
-        <h1 class="title">接口注册与调试</h1>
-        <p class="subtitle">管理系统对外暴露的 API 接口</p>
-      </div>
-      <button class="btn-primary" @click="handleAdd">
-        <el-icon><Plus /></el-icon> 注册接口
-      </button>
-    </div>
-
-    <!-- 搜索栏 -->
-    <div class="rf-search-bar">
-      <div class="search-fields">
-        <el-form :model="queryForm" inline>
-          <el-form-item label="接口编码">
-            <el-input v-model="queryForm.apiCode" placeholder="请输入接口编码" clearable />
-          </el-form-item>
-          <el-form-item label="接口名称">
-            <el-input v-model="queryForm.apiName" placeholder="请输入接口名称" clearable />
-          </el-form-item>
-        </el-form>
-      </div>
-      <div class="search-actions">
-        <button class="btn-search" @click="handleSearch">
-          <el-icon><Search /></el-icon> 查询
-        </button>
-        <button class="btn-reset" @click="handleReset">重置</button>
-      </div>
-    </div>
-
-    <div class="rf-table-card">
-      <el-table :data="apiList" stripe v-loading="loading" class="rf-data-table" :fit="false" style="width: 100%" empty-text="暂无数据">
-        <el-table-column type="index" label="#" width="52" align="center" />
-        <el-table-column prop="apiCode" label="接口编码" width="240">
-          <template #default="{ row }">
-            <span class="rf-code">{{ row.apiCode }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="apiName" label="接口名称" min-width="180" class-name="cell-wrap" />
-        <el-table-column prop="apiType" label="类型" width="100" align="center">
-          <template #default="{ row }">
-            <span :class="['rf-tag', row.apiType]">
-              {{ { proxy: '代理', sql: 'SQL', script: '脚本', data: '数据', plugin: '插件' }[row.apiType] || row.apiType }}
-            </span>
-          </template>
-        </el-table-column>
-        <!-- <el-table-column label="原始接口" min-width="240" class-name="cell-wrap">
-          <template #default="{ row }">
-            <div class="endpoint-row">
-              <span :class="['rf-tag', row.method?.toLowerCase()]">{{ row.method }}</span>
-              <span v-if="row.apiType === 'sql'" class="endpoint-url endpoint-sql">SQL语句</span>
-              <span v-else class="endpoint-url">{{ row.url }}</span>
+  <div class="api-mgr-page" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
+    <!-- 左侧面板：应用目录 -->
+    <Transition name="sidebar">
+      <div v-show="!sidebarCollapsed" class="app-sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">
+            <el-icon :size="18"><FolderOpened /></el-icon>
+            <span>应用目录</span>
+          </div>
+          <div class="sidebar-actions">
+            <el-button type="primary" size="small" circle @click="handleAddApp">
+              <el-icon><Plus /></el-icon>
+            </el-button>
+            <el-button size="small" text circle @click="sidebarCollapsed = true">
+              <el-icon><Fold /></el-icon>
+            </el-button>
+          </div>
+        </div>
+        <div class="app-search">
+          <el-input v-model="appKeyword" placeholder="搜索应用" clearable prefix-icon="Search" size="small" />
+        </div>
+        <div v-loading="appLoading" class="app-list">
+          <div class="app-item all-apps" :class="{ active: !selectedAppId }" @click="selectApp(null)">
+            <div class="app-icon all">
+              <el-icon :size="20"><Grid /></el-icon>
             </div>
-          </template>
-        </el-table-column> -->
-        <el-table-column label="代理接口" min-width="300" class-name="cell-wrap">
-          <template #default="{ row }">
-            <div class="endpoint-row">
-              <span :class="['rf-tag', row.openMethod?.toLowerCase()]">{{ row.openMethod }}</span>
-              <span class="rf-code">/open{{ row.openPath || '/' + row.apiCode }}</span>
+            <div class="app-info">
+              <div class="app-name">全部接口</div>
+              <div class="app-meta">{{ totalApiCount }} 个接口</div>
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="120" align="center">
-          <template #default="{ row }">
-            <el-switch v-model="row.status" :active-value="1" :inactive-value="0" @change="handleStatusChange(row)" />
-          </template>
-        </el-table-column>
-        <el-table-column label="流程触发" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag v-if="row.triggerEnabled === 1" type="success" size="small">已启用</el-tag>
-            <el-tag v-else type="info" size="small">未启用</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right" align="center">
-          <template #default="{ row }">
-            <div class="rf-actions">
-              <button class="action-btn success" title="调试" @click="handleDebug(row)">
-                <el-icon><Promotion /></el-icon>
-              </button>
-              <button class="action-btn primary" title="编辑" @click="handleEdit(row)">
+          </div>
+          <div
+            v-for="app in filteredApps"
+            :key="app.id"
+            class="app-item"
+            :class="{ active: selectedAppId === app.id }"
+            @click="selectApp(app)"
+          >
+            <div class="app-icon">
+              <el-icon :size="18"><Folder /></el-icon>
+            </div>
+            <div class="app-info">
+              <div class="app-name">{{ app.appName }}</div>
+              <div class="app-meta">{{ app.appCode }} · {{ app.apiCount || 0 }} 个接口</div>
+            </div>
+            <div class="app-actions">
+              <el-button link type="primary" size="small" @click.stop="handleEditApp(app)">
                 <el-icon><Edit /></el-icon>
-              </button>
-              <button class="action-btn danger" title="删除" @click="handleDelete(row)">
+              </el-button>
+              <el-button link type="danger" size="small" @click.stop="handleDeleteApp(app)">
                 <el-icon><Delete /></el-icon>
-              </button>
+              </el-button>
             </div>
-          </template>
-        </el-table-column>
-      </el-table>
+          </div>
+          <div v-if="filteredApps.length === 0" class="app-empty">
+            暂无应用
+          </div>
+        </div>
+      </div>
+    </Transition>
 
-      <div class="rf-pagination">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.size"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @update:page-size="handleSearch"
-          @update:current-page="handleSearch"
-        />
+    <!-- 右侧面板：API 列表 -->
+    <div class="api-main">
+      <div class="rf-list-header">
+        <div class="header-left">
+          <el-button v-if="sidebarCollapsed" class="expand-btn" size="small" text circle @click="sidebarCollapsed = false">
+            <el-icon><Expand /></el-icon>
+          </el-button>
+          <div>
+            <h1 class="title">{{ currentAppName }}</h1>
+            <p class="subtitle">{{ currentAppDesc }}</p>
+          </div>
+        </div>
+        <button v-if="selectedAppId" class="btn-primary" @click="handleAdd">
+          <el-icon><Plus /></el-icon> 注册接口
+        </button>
+      </div>
+
+      <!-- 搜索栏 -->
+      <div class="rf-search-bar">
+        <div class="search-fields">
+          <el-form :model="queryForm" inline>
+            <el-form-item label="接口编码">
+              <el-input v-model="queryForm.apiCode" placeholder="请输入接口编码" clearable />
+            </el-form-item>
+            <el-form-item label="接口名称">
+              <el-input v-model="queryForm.apiName" placeholder="请输入接口名称" clearable />
+            </el-form-item>
+          </el-form>
+        </div>
+        <div class="search-actions">
+          <button class="btn-search" @click="handleSearch">
+            <el-icon><Search /></el-icon> 查询
+          </button>
+          <button class="btn-reset" @click="handleReset">重置</button>
+        </div>
+      </div>
+
+      <div class="rf-table-card">
+        <el-table :data="apiList" stripe v-loading="loading" class="rf-data-table" style="width: 100%" empty-text="暂无数据">
+          <el-table-column type="index" label="#" width="52" align="center" />
+          <el-table-column prop="apiCode" label="接口编码" width="220">
+            <template #default="{ row }">
+              <span class="rf-code">{{ row.apiCode }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="apiName" label="接口名称" min-width="160" class-name="cell-wrap" />
+          <el-table-column prop="apiType" label="类型" width="90" align="center">
+            <template #default="{ row }">
+              <span :class="['rf-tag', row.apiType]">
+                {{ { proxy: '代理', sql: 'SQL', script: '脚本', data: '数据', plugin: '插件' }[row.apiType] || row.apiType }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="代理接口" min-width="280" class-name="cell-wrap">
+            <template #default="{ row }">
+              <div class="endpoint-row">
+                <span :class="['rf-tag', row.openMethod?.toLowerCase()]">{{ row.openMethod }}</span>
+                <span class="rf-code">/open{{ row.openPath || '/' + row.apiCode }}</span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="status" label="状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-switch v-if="selectedAppId" v-model="row.status" :active-value="1" :inactive-value="0" @change="handleStatusChange(row)" />
+              <el-tag v-else :type="row.status === 1 ? 'success' : 'info'" size="small">{{ row.status === 1 ? '已发布' : '草稿' }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column v-if="!selectedAppId" label="所属应用" width="140" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.appId" type="primary" size="small">{{ getAppName(row.appId) }}</el-tag>
+              <span v-else class="rf-text-muted">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="流程触发" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.triggerEnabled === 1" type="success" size="small">已启用</el-tag>
+              <el-tag v-else type="info" size="small">未启用</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column v-if="selectedAppId" label="操作" width="120" fixed="right" align="center">
+            <template #default="{ row }">
+              <div class="rf-actions">
+                <button class="action-btn success" title="调试" @click="handleDebug(row)">
+                  <el-icon><Promotion /></el-icon>
+                </button>
+                <button class="action-btn primary" title="编辑" @click="handleEdit(row)">
+                  <el-icon><Edit /></el-icon>
+                </button>
+                <button class="action-btn danger" title="删除" @click="handleDelete(row)">
+                  <el-icon><Delete /></el-icon>
+                </button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div class="rf-pagination">
+          <el-pagination
+            v-model:current-page="pagination.page"
+            v-model:page-size="pagination.size"
+            :total="pagination.total"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            @update:page-size="handlePageChange"
+            @update:current-page="handlePageChange"
+          />
+        </div>
       </div>
     </div>
+
+    <!-- 应用编辑弹窗 -->
+    <el-dialog v-model="appDialogVisible" :title="appDialogTitle" width="520px" top="20vh" destroy-on-close :close-on-click-modal="false">
+      <el-form ref="appFormRef" :model="appForm" :rules="appFormRules" label-width="90px">
+        <el-form-item label="应用编码" prop="appCode">
+          <el-input v-model="appForm.appCode" placeholder="如 user-center" :disabled="!!appForm.id" />
+        </el-form-item>
+        <el-form-item label="应用名称" prop="appName">
+          <el-input v-model="appForm.appName" placeholder="如 用户中心" />
+        </el-form-item>
+        <el-form-item label="应用图标" prop="icon">
+          <el-input v-model="appForm.icon" placeholder="Element Plus 图标名，如 Folder" />
+        </el-form-item>
+        <el-form-item label="排序号" prop="sortNo">
+          <el-input-number v-model="appForm.sortNo" :min="0" :max="9999" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-radio-group v-model="appForm.status">
+            <el-radio :label="1">启用</el-radio>
+            <el-radio :label="0">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="应用描述" prop="description">
+          <el-input v-model="appForm.description" type="textarea" :rows="3" placeholder="请输入应用描述" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="appDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="appSubmitLoading" @click="handleSubmitApp">保存</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 注册/编辑弹窗 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="780px" top="5vh" destroy-on-close :close-on-click-modal="false" class="edit-dialog">
@@ -111,17 +208,24 @@
           <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px" class="edit-form">
             <el-row :gutter="16">
               <el-col :span="12">
+                <el-form-item label="所属应用" prop="appId">
+                  <el-select v-model="form.appId" placeholder="请选择所属应用" :disabled="!!selectedAppId" clearable style="width: 100%">
+                    <el-option v-for="app in appList" :key="app.id" :label="app.appName" :value="app.id" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
                 <el-form-item label="接口编码" prop="apiCode">
                   <el-input v-model="form.apiCode" placeholder="如 API_001" :disabled="!!form.id" />
                 </el-form-item>
               </el-col>
+            </el-row>
+            <el-row :gutter="16">
               <el-col :span="12">
                 <el-form-item label="接口名称" prop="apiName">
                   <el-input v-model="form.apiName" placeholder="如 统一认证平台" />
                 </el-form-item>
               </el-col>
-            </el-row>
-            <el-row :gutter="16">
               <el-col :span="12">
                 <el-form-item label="接口类型" prop="apiType">
                   <el-select v-model="form.apiType" placeholder="请选择" style="width: 100%">
@@ -133,9 +237,21 @@
                   </el-select>
                 </el-form-item>
               </el-col>
+            </el-row>
+            <el-row :gutter="16">
               <el-col :span="12">
                 <el-form-item label="请求方式" prop="method">
                   <el-select v-model="form.method" placeholder="请选择" style="width: 100%">
+                    <el-option label="GET" value="GET" />
+                    <el-option label="POST" value="POST" />
+                    <el-option label="PUT" value="PUT" />
+                    <el-option label="DELETE" value="DELETE" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="代理后方式" prop="openMethod">
+                  <el-select v-model="form.openMethod" placeholder="请选择" style="width: 100%">
                     <el-option label="GET" value="GET" />
                     <el-option label="POST" value="POST" />
                     <el-option label="PUT" value="PUT" />
@@ -161,19 +277,6 @@
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="代理后方式" prop="openMethod">
-                  <el-select v-model="form.openMethod" placeholder="请选择" style="width: 100%">
-                    <el-option label="GET" value="GET" />
-                    <el-option label="POST" value="POST" />
-                    <el-option label="PUT" value="PUT" />
-                    <el-option label="DELETE" value="DELETE" />
-                  </el-select>
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <div class="proxy-path-hint">外部调用和调试均使用上述代理后的路径和请求方式</div>
-            <el-row :gutter="16">
-              <el-col :span="12">
                 <el-form-item label="Content-Type">
                   <el-select v-model="form.contentType" placeholder="请选择" style="width: 100%">
                     <el-option label="application/json" value="application/json" />
@@ -183,6 +286,9 @@
                   </el-select>
                 </el-form-item>
               </el-col>
+            </el-row>
+            <div class="proxy-path-hint">外部调用和调试均使用上述代理后的路径和请求方式</div>
+            <el-row :gutter="16">
               <el-col :span="12">
                 <el-form-item label="认证方式">
                   <el-select v-model="form.authType" placeholder="请选择" style="width: 100%">
@@ -191,6 +297,11 @@
                     <el-option label="Token" value="token" />
                     <el-option label="OAuth2" value="oauth2" />
                   </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="超时(ms)">
+                  <el-input-number v-model="form.timeout" :min="1000" :max="120000" :step="1000" style="width: 100%" />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -203,8 +314,8 @@
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="超时(ms)">
-                  <el-input-number v-model="form.timeout" :min="1000" :max="120000" :step="1000" style="width: 100%" />
+                <el-form-item label="重试次数">
+                  <el-input-number v-model="form.retryTimes" :min="0" :max="5" style="width: 100%" />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -212,18 +323,8 @@
             <!-- 脚本类型配置 -->
             <template v-if="form.apiType === 'script'">
               <el-form-item label="绑定脚本">
-                <el-select
-                  v-model="form.scriptId"
-                  placeholder="请选择要绑定的脚本"
-                  clearable
-                  style="width: 100%"
-                >
-                  <el-option
-                    v-for="s in scriptOptions"
-                    :key="s.id"
-                    :label="`${s.scriptName} (${s.scriptCode})`"
-                    :value="s.id"
-                  />
+                <el-select v-model="form.scriptId" placeholder="请选择要绑定的脚本" clearable style="width: 100%">
+                  <el-option v-for="s in scriptOptions" :key="s.id" :label="`${s.scriptName} (${s.scriptCode})`" :value="s.id" />
                 </el-select>
               </el-form-item>
             </template>
@@ -231,24 +332,11 @@
             <!-- 插件类型配置 -->
             <template v-if="form.apiType === 'plugin'">
               <el-form-item label="插件类型" prop="pluginType">
-                <el-select
-                  v-model="form.pluginType"
-                  placeholder="请选择已加载的插件"
-                  clearable
-                  style="width: 100%"
-                >
-                  <el-option
-                    v-for="p in pluginOptions"
-                    :key="p.pluginType"
-                    :label="`${p.pluginName} (${p.pluginType})`"
-                    :value="p.pluginType"
-                  />
+                <el-select v-model="form.pluginType" placeholder="请选择已加载的插件" clearable style="width: 100%">
+                  <el-option v-for="p in pluginOptions" :key="p.pluginType" :label="`${p.pluginName} (${p.pluginType})`" :value="p.pluginType" />
                 </el-select>
                 <div v-if="pluginOptions.length === 0" style="color: #f56c6c; font-size: 12px; margin-top: 4px;">
-                  未检测到已加载的插件，请检查插件管理页面是否已上传并启用（当前内存插件数: {{ pluginOptions.length }}）
-                </div>
-                <div v-else style="color: #67c23a; font-size: 12px; margin-top: 4px;">
-                  已加载 {{ pluginOptions.length }} 个插件: {{ pluginOptions.map(p => p.pluginType).join(', ') }}
+                  未检测到已加载的插件，请检查插件管理页面是否已上传并启用
                 </div>
               </el-form-item>
             </template>
@@ -350,8 +438,6 @@
     <el-dialog v-model="debugDialogVisible" title="接口调试" width="700px" destroy-on-close>
       <ApiDebugger :url="debugRow?.url" :method="debugRow?.method" :api-type="debugRow?.apiType" />
     </el-dialog>
-
-
   </div>
 </template>
 
@@ -368,10 +454,151 @@ import {
   getApiScriptList,
   getApiPluginList
 } from '@/api/apiMgr'
+import { getApiAppList, getApiAppListAll, saveApiApp, updateApiApp, deleteApiApp, getApiAppCounts } from '@/api/apiApp'
 import { getDatasourceList } from '@/api/datasource'
 import { getFlowDefinitionList } from '@/api/workflow'
 import ApiDebugger from '@/components/ApiDebugger/index.vue'
 
+/* ========== 应用目录相关 ========== */
+const sidebarCollapsed = ref(false)
+const appLoading = ref(false)
+const appList = ref([])
+const appKeyword = ref('')
+const selectedAppId = ref(null)
+const totalApiCount = ref(0)
+
+const filteredApps = computed(() => {
+  if (!appKeyword.value) return appList.value
+  const kw = appKeyword.value.toLowerCase()
+  return appList.value.filter(app =>
+    (app.appName && app.appName.toLowerCase().includes(kw)) ||
+    (app.appCode && app.appCode.toLowerCase().includes(kw))
+  )
+})
+
+const currentAppName = computed(() => {
+  if (!selectedAppId.value) return '全部接口'
+  const app = appList.value.find(a => a.id === selectedAppId.value)
+  return app ? app.appName : '接口列表'
+})
+
+const currentAppDesc = computed(() => {
+  if (!selectedAppId.value) return '管理系统所有对外暴露的 API 接口'
+  const app = appList.value.find(a => a.id === selectedAppId.value)
+  return app ? (app.description || '暂无描述') : ''
+})
+
+function getAppName(appId) {
+  if (!appId) return '-'
+  const app = appList.value.find(a => String(a.id) === String(appId))
+  return app ? app.appName : '-'
+}
+
+async function loadAppList() {
+  appLoading.value = true
+  try {
+    const res = await getApiAppList({ page: 1, size: 999, status: 1 })
+    const list = res.list || res.records || res || []
+    // 批量获取 API 数量
+    const appIds = list.map(a => a.id).filter(Boolean)
+    if (appIds.length > 0) {
+      try {
+        const countRes = await getApiAppCounts(appIds)
+        const counts = countRes || {}
+        list.forEach(app => {
+          app.apiCount = counts[app.id] || 0
+        })
+      } catch (e) {
+        // 忽略统计错误
+      }
+    }
+    appList.value = list
+  } finally {
+    appLoading.value = false
+  }
+}
+
+function selectApp(app) {
+  selectedAppId.value = app ? app.id : null
+  pagination.page = 1
+  loadList()
+}
+
+/* 应用弹窗 */
+const appDialogVisible = ref(false)
+const appDialogTitle = ref('新增应用')
+const appFormRef = ref(null)
+const appSubmitLoading = ref(false)
+const appForm = reactive({
+  id: null,
+  appCode: '',
+  appName: '',
+  description: '',
+  icon: '',
+  sortNo: 0,
+  status: 1
+})
+const appFormRules = {
+  appCode: [{ required: true, message: '请输入应用编码', trigger: 'blur' }],
+  appName: [{ required: true, message: '请输入应用名称', trigger: 'blur' }]
+}
+
+function handleAddApp() {
+  appDialogTitle.value = '新增应用'
+  Object.assign(appForm, {
+    id: null,
+    appCode: '',
+    appName: '',
+    description: '',
+    icon: '',
+    sortNo: 0,
+    status: 1
+  })
+  appDialogVisible.value = true
+}
+
+function handleEditApp(app) {
+  appDialogTitle.value = '编辑应用'
+  Object.assign(appForm, { ...app })
+  appDialogVisible.value = true
+}
+
+async function handleDeleteApp(app) {
+  try {
+    await ElMessageBox.confirm(`确认删除应用「${app.appName}」？`, '删除确认', { type: 'warning' })
+    await deleteApiApp(app.id)
+    ElMessage.success('删除成功')
+    if (selectedAppId.value === app.id) {
+      selectedAppId.value = null
+    }
+    loadAppList()
+    loadList()
+  } catch (e) {
+    // 取消或失败
+  }
+}
+
+async function handleSubmitApp() {
+  const valid = await appFormRef.value.validate().catch(() => false)
+  if (!valid) return
+  appSubmitLoading.value = true
+  try {
+    if (appForm.id) {
+      await updateApiApp(appForm)
+    } else {
+      await saveApiApp(appForm)
+    }
+    ElMessage.success('保存成功')
+    appDialogVisible.value = false
+    loadAppList()
+  } catch (e) {
+    // 错误已由 request 拦截器提示
+  } finally {
+    appSubmitLoading.value = false
+  }
+}
+
+/* ========== 接口列表相关（保留原有逻辑） ========== */
 const loading = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = ref('注册接口')
@@ -398,6 +625,7 @@ const datasourceOptions = ref([])
 const flowDefinitionOptions = ref([])
 const form = reactive({
   id: null,
+  appId: null,
   apiCode: '',
   apiName: '',
   apiType: 'proxy',
@@ -426,6 +654,7 @@ const scriptOptions = ref([])
 const pluginOptions = ref([])
 
 const formRules = {
+  appId: [{ required: true, message: '请选择所属应用', trigger: 'change' }],
   apiCode: [{ required: true, message: '请输入接口编码', trigger: 'blur' }],
   apiName: [{ required: true, message: '请输入接口名称', trigger: 'blur' }],
   apiType: [{ required: true, message: '请选择接口类型', trigger: 'change' }],
@@ -437,14 +666,12 @@ const formRules = {
 
 const allParams = ref([])
 
-// 给参数分配 clientId（用于前端嵌套关系）
 function ensureClientId(param) {
   if (!param.clientId) {
     param.clientId = 'c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
   }
 }
 
-// 计算参数的层级
 function getParamLevel(param) {
   if (!param.parentId || param.parentId === '0' || param.parentId === 0 || param.parentId === 'null') return 0
   const parent = allParams.value.find(p =>
@@ -457,14 +684,11 @@ function getParamLevel(param) {
 
 const filteredParams = computed(() => {
   const typeParams = allParams.value.filter(p => p.paramType === paramTab.value)
-  // 确保每个参数有 clientId
   typeParams.forEach(ensureClientId)
-  // 计算层级并直接写入原始对象（保证 v-model 双向绑定）
   typeParams.forEach(p => {
     p._level = getParamLevel(p)
   })
 
-  // 按父子关系排序：父参数 -> 子参数(递归) -> 下一个父参数
   function collectWithChildren(parentId, result) {
     const children = typeParams
       .filter(p => {
@@ -517,17 +741,16 @@ function addChildParam(parent) {
 
 function removeParam(row) {
   const idsToDelete = new Set()
-  
+
   function collectIds(target) {
     idsToDelete.add(target.clientId)
-    // 找到所有子参数（parentId 匹配 clientId 或数据库 id）
     allParams.value.forEach(p => {
       if (p.parentId === target.clientId || p.parentId === target.id || String(p.parentId) === String(target.id)) {
         collectIds(p)
       }
     })
   }
-  
+
   collectIds(row)
   allParams.value = allParams.value.filter(p => !idsToDelete.has(p.clientId))
 }
@@ -536,11 +759,16 @@ async function loadList() {
   loading.value = true
   try {
     const params = { page: pagination.page, size: pagination.size }
+    if (selectedAppId.value) params.appId = selectedAppId.value
     if (queryForm.apiCode) params.apiCode = queryForm.apiCode
     if (queryForm.apiName) params.apiName = queryForm.apiName
     const res = await getApiCatalogList(params)
     apiList.value = res.list || res.records || res || []
     pagination.total = Number(res.total) || 0
+    // 同时更新全部接口计数（用于左侧"全部接口"卡片）
+    if (!selectedAppId.value) {
+      totalApiCount.value = pagination.total
+    }
   } finally {
     loading.value = false
   }
@@ -548,6 +776,10 @@ async function loadList() {
 
 function handleSearch() {
   pagination.page = 1
+  loadList()
+}
+
+function handlePageChange() {
   loadList()
 }
 
@@ -573,6 +805,7 @@ function handleAdd() {
   paramTab.value = 'header'
   Object.assign(form, {
     id: null,
+    appId: selectedAppId.value,
     apiCode: '',
     apiName: '',
     apiType: 'proxy',
@@ -612,11 +845,8 @@ async function loadScriptOptions() {
 async function loadPluginOptions() {
   try {
     const res = await getApiPluginList()
-    console.log('[DEBUG] /plugin/api-loaded 返回:', res)
     pluginOptions.value = res.plugins || []
-    console.log('[DEBUG] pluginOptions:', pluginOptions.value)
   } catch (e) {
-    console.error('[DEBUG] /plugin/api-loaded 请求失败:', e)
     pluginOptions.value = []
   }
 }
@@ -634,9 +864,7 @@ async function handleEdit(row) {
   try {
     const params = await getApiParams(row.id)
     allParams.value = Array.isArray(params) ? params : []
-    // 为每个参数分配 clientId
     allParams.value.forEach(ensureClientId)
-    // 将数据库的 parent_id（数字）转换为 clientId 引用，供前端嵌套展示使用
     allParams.value.forEach(p => {
       if (p.parentId && p.parentId !== '0' && p.parentId !== 0) {
         const parent = allParams.value.find(pp =>
@@ -647,7 +875,6 @@ async function handleEdit(row) {
         }
       }
     })
-    // 智能切换参数Tab：按 body > query > header > response 优先级
     if (allParams.value.length > 0) {
       const hasBody = allParams.value.some(p => p.paramType === 'body')
       const hasQuery = allParams.value.some(p => p.paramType === 'query')
@@ -670,7 +897,6 @@ async function handleSubmit() {
   }
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
-  // 自动补全 openPath 前缀并校验
   if (form.openPath && !form.openPath.startsWith('/')) {
     form.openPath = '/' + form.openPath
   }
@@ -687,7 +913,6 @@ async function handleSubmit() {
       const res = await saveApiCatalog(form)
       apiId = res
     }
-    // 保存参数（包含 clientId 和 parentClientId 用于嵌套关系）
     const validParams = allParams.value.filter(p => p.paramKey).map(p => ({
       ...p,
       clientId: p.clientId,
@@ -700,6 +925,10 @@ async function handleSubmit() {
     ElMessage.success('保存成功')
     dialogVisible.value = false
     loadList()
+    // 如果创建了接口且选中了应用，刷新应用列表以更新数量
+    if (form.appId) {
+      loadAppList()
+    }
   } catch (e) {
     // 错误已由 request 拦截器提示
   } finally {
@@ -713,6 +942,7 @@ async function handleDelete(row) {
     await deleteApiCatalog(row.id)
     ElMessage.success('删除成功')
     loadList()
+    loadAppList()
   } catch (e) {
     // 取消或失败
   }
@@ -729,7 +959,6 @@ async function handleStatusChange(row) {
 
 function handleDebug(row) {
   debugRow.value = { ...row }
-  // 调试使用用户配置的代理后路径和方式
   debugRow.value.url = `/api/open${row.openPath || '/' + row.apiCode}`
   debugRow.value.method = row.openMethod || row.method || 'POST'
   debugDialogVisible.value = true
@@ -744,16 +973,247 @@ async function loadFlowDefinitionOptions() {
   }
 }
 
+async function loadTotalApiCount() {
+  try {
+    const res = await getApiCatalogList({ page: 1, size: 1 })
+    totalApiCount.value = Number(res.total) || 0
+  } catch (e) {
+    totalApiCount.value = 0
+  }
+}
+
 onMounted(() => {
   loadDatasourceOptions()
   loadFlowDefinitionOptions()
   loadScriptOptions()
   loadPluginOptions()
+  loadAppList()
+  loadTotalApiCount()
   loadList()
 })
 </script>
 
 <style scoped lang="scss">
+.api-mgr-page {
+  display: flex;
+  height: calc(100vh - 100px);
+  gap: 16px;
+  position: relative;
+}
+
+/* 左侧面板 */
+.app-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e4e7ed;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #f0f0f0;
+
+  .sidebar-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .sidebar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.app-search {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.app-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.app-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 4px;
+  position: relative;
+
+  &:hover {
+    background: #f5f7fa;
+
+    .app-actions {
+      opacity: 1;
+    }
+  }
+
+  &.active {
+    background: #ecf5ff;
+    border-left: 3px solid #409eff;
+
+    .app-icon {
+      color: #409eff;
+    }
+
+    .app-name {
+      color: #409eff;
+      font-weight: 600;
+    }
+  }
+
+  &.all-apps {
+    .app-icon.all {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: #f0f9ff;
+      color: #409eff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
+.app-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.app-info {
+  flex: 1;
+  min-width: 0;
+
+  .app-name {
+    font-size: 14px;
+    color: #1f2937;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .app-meta {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.app-actions {
+  opacity: 0;
+  transition: opacity 0.2s;
+  display: flex;
+  gap: 2px;
+}
+
+.app-empty {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 13px;
+  padding: 40px 0;
+}
+
+/* 左侧过渡动画 */
+.sidebar-enter-active,
+.sidebar-leave-active {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.sidebar-enter-from,
+.sidebar-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.sidebar-leave-active {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+}
+
+/* 右侧面板 */
+.api-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e4e7ed;
+  padding: 20px 24px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+
+  .rf-list-header {
+    flex-shrink: 0;
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .expand-btn {
+        flex-shrink: 0;
+      }
+    }
+  }
+
+  .rf-search-bar {
+    flex-shrink: 0;
+  }
+
+  .rf-table-card {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    .el-table {
+      flex: 1;
+      overflow: auto;
+    }
+
+    .rf-pagination {
+      flex-shrink: 0;
+      padding-top: 12px;
+    }
+  }
+}
+
+/* 保持原有样式 */
 .param-toolbar {
   display: flex;
   justify-content: space-between;
@@ -780,21 +1240,6 @@ onMounted(() => {
       color: var(--rf-text-muted);
       font-style: italic;
     }
-  }
-}
-
-.proxy-path-block {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 10px 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  .placeholder {
-    color: #94a3b8;
-    background: #f1f5f9;
   }
 }
 
