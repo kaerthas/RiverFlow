@@ -35,6 +35,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -365,7 +366,9 @@ public class OpenApiController {
             return R.fail("SQL 未配置");
         }
 
-        String resolvedSql = resolveSql(sql, params);
+        PreparedSql prepared = resolvePreparedSql(sql, params);
+        String resolvedSql = prepared.getSql();
+        Object[] args = prepared.getArgs();
         Long dsId = api.getDsId();
 
         try {
@@ -375,17 +378,19 @@ public class OpenApiController {
 
             if (dsId == null || dsId == 0) {
                 // 使用主库
-                result = isSelect ? jdbcTemplate.queryForList(resolvedSql)
-                        : jdbcTemplate.update(resolvedSql);
+                result = isSelect ? jdbcTemplate.queryForList(resolvedSql, args)
+                        : jdbcTemplate.update(resolvedSql, args);
             } else {
                 // 切换到动态数据源
                 Datasource ds = datasourceService.getById(dsId);
                 if (ds == null) {
                     return R.fail("数据源不存在: dsId=" + dsId);
                 }
+                final String execSql = resolvedSql;
+                final Object[] execArgs = args;
                 result = dynamicDataSourceService.executeWithDs(ds.getDsCode(), () -> {
-                    return isSelect ? jdbcTemplate.queryForList(resolvedSql)
-                            : jdbcTemplate.update(resolvedSql);
+                    return isSelect ? jdbcTemplate.queryForList(execSql, execArgs)
+                            : jdbcTemplate.update(execSql, execArgs);
                 });
             }
 
@@ -439,36 +444,46 @@ public class OpenApiController {
     }
 
     /**
-     * 解析 SQL 中的 #{xxx} 占位符
+     * 解析 SQL 中的 #{xxx} 占位符，返回预编译SQL和参数列表
      */
-    private String resolveSql(String sql, Map<String, Object> params) {
+    private PreparedSql resolvePreparedSql(String sql, Map<String, Object> params) {
         if (params == null || params.isEmpty()) {
-            return sql;
+            return new PreparedSql(sql, new Object[0]);
         }
         Pattern pattern = Pattern.compile("#\\{([^}]+)}");
         Matcher matcher = pattern.matcher(sql);
         StringBuffer sb = new StringBuffer();
+        List<Object> args = new ArrayList<>();
         while (matcher.find()) {
             String key = matcher.group(1).trim();
             // 支持嵌套路径取值，如 baseInfo.person.name
             Object value = NestedParamResolver.getValueByPath(params, key);
-            String replacement = formatSqlValue(value);
-            matcher.appendReplacement(sb, replacement);
+            if (value instanceof Map || value instanceof List) {
+                value = JSON.toJSONString(value);
+            }
+            args.add(value);
+            matcher.appendReplacement(sb, "?");
         }
         matcher.appendTail(sb);
-        return sb.toString();
+        return new PreparedSql(sb.toString(), args.toArray());
     }
 
-    private String formatSqlValue(Object value) {
-        if (value == null) {
-            return "NULL";
+    private static class PreparedSql {
+        private final String sql;
+        private final Object[] args;
+
+        public PreparedSql(String sql, Object[] args) {
+            this.sql = sql;
+            this.args = args;
         }
-        // Map/List 自动序列化为 JSON 字符串（用于 JSON 类型字段）
-        if (value instanceof Map || value instanceof List) {
-            return "'" + JSON.toJSONString(value).replace("'", "''") + "'";
+
+        public String getSql() {
+            return sql;
         }
-        String str = String.valueOf(value);
-        return "'" + str.replace("'", "''") + "'";
+
+        public Object[] getArgs() {
+            return args;
+        }
     }
 
     /**

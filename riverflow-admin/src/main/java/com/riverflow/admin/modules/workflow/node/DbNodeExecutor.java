@@ -13,6 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -57,17 +58,21 @@ public class DbNodeExecutor implements NodeExecutor {
         }
 
         // 解析 SQL 中的 SpEL 占位符
-        String resolvedSql = resolveSql(sql, context);
+        PreparedSql prepared = resolvePreparedSql(sql, context);
+        String resolvedSql = prepared.getSql();
+        Object[] args = prepared.getArgs();
         log.debug("[流程实例:{}] 解析后SQL: {}", context.getInstanceId(), resolvedSql);
 
         try {
             Object result;
             if (dsCode == null || dsCode.isEmpty() || "master".equals(dsCode)) {
                 // 使用默认数据源
-                result = executeSql(operation, resolvedSql);
+                result = executeSql(operation, resolvedSql, args);
             } else {
                 // 切换到动态数据源
-                result = dynamicDataSourceService.executeWithDs(dsCode, () -> executeSql(operation, resolvedSql));
+                final String execSql = resolvedSql;
+                final Object[] execArgs = args;
+                result = dynamicDataSourceService.executeWithDs(dsCode, () -> executeSql(operation, execSql, execArgs));
             }
 
             log.info("[流程实例:{}] SQL执行完成: op={}, result={}",
@@ -102,38 +107,54 @@ public class DbNodeExecutor implements NodeExecutor {
     }
 
     /**
-     * 解析 SQL 中的 SpEL 占位符
+     * 解析 SQL 中的 SpEL 占位符，转为 PreparedStatement 参数化SQL
      */
-    private String resolveSql(String sql, FlowContext context) {
+    private PreparedSql resolvePreparedSql(String sql, FlowContext context) {
         Matcher matcher = SPEL_PATTERN.matcher(sql);
         StringBuffer sb = new StringBuffer();
+        List<Object> args = new ArrayList<>();
         while (matcher.find()) {
             String expression = matcher.group(1);
             Object value = context.getByPath(expression);
-            String replacement = value != null ? escapeSql(String.valueOf(value)) : "NULL";
-            matcher.appendReplacement(sb, replacement);
+            if (value instanceof Map || value instanceof List) {
+                value = JSON.toJSONString(value);
+            }
+            args.add(value);
+            matcher.appendReplacement(sb, "?");
         }
         matcher.appendTail(sb);
-        return sb.toString();
+        return new PreparedSql(sb.toString(), args.toArray());
     }
 
-    private String escapeSql(String value) {
-        if (value == null) return "NULL";
-        // 简单转义单引号
-        return "'" + value.replace("'", "''") + "'";
+    private static class PreparedSql {
+        private final String sql;
+        private final Object[] args;
+
+        public PreparedSql(String sql, Object[] args) {
+            this.sql = sql;
+            this.args = args;
+        }
+
+        public String getSql() {
+            return sql;
+        }
+
+        public Object[] getArgs() {
+            return args;
+        }
     }
 
     /**
-     * 执行 SQL
+     * 执行 SQL（参数化查询）
      */
-    private Object executeSql(String operation, String sql) {
+    private Object executeSql(String operation, String sql, Object[] args) {
         switch (operation != null ? operation.toLowerCase() : "select") {
             case "select":
-                return jdbcTemplate.queryForList(sql);
+                return jdbcTemplate.queryForList(sql, args);
             case "insert":
             case "update":
             case "delete":
-                return jdbcTemplate.update(sql);
+                return jdbcTemplate.update(sql, args);
             default:
                 throw new IllegalArgumentException("不支持的操作类型: " + operation);
         }

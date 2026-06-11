@@ -15,7 +15,7 @@
         </el-input>
       </el-form-item>
 
-      <el-form-item label="Headers">
+      <el-form-item v-if="props.apiType !== 'sql'" label="Headers">
         <div v-for="(h, idx) in headers" :key="idx" class="kv-row">
           <el-input v-model="h.key" placeholder="Key" size="small" />
           <el-input v-model="h.value" placeholder="Value" size="small" />
@@ -74,7 +74,8 @@ import MonacoEditor from '@/components/MonacoEditor/index.vue'
 
 const props = defineProps({
   url: { type: String, default: '' },
-  method: { type: String, default: 'GET' }
+  method: { type: String, default: 'GET' },
+  apiType: { type: String, default: 'proxy' }
 })
 
 const debugUrl = ref(props.url)
