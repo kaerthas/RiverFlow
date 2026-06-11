@@ -37,12 +37,20 @@ public class DatasourceController {
     @PostMapping
     public R<Long> save(@RequestBody Datasource datasource) {
         datasourceService.saveOrUpdate(datasource);
-        // 如果状态为启用，动态加载
+        // 如果状态为启用，先移除旧的再重新加载，避免连接池重复或旧配置残留
         if (datasource.getStatus() != null && datasource.getStatus() == 1) {
             try {
+                dynamicDataSourceService.removeDataSource(datasource.getDsCode());
                 dynamicDataSourceService.addDataSource(datasource);
             } catch (Exception e) {
                 log.error("动态加载数据源失败: {}", e.getMessage());
+            }
+        } else {
+            // 状态为停用时，确保移除已存在的连接池
+            try {
+                dynamicDataSourceService.removeDataSource(datasource.getDsCode());
+            } catch (Exception e) {
+                // 忽略移除不存在的连接池的异常
             }
         }
         return R.ok(datasource.getId());
@@ -51,6 +59,21 @@ public class DatasourceController {
     @PutMapping
     public R<Long> update(@RequestBody Datasource datasource) {
         datasourceService.updateById(datasource);
+        // 更新后重新加载或移除连接池，确保配置实时生效
+        if (datasource.getStatus() != null && datasource.getStatus() == 1) {
+            try {
+                dynamicDataSourceService.removeDataSource(datasource.getDsCode());
+                dynamicDataSourceService.addDataSource(datasource);
+            } catch (Exception e) {
+                log.error("动态重载数据源失败: {}", e.getMessage());
+            }
+        } else {
+            try {
+                dynamicDataSourceService.removeDataSource(datasource.getDsCode());
+            } catch (Exception e) {
+                // 忽略移除不存在的连接池的异常
+            }
+        }
         return R.ok(datasource.getId());
     }
 

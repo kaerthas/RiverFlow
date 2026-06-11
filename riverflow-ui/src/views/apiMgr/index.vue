@@ -436,7 +436,7 @@
 
     <!-- 调试弹窗 -->
     <el-dialog v-model="debugDialogVisible" title="接口调试" width="700px" destroy-on-close>
-      <ApiDebugger :url="debugRow?.url" :method="debugRow?.method" />
+      <ApiDebugger :url="debugRow?.url" :method="debugRow?.method" :api-type="debugRow?.apiType" />
     </el-dialog>
   </div>
 </template>
@@ -1226,6 +1226,12 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+
+  .rf-code {
+    white-space: normal;
+    word-break: break-all;
+  }
+
   .endpoint-url {
     font-size: 13px;
     color: var(--rf-text-secondary);

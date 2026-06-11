@@ -6,12 +6,14 @@ import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.DigestUtils;
 
+import javax.annotation.PreDestroy;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
 /**
  * Groovy 沙箱执行器
@@ -26,11 +28,28 @@ public class GroovySandboxExecutor {
      */
     private static final Map<String, Script> SCRIPT_CACHE = new ConcurrentHashMap<>();
 
-    /**
-     * 默认脚本模板前缀：注入常用工具类
-     */
     @Autowired
     private StringRedisTemplate redisTemplate;
+
+    /**
+     * 脚本执行线程池
+     */
+    private final ExecutorService scriptExecutor = new ThreadPoolExecutor(
+        2, 10, 60L, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>(100),
+        r -> {
+            Thread t = new Thread(r, "groovy-script-pool");
+            t.setDaemon(true);
+            return t;
+        },
+        new ThreadPoolExecutor.CallerRunsPolicy()
+    );
+
+    /**
+     * 脚本执行超时（秒）
+     */
+    @Value("${riverflow.groovy.timeout:5}")
+    private int scriptTimeoutSeconds;
 
     private static final String SCRIPT_TEMPLATE_PREFIX =
         "import com.alibaba.fastjson2.JSON\n" +
@@ -77,24 +96,37 @@ public class GroovySandboxExecutor {
         String scriptMd5 = DigestUtils.md5DigestAsHex(fullScript.getBytes());
 
         try {
-            Script script = SCRIPT_CACHE.computeIfAbsent(scriptMd5, md5 -> {
-                GroovyShell shell = new GroovyShell();
-                return shell.parse(fullScript);
+            Future<JSONObject> future = scriptExecutor.submit(() -> {
+                Script script = SCRIPT_CACHE.computeIfAbsent(scriptMd5, md5 -> {
+                    GroovyShell shell = new GroovyShell();
+                    return shell.parse(fullScript);
+                });
+
+                Object result = script.invokeMethod("execute", new Object[]{args});
+
+                if (result == null) {
+                    return new JSONObject();
+                }
+                if (result instanceof JSONObject) {
+                    return (JSONObject) result;
+                }
+                return JSON.parseObject(JSON.toJSONString(result));
             });
 
-            Object result = script.invokeMethod("execute", new Object[]{args});
-
-            if (result == null) {
-                return new JSONObject();
-            }
-            if (result instanceof JSONObject) {
-                return (JSONObject) result;
-            }
-            return JSON.parseObject(JSON.toJSONString(result));
+            return future.get(scriptTimeoutSeconds, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            log.error("Groovy脚本执行超时（{}秒），已中断", scriptTimeoutSeconds);
+            throw new RuntimeException("脚本执行超时（最大" + scriptTimeoutSeconds + "秒），请优化脚本或联系管理员");
         } catch (Exception e) {
             log.error("Groovy 脚本执行失败: {}", e.getMessage(), e);
             throw new RuntimeException("脚本执行失败: " + e.getMessage(), e);
         }
+    }
+
+    @PreDestroy
+    public void destroy() {
+        scriptExecutor.shutdownNow();
+        log.info("Groovy脚本执行线程池已关闭");
     }
 
     /**
@@ -106,16 +138,33 @@ public class GroovySandboxExecutor {
     }
 
     /**
-     * 安全检查
+     * 安全检查（增强版：覆盖反射、脚本引擎、字符串拼接绕过等）
      */
     private boolean containsDangerousKeyword(String script) {
         String lower = script.toLowerCase();
         String[] dangers = {
+            // 命令执行
             "runtime.exec", "processbuilder", "system.exit",
+            // 类加载与反射
             "classloader", "defineclass", "loadclass",
+            "class.forname", "getmethod(", "getdeclaredmethod(", "invoke(", "newinstance(",
+            ".getclass()", ".class ", ".class\n", ".class\t",
+            "getruntime", "runtime.get",
+            // 文件系统
             "fileinputstream", "fileoutputstream", "file.delete",
-            "socket(", "serversocket(", "url(", "httpurlconnection",
-            "thread.sleep"
+            "randomaccessfile", "filewriter", "filereader", "file.create",
+            // 网络
+            "socket(", "serversocket(", "url(", "httpurlconnection", "openconnection",
+            // 脚本引擎与代码执行
+            "eval.me", "evaluate(", "groovyshell", "scriptengine",
+            "nashorn", "javascript", "compilercallback",
+            // 系统信息泄露
+            "system.getproperty", "system.getenv", "system.console", "system.in",
+            // 线程与并发
+            "thread.sleep", "thread.start", "thread.run",
+            "executor", "executors.", "scheduledexecutor",
+            // 进程
+            "process ", "process.", "processbuilder"
         };
         for (String danger : dangers) {
             if (lower.contains(danger)) {
@@ -123,6 +172,15 @@ public class GroovySandboxExecutor {
                 return true;
             }
         }
+
+        // 检测字符串拼接的恶意组合（如 runt + ime）
+        String stripped = lower.replaceAll("[\"'\\+\\s]", "");
+        if (stripped.contains("runtime") || stripped.contains("processbuilder")
+                || stripped.contains("fileoutputstream") || stripped.contains("fileinputstream")) {
+            log.warn("脚本可能包含字符串拼接绕过的危险调用");
+            return true;
+        }
+
         return false;
     }
 }
