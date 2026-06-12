@@ -1,24 +1,28 @@
 package com.riverflow.admin.modules.workflow.engine;
 
+import com.riverflow.admin.config.SemaphoreExecutorService;
 import com.riverflow.admin.service.FlowLogService;
 import com.riverflow.api.entity.FlowLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
  * 异步日志保存服务
- * 使用线程池异步保存流程日志，避免阻塞流程执行
- * 
+ * 使用虚拟线程执行器异步保存流程日志，避免阻塞流程执行
+ *
  * 同步流程：不需要重试，调用方可以自己处理
  * 异步流程：需要重试，确保日志不丢失
+ *
+ * <p>JDK 21 起切换为虚拟线程，最大并发数可通过
+ * {@code riverflow.virtual-thread.log-executor-max-concurrency} 配置，默认 10。
  */
 @Slf4j
 @Component
@@ -28,15 +32,14 @@ public class AsyncLogService {
     
     @Autowired
     private FlowLogService flowLogService;
-    
+
+    @Value("${riverflow.virtual-thread.log-executor-max-concurrency:10}")
+    private int logExecutorMaxConcurrency;
+
     @PostConstruct
     public void init() {
-        logExecutor = Executors.newFixedThreadPool(2, r -> {
-            Thread t = new Thread(r, "async-log-saver");
-            t.setDaemon(true);
-            return t;
-        });
-        log.info("异步日志服务初始化完成，线程池大小: 2");
+        logExecutor = new SemaphoreExecutorService(logExecutorMaxConcurrency);
+        log.info("异步日志服务初始化完成，虚拟线程执行器最大并发数: {}", logExecutorMaxConcurrency);
     }
     
     @PreDestroy

@@ -3,13 +3,20 @@ server:
   undertow:
     threads:
       io: 4
-      worker: 20
+      # worker 线程在开启 Spring 虚拟线程后由平台线程改为虚拟线程承载，
+      # 此处不再限制 worker 数量，交由 Spring Boot 自动管理。
+      # worker: 20
     buffer-size: 1024
     max-entity-size: 104857600
 
 spring:
   application:
     name: riverflow-admin
+
+  # 开启 JDK 21 虚拟线程：Undertow 请求处理、Spring @Async、TaskScheduler 等均使用虚拟线程
+  threads:
+    virtual:
+      enabled: true
 
   servlet:
     multipart:
@@ -23,6 +30,7 @@ spring:
     dynamic:
       primary: master
       strict: false
+      enabled: true
       datasource:
         master:
           url: jdbc:mysql://127.0.0.1:3306/riverflow?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
@@ -113,3 +121,16 @@ riverflow:
     # 启用插件系统
     enabled: true
     dir: ${user.home}/riverflow/plugins
+
+  # 虚拟线程执行器并发限制（JDK 21+ 生效）
+  # 取值应小于最稀缺外部连接池的容量，防止虚拟线程无界增长导致连接池耗尽或 OOM
+  virtual-thread:
+    # 流程任务执行器：工作流节点多为 HTTP/DB 阻塞 I/O，默认 30
+    flow-executor-max-concurrency: 30
+    # 异步日志执行器：日志写入主要为 DB 操作，默认 10
+    log-executor-max-concurrency: 10
+
+  # AI 服务配置（独立微服务 riverflow-ai）
+  ai-service:
+    base-url: http://localhost:8081
+    timeout: 60000
