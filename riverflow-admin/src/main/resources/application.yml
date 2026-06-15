@@ -142,4 +142,7 @@ riverflow:
   plugin:
     # 启用插件系统
     enabled: true
+    # 插件存储目录
     dir: ${user.home}/riverflow/plugins
+    # 插件文件最大大小，默认 50MB（单位：字节）
+    max-file-size: 52428800
