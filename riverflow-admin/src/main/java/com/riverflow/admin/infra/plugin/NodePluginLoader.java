@@ -47,6 +47,9 @@ public class NodePluginLoader implements SmartInitializingSingleton {
     @Autowired
     private ApplicationContext applicationContext;
 
+    @Autowired
+    private PluginFileValidator pluginFileValidator;
+
     private String pluginDir;
     private final Map<String, NodePlugin> pluginMap = new ConcurrentHashMap<>();
     private final Map<String, URLClassLoader> classLoaderMap = new ConcurrentHashMap<>();
@@ -112,10 +115,12 @@ public class NodePluginLoader implements SmartInitializingSingleton {
     }
 
     public R<String> uploadAndLoad(MultipartFile file) {
-        String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || !originalFilename.endsWith(".jar")) {
-            return R.fail("只支持JAR文件");
+        R<String> validateResult = pluginFileValidator.validate(file);
+        if (validateResult != null) {
+            return validateResult;
         }
+
+        String originalFilename = file.getOriginalFilename();
 
         try {
             long fileSize = file.getSize();
