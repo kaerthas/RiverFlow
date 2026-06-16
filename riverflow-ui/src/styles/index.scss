@@ -657,6 +657,11 @@ body {
       color: var(--rf-danger);
       background: var(--rf-danger-bg);
     }
+
+    &.info:hover {
+      color: var(--rf-info);
+      background: var(--rf-info-bg);
+    }
   }
 }
 
