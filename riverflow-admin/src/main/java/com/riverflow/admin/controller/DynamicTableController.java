@@ -276,21 +276,42 @@ public class DynamicTableController {
                 ddl.append(" NOT NULL");
             }
             if (col.getDefaultValue() != null && !col.getDefaultValue().isEmpty()) {
-                ddl.append(" DEFAULT '").append(col.getDefaultValue()).append("'");
+                String defaultValue = col.getDefaultValue();
+                // MySQL 函数默认值（如 CURRENT_TIMESTAMP）不需要单引号
+                if (isMysqlFunctionDefault(defaultValue)) {
+                    ddl.append(" DEFAULT ").append(defaultValue);
+                } else {
+                    ddl.append(" DEFAULT '").append(defaultValue).append("'");
+                }
             }
             if (col.getIsPk() != null && col.getIsPk() == 1) {
                 ddl.append(" PRIMARY KEY");
             }
+            if (col.getColumnName() != null && !col.getColumnName().isEmpty()) {
+                ddl.append(" COMMENT '").append(col.getColumnName()).append("'");
+            }
             if (i < sortedCols.size() - 1) {
                 ddl.append(",");
             }
-            ddl.append(" COMMENT '").append(col.getColumnName()).append("'\n");
+            ddl.append("\n");
         }
 
         ddl.append(") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci")
            .append(" COMMENT '").append(table.getTableName()).append("';");
 
         return ddl.toString();
+    }
+
+    /**
+     * 判断默认值是否为 MySQL 函数/关键字，无需单引号包裹
+     */
+    private boolean isMysqlFunctionDefault(String defaultValue) {
+        if (defaultValue == null) {
+            return false;
+        }
+        String upper = defaultValue.toUpperCase();
+        return upper.equals("CURRENT_TIMESTAMP") || upper.equals("NOW()")
+                || upper.startsWith("CURRENT_TIMESTAMP(");
     }
 
     /**

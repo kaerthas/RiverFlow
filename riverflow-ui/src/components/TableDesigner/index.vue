@@ -190,14 +190,23 @@ function parseSql() {
       const isRequired = /not\s*null/i.test(def) && !/default\s+null/i.test(def) ? 1 : 0
       const isIndex = /index|unique/i.test(def) ? 1 : 0
 
-      // 默认值
+      // 字段名称：优先从 COMMENT 解析，否则使用字段编码
+      let columnName = colName
+      const commentMatch = def.match(/comment\s+['"]([^'"]*)['"]/i)
+      if (commentMatch) {
+        columnName = commentMatch[1].trim() || colName
+      }
+
+      // 默认值（支持带空格的字符串，如 '2024-01-01 00:00:00'）
       let defaultValue = ''
-      const defaultMatch = def.match(/default\s+([^\s,)]+)/i)
-      if (defaultMatch) defaultValue = defaultMatch[1].replace(/['"]/g, '')
+      const defaultMatch = def.match(/default\s+('[^']*'|"[^"]*"|\S+)/i)
+      if (defaultMatch) {
+        defaultValue = defaultMatch[1].replace(/^['"]|['"]$/g, '')
+      }
 
       parsed.push({
         columnCode: colName,
-        columnName: colName,
+        columnName,
         dataType,
         length,
         decimalScale,
