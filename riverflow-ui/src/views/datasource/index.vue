@@ -58,8 +58,16 @@
         <el-form-item label="用户名" prop="username">
           <el-input v-model="form.username" placeholder="数据库用户名" />
         </el-form-item>
-        <el-form-item label="密码" prop="password">
-          <el-input v-model="form.password" type="password" placeholder="数据库密码" show-password />
+        <el-form-item label="密码" prop="password" :rules="passwordRule">
+          <el-input
+            v-model="form.password"
+            type="password"
+            :placeholder="isEdit ? '不修改请留空' : '数据库密码'"
+            show-password
+            autocomplete="new-password"
+            readonly
+            @focus="($event) => $event.target.removeAttribute('readonly')"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -71,7 +79,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getDatasourceList,
@@ -86,6 +94,7 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('新增数据源')
 const formRef = ref(null)
 const submitLoading = ref(false)
+const isEdit = ref(false)
 
 const datasourceList = ref([])
 
@@ -105,9 +114,15 @@ const formRules = {
   dsName: [{ required: true, message: '请输入数据源名称', trigger: 'blur' }],
   dbType: [{ required: true, message: '请选择数据库类型', trigger: 'change' }],
   url: [{ required: true, message: '请输入连接URL', trigger: 'blur' }],
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }]
 }
+
+// 密码校验规则（新增必填，编辑可选）
+const passwordRule = computed(() => {
+  return isEdit.value
+    ? []
+    : [{ required: true, message: '请输入密码', trigger: 'blur' }]
+})
 
 const dbTypeDriverMap = {
   mysql: 'com.mysql.cj.jdbc.Driver',
@@ -135,6 +150,7 @@ async function loadList() {
 
 function handleAdd() {
   dialogTitle.value = '新增数据源'
+  isEdit.value = false
   Object.assign(form, {
     id: null,
     dsCode: '',
@@ -150,7 +166,8 @@ function handleAdd() {
 
 function handleEdit(ds) {
   dialogTitle.value = '编辑数据源'
-  Object.assign(form, { ...ds })
+  isEdit.value = true
+  Object.assign(form, { ...ds, password: '' })
   dialogVisible.value = true
 }
 
