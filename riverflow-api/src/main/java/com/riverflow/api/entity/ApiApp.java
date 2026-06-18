@@ -26,6 +26,16 @@ public class ApiApp extends BaseEntity {
     private String appName;
 
     /**
+     * 应用标识（AK），开放接口调用方标识
+     */
+    private String appKey;
+
+    /**
+     * 应用密钥（SK），仅服务端与调用方持有
+     */
+    private String appSecret;
+
+    /**
      * 应用描述
      */
     private String description;

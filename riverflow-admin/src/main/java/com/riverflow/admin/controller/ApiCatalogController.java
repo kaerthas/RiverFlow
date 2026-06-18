@@ -3,6 +3,8 @@ package com.riverflow.admin.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.riverflow.admin.infra.openapi.SqlCheckResult;
+import com.riverflow.admin.infra.openapi.SqlSafetyChecker;
 import com.riverflow.admin.mapper.ApiParamMapper;
 import com.riverflow.admin.service.ApiCatalogService;
 import com.riverflow.admin.service.ApiParamService;
@@ -74,6 +76,10 @@ public class ApiCatalogController {
 
     @PostMapping
     public R<String> save(@RequestBody ApiCatalog apiCatalog) {
+        R<String> validateResult = validateSqlApi(apiCatalog);
+        if (validateResult != null) {
+            return validateResult;
+        }
         normalizeTriggerFlow(apiCatalog);
         apiCatalogService.saveOrUpdate(apiCatalog);
         return R.ok(String.valueOf(apiCatalog.getId()));
@@ -81,9 +87,26 @@ public class ApiCatalogController {
 
     @PutMapping
     public R<String> update(@RequestBody ApiCatalog apiCatalog) {
+        R<String> validateResult = validateSqlApi(apiCatalog);
+        if (validateResult != null) {
+            return validateResult;
+        }
         normalizeTriggerFlow(apiCatalog);
         apiCatalogService.updateById(apiCatalog);
         return R.ok(String.valueOf(apiCatalog.getId()));
+    }
+
+    private R<String> validateSqlApi(ApiCatalog apiCatalog) {
+        if ("sql".equalsIgnoreCase(apiCatalog.getApiType())) {
+            String sql = apiCatalog.getUrl();
+            if (sql != null && !sql.trim().isEmpty()) {
+                SqlCheckResult result = SqlSafetyChecker.validate(sql);
+                if (!result.isPassed()) {
+                    return R.fail("SQL 校验失败: " + result.getMessage());
+                }
+            }
+        }
+        return null;
     }
 
     private void normalizeTriggerFlow(ApiCatalog api) {

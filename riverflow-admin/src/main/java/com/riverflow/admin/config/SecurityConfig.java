@@ -31,6 +31,9 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    @Autowired
+    private com.riverflow.admin.infra.openapi.OpenApiAuthFilter openApiAuthFilter;
+
     /**
      * 安全过滤链
      */
@@ -60,15 +63,18 @@ public class SecurityConfig {
             .antMatchers("/webjars/**").permitAll()
             .antMatchers("/swagger-resources/**").permitAll()
             .antMatchers("/v3/api-docs/**").permitAll()
-            .antMatchers("/open/**").permitAll()
-            .antMatchers("/example/**").permitAll()
-            .antMatchers("/plugin/**").permitAll()
+            .antMatchers("/open/**").permitAll()  // 由 OpenApiAuthFilter 做应用级认证
+            .antMatchers("/example/**").denyAll()  // 示例/调试接口禁止外部访问
+            .antMatchers("/plugin/**").authenticated()  // 插件管理需要登录
             .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             // 其他请求需要认证
             .anyRequest().authenticated();
 
         // 添加 JWT 过滤器
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        // 添加开放接口认证过滤器，放在 JWT 之前
+        http.addFilterBefore(openApiAuthFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

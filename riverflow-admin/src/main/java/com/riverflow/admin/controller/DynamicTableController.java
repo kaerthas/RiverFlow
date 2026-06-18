@@ -3,6 +3,8 @@ package com.riverflow.admin.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
+import com.riverflow.admin.infra.openapi.SqlCheckResult;
+import com.riverflow.admin.infra.openapi.SqlSafetyChecker;
 import com.riverflow.admin.mapper.DynamicTableColumnMapper;
 import com.riverflow.admin.service.ApiCatalogService;
 import com.riverflow.admin.service.DatasourceService;
@@ -183,28 +185,48 @@ public class DynamicTableController {
 
         // 1. INSERT 接口
         String insertSql = buildInsertSql(tableCode, nonPkCols);
+        SqlCheckResult insertCheck = SqlSafetyChecker.validate(insertSql);
+        if (!insertCheck.isPassed()) {
+            return R.fail("INSERT SQL 校验失败: " + insertCheck.getMessage());
+        }
         saveOrUpdateApi(tableCode + "_INSERT", table.getTableName() + "-新增", "sql", "POST", insertSql, dsId, contentType);
         generatedApis.add(tableCode + "_INSERT");
 
         // 2. SELECT 接口（按主键查询）
         String selectSql = "SELECT * FROM " + tableCode + " WHERE " + pkColumn + " = #{" + pkColumn + "}";
+        SqlCheckResult selectCheck = SqlSafetyChecker.validate(selectSql);
+        if (!selectCheck.isPassed()) {
+            return R.fail("SELECT SQL 校验失败: " + selectCheck.getMessage());
+        }
         saveOrUpdateApi(tableCode + "_SELECT", table.getTableName() + "-查询", "sql", "GET", selectSql, dsId, contentType);
         generatedApis.add(tableCode + "_SELECT");
 
         // 3. UPDATE 接口
         if (!updatableCols.isEmpty()) {
             String updateSql = buildUpdateSql(tableCode, updatableCols, pkColumn);
+            SqlCheckResult updateCheck = SqlSafetyChecker.validate(updateSql);
+            if (!updateCheck.isPassed()) {
+                return R.fail("UPDATE SQL 校验失败: " + updateCheck.getMessage());
+            }
             saveOrUpdateApi(tableCode + "_UPDATE", table.getTableName() + "-更新", "sql", "POST", updateSql, dsId, contentType);
             generatedApis.add(tableCode + "_UPDATE");
         }
 
         // 4. DELETE 接口
         String deleteSql = "DELETE FROM " + tableCode + " WHERE " + pkColumn + " = #{" + pkColumn + "}";
+        SqlCheckResult deleteCheck = SqlSafetyChecker.validate(deleteSql);
+        if (!deleteCheck.isPassed()) {
+            return R.fail("DELETE SQL 校验失败: " + deleteCheck.getMessage());
+        }
         saveOrUpdateApi(tableCode + "_DELETE", table.getTableName() + "-删除", "sql", "POST", deleteSql, dsId, contentType);
         generatedApis.add(tableCode + "_DELETE");
 
         // 5. LIST 接口（分页查询全部）
         String listSql = "SELECT * FROM " + tableCode + " ORDER BY " + pkColumn + " DESC LIMIT #{limit} OFFSET #{offset}";
+        SqlCheckResult listCheck = SqlSafetyChecker.validate(listSql);
+        if (!listCheck.isPassed()) {
+            return R.fail("LIST SQL 校验失败: " + listCheck.getMessage());
+        }
         saveOrUpdateApi(tableCode + "_LIST", table.getTableName() + "-列表", "sql", "GET", listSql, dsId, contentType);
         generatedApis.add(tableCode + "_LIST");
 

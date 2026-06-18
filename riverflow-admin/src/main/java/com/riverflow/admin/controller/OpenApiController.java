@@ -7,6 +7,8 @@ import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
 import com.riverflow.admin.infra.groovy.GroovySandboxExecutor;
 import com.riverflow.admin.infra.http.HttpRequestService;
 import com.riverflow.admin.infra.openapi.NestedParamResolver;
+import com.riverflow.admin.infra.openapi.SqlCheckResult;
+import com.riverflow.admin.infra.openapi.SqlSafetyChecker;
 import com.riverflow.admin.infra.plugin.ApiPluginLoader;
 import com.riverflow.admin.modules.workflow.engine.FlowEngine;
 import com.riverflow.admin.service.ApiCatalogService;
@@ -364,6 +366,13 @@ public class OpenApiController {
         String sql = api.getUrl();
         if (sql == null || sql.trim().isEmpty()) {
             return R.fail("SQL 未配置");
+        }
+
+        // SQL 安全校验
+        SqlCheckResult checkResult = SqlSafetyChecker.validate(sql);
+        if (!checkResult.isPassed()) {
+            log.warn("SQL 安全校验失败: apiCode={}, reason={}", api.getApiCode(), checkResult.getMessage());
+            return R.fail("SQL 安全校验失败: " + checkResult.getMessage());
         }
 
         PreparedSql prepared = resolvePreparedSql(sql, params);
