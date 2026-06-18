@@ -146,3 +146,23 @@ riverflow:
     dir: ${user.home}/riverflow/plugins
     # 插件文件最大大小，默认 50MB（单位：字节）
     max-file-size: 52428800
+  # 开放接口认证配置
+  open:
+    # 是否启用开放接口认证过滤器
+    enabled: true
+    # 签名时间戳容差（秒），默认 5 分钟
+    timestamp-tolerance: 300
+    # nonce 防重放缓存时间（秒）
+    nonce-expire: 600
+    # /open/flow/** 固定流程接口是否强制签名认证
+    flow-auth-enabled: true
+    # 接口 auth_type 为空时的默认策略：none / sign
+    default-auth-type: none
+    # 可信代理 IP/CIDR，只有来自这些地址的请求才读取 X-Forwarded-For 等代理 Header
+    # 默认包含本地回环和常见内网段，生产环境请根据实际网关/Nginx 网段调整
+    trusted-proxies:
+      - 127.0.0.1
+      - 0:0:0:0:0:0:0:1
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
