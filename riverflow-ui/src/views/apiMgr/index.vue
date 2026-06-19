@@ -113,12 +113,19 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="代理接口" min-width="280" class-name="cell-wrap">
+          <el-table-column label="代理接口" min-width="260" class-name="cell-wrap">
             <template #default="{ row }">
               <div class="endpoint-row">
                 <span :class="['rf-tag', row.openMethod?.toLowerCase()]">{{ row.openMethod }}</span>
                 <span class="rf-code">/open{{ row.openPath || '/' + row.apiCode }}</span>
               </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="authType" label="认证方式" width="120" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.authType === 'none' ? 'info' : 'warning'" size="small">
+                {{ { none: '无', basic: 'Basic', token: 'Token', sign: 'AK/SK', oauth2: 'OAuth2' }[row.authType] || row.authType }}
+              </el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="status" label="状态" width="100" align="center">
@@ -181,6 +188,20 @@
         </el-form-item>
         <el-form-item label="应用图标" prop="icon">
           <el-input v-model="appForm.icon" placeholder="Element Plus 图标名，如 Folder" />
+        </el-form-item>
+        <el-form-item label="AppKey">
+          <el-input v-model="appForm.appKey" placeholder="应用标识">
+            <template #append>
+              <el-button @click="generateAppKey">生成</el-button>
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="AppSecret">
+          <el-input v-model="appForm.appSecret" type="password" show-password placeholder="应用密钥">
+            <template #append>
+              <el-button @click="generateAppSecret">生成</el-button>
+            </template>
+          </el-input>
         </el-form-item>
         <el-form-item label="排序号" prop="sortNo">
           <el-input-number v-model="appForm.sortNo" :min="0" :max="9999" style="width: 100%" />
@@ -262,6 +283,11 @@
             </el-row>
             <el-form-item v-if="form.apiType === 'sql'" label="SQL 语句" prop="url">
               <el-input v-model="form.url" type="textarea" :rows="4" placeholder="请输入 SQL 语句，如 INSERT INTO..." />
+              <div class="sql-safety-hint">
+                <el-alert :closable="false" type="warning" show-icon title="SQL 安全限制">
+                  <div>仅允许 SELECT/INSERT/UPDATE/DELETE；禁止 DROP/TRUNCATE/ALTER/GRANT 等；UPDATE/DELETE 必须带 WHERE。</div>
+                </el-alert>
+              </div>
             </el-form-item>
             <el-form-item v-else-if="form.apiType === 'plugin'" label="插件配置" prop="url">
               <el-input v-model="form.url" type="textarea" :rows="4" placeholder='请输入插件配置 JSON，如 {"operation":"upload","bucket":"xxx"}' />
@@ -295,8 +321,12 @@
                     <el-option label="无" value="none" />
                     <el-option label="Basic Auth" value="basic" />
                     <el-option label="Token" value="token" />
+                    <el-option label="AK/SK 签名" value="sign" />
                     <el-option label="OAuth2" value="oauth2" />
                   </el-select>
+                </el-form-item>
+                <el-form-item label="IP 白名单">
+                  <el-input v-model="form.allowedIps" placeholder="可选，如 10.0.0.0/24,192.168.1.10" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
@@ -533,6 +563,8 @@ const appForm = reactive({
   id: null,
   appCode: '',
   appName: '',
+  appKey: '',
+  appSecret: '',
   description: '',
   icon: '',
   sortNo: 0,
@@ -549,6 +581,8 @@ function handleAddApp() {
     id: null,
     appCode: '',
     appName: '',
+    appKey: '',
+    appSecret: '',
     description: '',
     icon: '',
     sortNo: 0,
@@ -559,7 +593,17 @@ function handleAddApp() {
 
 function handleEditApp(app) {
   appDialogTitle.value = '编辑应用'
-  Object.assign(appForm, { ...app })
+  Object.assign(appForm, {
+    id: app.id,
+    appCode: app.appCode,
+    appName: app.appName,
+    appKey: app.appKey || '',
+    appSecret: app.appSecret || '',
+    description: app.description,
+    icon: app.icon,
+    sortNo: app.sortNo,
+    status: app.status
+  })
   appDialogVisible.value = true
 }
 
@@ -576,6 +620,23 @@ async function handleDeleteApp(app) {
   } catch (e) {
     // 取消或失败
   }
+}
+
+function generateRandomString(length = 16) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  let result = ''
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
+}
+
+function generateAppKey() {
+  appForm.appKey = 'ak_' + generateRandomString(16)
+}
+
+function generateAppSecret() {
+  appForm.appSecret = generateRandomString(32)
 }
 
 async function handleSubmitApp() {
@@ -635,6 +696,7 @@ const form = reactive({
   openMethod: 'POST',
   contentType: 'application/json',
   authType: 'none',
+  allowedIps: '',
   dsId: null,
   scriptId: null,
   pluginType: '',
@@ -815,6 +877,7 @@ function handleAdd() {
     openMethod: 'POST',
     contentType: 'application/json',
     authType: 'none',
+    allowedIps: '',
     dsId: null,
     scriptId: null,
     pluginType: '',
@@ -890,6 +953,35 @@ async function handleEdit(row) {
   }
 }
 
+function validateSqlSafety(sql) {
+  if (!sql || !sql.trim()) return { passed: true }
+  const statements = sql.split(';').filter(s => s.trim())
+  const allowed = ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
+  const blacklist = ['DROP', 'TRUNCATE', 'ALTER', 'CREATE', 'RENAME', 'GRANT', 'REVOKE', 'EXEC', 'EXECUTE', 'CALL']
+  for (const stmt of statements) {
+    // 去除注释
+    let clean = stmt.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/--.*$/gm, ' ')
+    // 去除字符串常量
+    clean = clean.replace(/'(?:[^']|'')*'/g, "''")
+    const first = clean.trim().match(/^\s*(\w+)/)
+    if (!first) return { passed: false, message: '无法识别 SQL 语句类型' }
+    const type = first[1].toUpperCase()
+    if (!allowed.includes(type)) {
+      return { passed: false, message: `不允许执行 ${type}，仅允许 SELECT/INSERT/UPDATE/DELETE` }
+    }
+    const upper = clean.toUpperCase()
+    for (const kw of blacklist) {
+      if (new RegExp(`\\b${kw}\\b`).test(upper)) {
+        return { passed: false, message: `SQL 包含禁止关键字 ${kw}` }
+      }
+    }
+    if ((type === 'UPDATE' || type === 'DELETE') && !/\bWHERE\b/i.test(clean)) {
+      return { passed: false, message: 'UPDATE/DELETE 必须包含 WHERE 条件' }
+    }
+  }
+  return { passed: true }
+}
+
 async function handleSubmit() {
   if (activeTab.value !== 'base') {
     activeTab.value = 'base'
@@ -903,6 +995,13 @@ async function handleSubmit() {
   if (!form.openPath || form.openPath.trim() === '/' || form.openPath.trim() === '') {
     ElMessage.warning('代理后路径不能为空')
     return
+  }
+  if (form.apiType === 'sql' && form.url) {
+    const sqlCheck = validateSqlSafety(form.url)
+    if (!sqlCheck.passed) {
+      ElMessage.warning('SQL 校验失败: ' + sqlCheck.message)
+      return
+    }
   }
   submitLoading.value = true
   try {

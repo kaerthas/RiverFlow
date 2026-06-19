@@ -64,9 +64,15 @@ public class ApiCatalog extends BaseEntity {
     private String contentType;
 
     /**
-     * 认证方式：none/basic/token/oauth2
+     * 认证方式：none/basic/token/sign/oauth2
+     * sign 表示 AppKey + AppSecret 请求签名
      */
     private String authType;
+
+    /**
+     * 调用方 IP 白名单，多个用逗号分隔，支持 CIDR，如 10.0.0.0/24,192.168.1.10
+     */
+    private String allowedIps;
 
     /**
      * SQL类型时绑定的数据源ID

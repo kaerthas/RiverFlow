@@ -7,8 +7,12 @@ import com.riverflow.admin.service.DatasourceService;
 import com.riverflow.api.entity.Datasource;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
+import org.jasypt.encryption.StringEncryptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 数据源管理
@@ -22,6 +26,15 @@ public class DatasourceController {
     private DatasourceService datasourceService;
     @Autowired
     private DynamicDataSourceService dynamicDataSourceService;
+    @Autowired
+    private StringEncryptor stringEncryptor;
+
+    /**
+     * 密码脱敏占位符，前端编辑时传回该值表示不修改密码
+     */
+    private static final String PASSWORD_MASK = "******";
+    private static final String ENC_PREFIX = "ENC(";
+    private static final String ENC_SUFFIX = ")";
 
     @GetMapping("/list")
     public R<Page<Datasource>> list(
@@ -31,49 +44,41 @@ public class DatasourceController {
         QueryWrapper<Datasource> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);
         qw.orderByDesc("create_time");
-        return R.ok(datasourceService.page(pageParam, qw));
+        Page<Datasource> result = datasourceService.page(pageParam, qw);
+        // 列表不返回真实密码
+        maskPasswords(result.getRecords());
+        return R.ok(result);
     }
 
     @PostMapping
     public R<Long> save(@RequestBody Datasource datasource) {
+        // 新增时密码必填，且加密存储
+        encryptPasswordIfNeeded(datasource);
         datasourceService.saveOrUpdate(datasource);
-        // 如果状态为启用，先移除旧的再重新加载，避免连接池重复或旧配置残留
-        if (datasource.getStatus() != null && datasource.getStatus() == 1) {
-            try {
-                dynamicDataSourceService.removeDataSource(datasource.getDsCode());
-                dynamicDataSourceService.addDataSource(datasource);
-            } catch (Exception e) {
-                log.error("动态加载数据源失败: {}", e.getMessage());
-            }
-        } else {
-            // 状态为停用时，确保移除已存在的连接池
-            try {
-                dynamicDataSourceService.removeDataSource(datasource.getDsCode());
-            } catch (Exception e) {
-                // 忽略移除不存在的连接池的异常
-            }
-        }
+        reloadDataSource(datasource);
         return R.ok(datasource.getId());
     }
 
     @PutMapping
     public R<Long> update(@RequestBody Datasource datasource) {
-        datasourceService.updateById(datasource);
-        // 更新后重新加载或移除连接池，确保配置实时生效
-        if (datasource.getStatus() != null && datasource.getStatus() == 1) {
-            try {
-                dynamicDataSourceService.removeDataSource(datasource.getDsCode());
-                dynamicDataSourceService.addDataSource(datasource);
-            } catch (Exception e) {
-                log.error("动态重载数据源失败: {}", e.getMessage());
+        Long id = datasource.getId();
+        if (id == null) {
+            return R.fail("数据源ID不能为空");
+        }
+
+        // 如果前端未填写密码或传回脱敏值，保持数据库原密码不变
+        if (shouldKeepOldPassword(datasource.getPassword())) {
+            Datasource old = datasourceService.getById(id);
+            if (old != null) {
+                datasource.setPassword(old.getPassword());
             }
         } else {
-            try {
-                dynamicDataSourceService.removeDataSource(datasource.getDsCode());
-            } catch (Exception e) {
-                // 忽略移除不存在的连接池的异常
-            }
+            encryptPasswordIfNeeded(datasource);
         }
+
+        datasourceService.updateById(datasource);
+        // 更新后重新加载或移除连接池，确保配置实时生效
+        reloadDataSource(datasource);
         return R.ok(datasource.getId());
     }
 
@@ -102,5 +107,67 @@ public class DatasourceController {
         dynamicDataSourceService.removeDataSource(ds.getDsCode());
         dynamicDataSourceService.addDataSource(ds);
         return R.ok();
+    }
+
+    /**
+     * 重新加载或移除数据源连接池
+     */
+    private void reloadDataSource(Datasource datasource) {
+        if (datasource.getStatus() != null && datasource.getStatus() == 1) {
+            try {
+                dynamicDataSourceService.removeDataSource(datasource.getDsCode());
+                dynamicDataSourceService.addDataSource(datasource);
+            } catch (Exception e) {
+                log.error("动态加载数据源失败: {}", e.getMessage());
+            }
+        } else {
+            try {
+                dynamicDataSourceService.removeDataSource(datasource.getDsCode());
+            } catch (Exception e) {
+                // 忽略移除不存在的连接池的异常
+            }
+        }
+    }
+
+    /**
+     * 对密码进行加密（若尚未加密）
+     */
+    private void encryptPasswordIfNeeded(Datasource datasource) {
+        String password = datasource.getPassword();
+        if (!StringUtils.hasText(password)) {
+            return;
+        }
+        if (password.startsWith(ENC_PREFIX) && password.endsWith(ENC_SUFFIX)) {
+            // 已经是 ENC(...) 格式，不再重复加密
+            return;
+        }
+        try {
+            String encrypted = stringEncryptor.encrypt(password);
+            datasource.setPassword(ENC_PREFIX + encrypted + ENC_SUFFIX);
+        } catch (Exception e) {
+            log.error("数据源密码加密失败: {}", e.getMessage());
+            throw new RuntimeException("密码加密失败", e);
+        }
+    }
+
+    /**
+     * 判断是否应保留原密码（前端未修改）
+     */
+    private boolean shouldKeepOldPassword(String password) {
+        return !StringUtils.hasText(password) || PASSWORD_MASK.equals(password);
+    }
+
+    /**
+     * 对列表中的密码进行脱敏
+     */
+    private void maskPasswords(List<Datasource> list) {
+        if (list == null) {
+            return;
+        }
+        for (Datasource ds : list) {
+            if (StringUtils.hasText(ds.getPassword())) {
+                ds.setPassword(PASSWORD_MASK);
+            }
+        }
     }
 }

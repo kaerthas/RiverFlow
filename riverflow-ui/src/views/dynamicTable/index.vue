@@ -48,7 +48,7 @@
             <span class="rf-time">{{ formatTime(row.createTime) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right" align="center">
+        <el-table-column label="操作" width="240" fixed="right" align="center">
           <template #default="{ row }">
             <div class="rf-actions">
               <button class="action-btn primary" title="设计表" @click="handleDesign(row)">
@@ -62,6 +62,9 @@
               </button>
               <button class="action-btn" title="生成API" @click="handleGenApi(row)">
                 <el-icon><Promotion /></el-icon>
+              </button>
+              <button class="action-btn info" title="查看数据" @click="handleViewData(row)">
+                <el-icon><View /></el-icon>
               </button>
               <button class="action-btn danger" title="删除" @click="handleDelete(row)">
                 <el-icon><Delete /></el-icon>
@@ -127,6 +130,14 @@
         <el-button type="primary" :loading="submitLoading" @click="handleSubmit">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 动态表数据管理抽屉 -->
+    <DynamicCrudDrawer
+      ref="crudDrawerRef"
+      :table-id="currentCrudTable.id"
+      :table-code="currentCrudTable.tableCode"
+      :table-name="currentCrudTable.tableName"
+    />
   </div>
 </template>
 
@@ -146,6 +157,7 @@ import {
 } from '@/api/dynamicTable'
 import { getDatasourceList } from '@/api/datasource'
 import TableDesigner from '@/components/TableDesigner/index.vue'
+import DynamicCrudDrawer from '@/components/DynamicCrudDrawer/index.vue'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -154,6 +166,12 @@ const formRef = ref(null)
 const designerRef = ref(null)
 const submitLoading = ref(false)
 const activeTab = ref('base')
+const crudDrawerRef = ref(null)
+const currentCrudTable = reactive({
+  id: null,
+  tableCode: '',
+  tableName: ''
+})
 
 const tableList = ref([])
 const datasourceOptions = ref([])
@@ -289,6 +307,17 @@ async function handleGenApi(row) {
   } catch (e) {
     // 失败已由 request 拦截器提示
   }
+}
+
+function handleViewData(row) {
+  Object.assign(currentCrudTable, {
+    id: row.id,
+    tableCode: row.tableCode,
+    tableName: row.tableName
+  })
+  nextTick(() => {
+    crudDrawerRef.value?.open()
+  })
 }
 
 async function handleDelete(row) {

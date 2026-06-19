@@ -26,11 +26,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  */
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
+@EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Autowired
+    private com.riverflow.admin.infra.openapi.OpenApiAuthFilter openApiAuthFilter;
 
     /**
      * 安全过滤链
@@ -39,36 +42,40 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             // 启用 CORS，禁用 CSRF（前后端分离，使用 JWT）
-            .cors(AbstractHttpConfigurer::disable)
-            .csrf(AbstractHttpConfigurer::disable)
+            .cors().and()
+            .csrf().disable()
             // 禁用 Session，使用无状态 JWT
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            .and()
             // 禁用默认 logout（项目使用自定义 /logout Controller）
-            .logout(AbstractHttpConfigurer::disable)
+            .logout().disable()
             // 异常处理
-            .exceptionHandling(ex -> ex
-                .authenticationEntryPoint(authenticationEntryPoint())
-                .accessDeniedHandler(accessDeniedHandler())
-            )
+            .exceptionHandling()
+            .authenticationEntryPoint(authenticationEntryPoint())
+            .accessDeniedHandler(accessDeniedHandler())
+            .and()
             // 请求授权
-            .authorizeHttpRequests(auth -> auth
-                // 允许匿名访问的路径
-                .requestMatchers("/login").permitAll()
-                .requestMatchers("/refresh").permitAll()
-                .requestMatchers("/doc.html").permitAll()
-                .requestMatchers("/webjars/**").permitAll()
-                .requestMatchers("/swagger-resources/**").permitAll()
-                .requestMatchers("/v3/api-docs/**").permitAll()
-                .requestMatchers("/open/**").permitAll()
-                .requestMatchers("/example/**").permitAll()
-                .requestMatchers("/plugin/**").permitAll()
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // 其他请求需要认证
-                .anyRequest().authenticated()
-            );
+            .authorizeRequests()
+            // 允许匿名访问的路径
+            .antMatchers("/login").permitAll()
+            .antMatchers("/refresh").permitAll()
+            .antMatchers("/captcha/**").permitAll()
+            .antMatchers("/doc.html").permitAll()
+            .antMatchers("/webjars/**").permitAll()
+            .antMatchers("/swagger-resources/**").permitAll()
+            .antMatchers("/v3/api-docs/**").permitAll()
+            .antMatchers("/open/**").permitAll()  // 由 OpenApiAuthFilter 做应用级认证
+            .antMatchers("/example/**").denyAll()  // 示例/调试接口禁止外部访问
+            .antMatchers("/plugin/**").authenticated()  // 插件管理需要登录
+            .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            // 其他请求需要认证
+            .anyRequest().authenticated();
 
         // 添加 JWT 过滤器
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        // 添加开放接口认证过滤器，放在 JWT 之前
+        http.addFilterBefore(openApiAuthFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

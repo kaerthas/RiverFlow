@@ -16,6 +16,8 @@
         <module>riverflow-api</module>
         <module>riverflow-admin</module>
         <module>river-minio</module>
+        <module>river-ixa-gateway</module>
+        <module>river-qrcode-plugin</module>
     </modules>
 
     <properties>
@@ -26,6 +28,9 @@
 
         <!-- 核心框架 -->
         <spring-boot.version>2.7.18</spring-boot.version>
+        <!-- 安全补丁：覆盖 Spring Framework / Security 版本（修复 CVE-2024-38827/22257/38819 等） -->
+        <spring-framework.version>5.3.39</spring-framework.version>
+        <spring-security.version>5.7.13</spring-security.version>
 
         <!-- 数据层 -->
         <mybatis-plus.version>3.5.5</mybatis-plus.version>

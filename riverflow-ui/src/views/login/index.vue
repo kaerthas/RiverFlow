@@ -81,6 +81,14 @@
         <p> 2024 RiverFlow · 河狸流程编排平台</p>
       </div>
     </div>
+
+    <!-- 行为验证码弹窗 -->
+    <CaptchaModal
+      :visible="captchaVisible"
+      @verify-success="onCaptchaSuccess"
+      @verify-fail="onCaptchaFail"
+      @close="captchaVisible = false"
+    />
   </div>
 </template>
 
@@ -91,11 +99,13 @@ import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/modules/user'
 import { login, getUserInfo } from '@/api/auth'
+import CaptchaModal from '@/components/CaptchaModal/index.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 const formRef = ref(null)
 const loading = ref(false)
+const captchaVisible = ref(false)
 
 const form = reactive({
   username: 'admin',
@@ -107,12 +117,27 @@ const rules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
+/**
+ * 点击登录：先校验表单，再弹出验证码
+ */
 async function handleLogin() {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
+  captchaVisible.value = true
+}
+
+/**
+ * 验证码验证成功：调用登录接口
+ */
+async function onCaptchaSuccess(captchaToken) {
+  captchaVisible.value = false
   loading.value = true
   try {
-    const res = await login({ username: form.username, password: form.password })
+    const res = await login({
+      username: form.username,
+      password: form.password,
+      captchaToken
+    })
     userStore.setToken(res.token)
     userStore.setUserInfo({
       username: res.username,
@@ -128,9 +153,17 @@ async function handleLogin() {
     router.push('/')
   } catch (error) {
     // 错误已在 request 拦截器中提示
+    // 登录失败后再次登录需要重新验证验证码
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * 验证码验证失败
+ */
+function onCaptchaFail() {
+  ElMessage.error('验证码验证失败，请重试')
 }
 </script>
 

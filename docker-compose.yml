@@ -1,0 +1,84 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: riverflow-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: java
+      MYSQL_DATABASE: riverflow
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/riverflow_init.sql:/docker-entrypoint-initdb.d/01-riverflow_init.sql
+      - ./db/init_data.sql:/docker-entrypoint-initdb.d/02-init_data.sql
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pjava" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: riverflow-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  riverflow-admin:
+    build:
+      context: .
+      dockerfile: riverflow-admin/Dockerfile
+    container_name: riverflow-admin
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - TZ=Asia/Shanghai
+      # Override database config
+      - SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_URL=jdbc:mysql://mysql:3306/riverflow?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_USERNAME=root
+      - SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD=java
+      # Override Redis config
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      # Override plugin directory
+      - RIVERFLOW_PLUGIN_DIR=/app/plugins
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+      - ./plugins:/app/plugins
+
+  riverflow-ui:
+    build:
+      context: ./riverflow-ui
+      dockerfile: Dockerfile
+    container_name: riverflow-ui
+    restart: unless-stopped
+    depends_on:
+      - riverflow-admin
+    ports:
+      - "80:80"
+
+volumes:
+  mysql_data:
+  redis_data:

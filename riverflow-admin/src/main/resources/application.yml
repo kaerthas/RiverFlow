@@ -102,6 +102,36 @@ jasypt:
     algorithm: PBEWithMD5AndDES
     iv-generator-classname: org.jasypt.iv.NoIvGenerator
 
+# tianai-captcha 行为验证码配置
+captcha:
+  # Redis key 前缀
+  prefix: riverflow:captcha
+  # 验证码过期时间（毫秒）
+  expire:
+    default: 120000
+    WORD_IMAGE_CLICK: 180000
+  # 加载系统默认模板资源
+  init-default-resource: true
+  # 本地缓存（提升并发）
+  # 注意：开启缓存需要每种验证码类型都有足够资源，否则启动会报错
+  local-cache-enabled: false
+  local-cache-size: 20
+  local-cache-wait-time: 5000
+  local-cache-period: 2000
+  # 二次验证（登录时校验）
+  secondary:
+    enabled: true
+    expire: 120000
+    keyPrefix: riverflow:captcha:secondary
+
+# 登录安全：账号锁定配置
+login:
+  lock:
+    # 允许最大连续失败次数
+    max-fail-times: 5
+    # 锁定时间（分钟）
+    lock-minutes: 30
+
 # JWT配置
 jwt:
   secret: riverflow-jwt-secret-key-2024-spring-boot
@@ -120,6 +150,7 @@ riverflow:
   plugin:
     # 启用插件系统
     enabled: true
+    # 插件存储目录
     dir: ${user.home}/riverflow/plugins
 
   # 虚拟线程执行器并发限制（JDK 21+ 生效）
@@ -134,3 +165,25 @@ riverflow:
   ai-service:
     base-url: http://localhost:8081
     timeout: 60000
+    # 插件文件最大大小，默认 50MB（单位：字节）
+    max-file-size: 52428800
+  # 开放接口认证配置
+  open:
+    # 是否启用开放接口认证过滤器
+    enabled: true
+    # 签名时间戳容差（秒），默认 5 分钟
+    timestamp-tolerance: 300
+    # nonce 防重放缓存时间（秒）
+    nonce-expire: 600
+    # /open/flow/** 固定流程接口是否强制签名认证
+    flow-auth-enabled: true
+    # 接口 auth_type 为空时的默认策略：none / sign
+    default-auth-type: none
+    # 可信代理 IP/CIDR，只有来自这些地址的请求才读取 X-Forwarded-For 等代理 Header
+    # 默认包含本地回环和常见内网段，生产环境请根据实际网关/Nginx 网段调整
+    trusted-proxies:
+      - 127.0.0.1
+      - 0:0:0:0:0:0:0:1
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16

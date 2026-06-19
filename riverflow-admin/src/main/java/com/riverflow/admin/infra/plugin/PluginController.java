@@ -42,16 +42,20 @@ public class PluginController {
     @Autowired
     private SysPluginService sysPluginService;
 
+    @Autowired
+    private PluginFileValidator pluginFileValidator;
+
     @Value("${riverflow.plugin.dir:${user.home}/riverflow/plugins}")
     private String pluginDir;
 
     @PostMapping("/upload")
     public R<String> uploadPlugin(@RequestParam("file") MultipartFile file) {
-        String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || !originalFilename.endsWith(".jar")) {
-            return R.fail("只支持JAR文件");
+        R<String> validateResult = pluginFileValidator.validate(file);
+        if (validateResult != null) {
+            return validateResult;
         }
 
+        String originalFilename = file.getOriginalFilename();
         Path filePath = null;
         try {
             long fileSize = file.getSize();

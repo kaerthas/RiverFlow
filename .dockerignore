@@ -1,0 +1,29 @@
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs
+logs/
+
+# Node.js
+**/node_modules/
+**/dist/
+
+# Java
+**/target/
+*.class
+
+# Docs
+docs/
+docs-site/
+
+# Misc
+*.md
+LICENSE
+*.zip
+*.bat

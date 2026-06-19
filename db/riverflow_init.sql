@@ -195,7 +195,8 @@ CREATE TABLE `wf_api_catalog`  (
   `method` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'POST' COMMENT '请求方式：GET/POST/PUT/DELETE',
   `url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '请求地址',
   `content_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'application/json' COMMENT '请求体类型',
-  `auth_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'none' COMMENT '认证方式：none/basic/token/oauth2',
+  `auth_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'none' COMMENT '认证方式：none/basic/token/sign/oauth2，sign 表示 AppKey+AppSecret 请求签名',
+  `allowed_ips` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '调用方 IP 白名单，多个用逗号分隔，支持 CIDR，如 10.0.0.0/24,192.168.1.10',
   `ds_id` bigint(20) NULL DEFAULT NULL COMMENT 'SQL类型时绑定的数据源ID',
   `script_id` bigint(20) NULL DEFAULT NULL COMMENT '脚本类型时绑定的脚本ID',
   `timeout` int(11) NULL DEFAULT 30000 COMMENT '超时毫秒',
@@ -1136,6 +1137,7 @@ CREATE TABLE `wf_transfer_queue`  (
 -- ----------------------------
 -- Records of wf_transfer_queue
 -- ----------------------------
+
 SET FOREIGN_KEY_CHECKS = 1;
 -- 为 wf_api_catalog 表增加代理后路径和请求方式字段
 -- 支持用户自定义对外暴露的路径和请求方式
@@ -1178,6 +1180,41 @@ ALTER TABLE `wf_api_catalog`
 
 -- 3. 更新 sys_plugin 现有数据的作用域为 node（兼容历史数据）
 UPDATE `sys_plugin` SET `plugin_scope` = 'node' WHERE `plugin_scope` IS NULL;
+
+
+-- 接口应用/目录表
+CREATE TABLE IF NOT EXISTS `wf_api_app` (
+  `id` bigint(20) NOT NULL COMMENT '主键ID',
+  `app_code` varchar(50) NOT NULL COMMENT '应用编码',
+  `app_name` varchar(100) NOT NULL COMMENT '应用名称',
+  `app_key` varchar(64) DEFAULT NULL COMMENT '应用标识（AK），开放接口调用方标识',
+  `app_secret` varchar(128) DEFAULT NULL COMMENT '应用密钥（SK），仅服务端与调用方持有',
+  `description` varchar(500) DEFAULT NULL COMMENT '应用描述',
+  `icon` varchar(50) DEFAULT NULL COMMENT '应用图标',
+  `sort_no` int(11) DEFAULT 0 COMMENT '排序号',
+  `status` tinyint(4) DEFAULT 1 COMMENT '0-禁用 1-启用',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `create_by` varchar(64) DEFAULT NULL,
+  `update_by` varchar(64) DEFAULT NULL,
+  `del_flag` tinyint(4) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_app_code` (`app_code`),
+  KEY `idx_status` (`status`),
+  KEY `idx_sort_no` (`sort_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='接口应用/目录';
+
+-- 为 wf_api_catalog 增加应用关联
+ALTER TABLE `wf_api_catalog` ADD COLUMN `app_id` bigint(20) DEFAULT NULL COMMENT '所属应用ID' AFTER `id`;
+ALTER TABLE `wf_api_catalog` ADD INDEX `idx_app_id` (`app_id`);
+
+-- 为 wf_api_app 增加应用级认证密钥（AppKey + AppSecret）
+ALTER TABLE `wf_api_app` ADD COLUMN IF NOT EXISTS `app_key` varchar(64) DEFAULT NULL COMMENT '应用标识（AK），开放接口调用方标识' AFTER `app_name`;
+ALTER TABLE `wf_api_app` ADD COLUMN IF NOT EXISTS `app_secret` varchar(128) DEFAULT NULL COMMENT '应用密钥（SK），仅服务端与调用方持有' AFTER `app_key`;
+ALTER TABLE `wf_api_app` ADD UNIQUE KEY IF NOT EXISTS `uk_app_key` (`app_key`);
+
+-- 为 wf_api_catalog 增加 IP 白名单字段
+ALTER TABLE `wf_api_catalog` ADD COLUMN IF NOT EXISTS `allowed_ips` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '调用方 IP 白名单，多个用逗号分隔，支持 CIDR，如 10.0.0.0/24,192.168.1.10' AFTER `auth_type`;
 
 
 -- 接口应用/目录表

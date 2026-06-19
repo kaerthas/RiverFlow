@@ -1,6 +1,9 @@
 package com.riverflow.admin.controller;
 
+import cloud.tianai.captcha.application.ImageCaptchaApplication;
+import cloud.tianai.captcha.spring.plugins.secondary.SecondaryVerificationApplication;
 import com.riverflow.admin.infra.security.JwtUtil;
+import com.riverflow.admin.service.LoginLockService;
 import com.riverflow.admin.service.SysUserService;
 import com.riverflow.api.entity.SysUser;
 import com.riverflow.common.result.R;
@@ -29,6 +32,12 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private ImageCaptchaApplication imageCaptchaApplication;
+
+    @Autowired
+    private LoginLockService loginLockService;
+
     /**
      * 初始化默认管理员账户（仅开发测试用）
      */
@@ -53,20 +62,54 @@ public class AuthController {
      */
     @PostMapping("/login")
     public R<Map<String, Object>> login(@RequestBody LoginRequest request) {
-        log.info("用户登录: {}", request.getUsername());
+        if (request == null || request.getUsername() == null || request.getPassword() == null) {
+            return R.fail("用户名或密码不能为空");
+        }
 
-        SysUser user = ensureDefaultUser(request.getUsername(), request.getPassword());
+        String username = request.getUsername();
+        log.info("用户登录: {}", username);
+
+        // 1. 校验行为验证码（二次验证 token）
+        String captchaToken = request.getCaptchaToken();
+        if (captchaToken == null || captchaToken.isEmpty()) {
+            return R.fail("请先完成验证码验证");
+        }
+
+        // 2. 检查账号是否被锁定（在验证码之后，避免刷验证码）
+        long lockSeconds = loginLockService.checkLocked(username);
+        if (lockSeconds > 0) {
+            long minutes = (lockSeconds + 59) / 60;
+            return R.fail("账号已被锁定，请 " + minutes + " 分钟后再试");
+        }
+        boolean captchaValid = false;
+        try {
+            captchaValid = ((SecondaryVerificationApplication) imageCaptchaApplication)
+                    .secondaryVerification(captchaToken);
+        } catch (Exception e) {
+            log.warn("验证码二次验证异常: {}", e.getMessage());
+        }
+        if (!captchaValid) {
+            return R.fail("验证码已失效，请重新验证");
+        }
+
+        // 3. 校验用户名密码
+        SysUser user = ensureDefaultUser(username, request.getPassword());
         if (user == null) {
+            recordLoginFailure(username);
             return R.fail("用户名或密码错误");
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            recordLoginFailure(username);
             return R.fail("用户名或密码错误");
         }
 
         if (user.getStatus() != null && user.getStatus() == 0) {
             return R.fail("账号已停用");
         }
+
+        // 4. 登录成功，清除失败记录
+        loginLockService.clearFailure(username);
 
         String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername(), user.getId());
@@ -80,6 +123,19 @@ public class AuthController {
         result.put("realName", user.getRealName());
 
         return R.ok(result);
+    }
+
+    /**
+     * 记录登录失败并给出提示
+     */
+    private void recordLoginFailure(String username) {
+        int failCount = loginLockService.recordFailure(username);
+        int remaining = loginLockService.getRemainingAttempts(username);
+        if (remaining <= 0) {
+            log.warn("用户 [{}] 连续登录失败 {} 次，账号已锁定", username, failCount);
+        } else {
+            log.warn("用户 [{}] 登录失败，已连续失败 {} 次，剩余 {} 次机会", username, failCount, remaining);
+        }
     }
 
     /**
@@ -156,5 +212,6 @@ public class AuthController {
     public static class LoginRequest {
         private String username;
         private String password;
+        private String captchaToken;
     }
 }
