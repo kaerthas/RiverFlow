@@ -30,4 +30,6 @@ export default {
   较上月_bfb0700f_1: 'Compared to last month',
   运行中_d679aea3: 'Running',
   运行中_d679aea3_1: 'Running',
+  失败或异常_d679aea3:'Failed/Exception',
+  近30天实例创建与完成趋势_d679aea:'Trend of instance creation and completion in the past 30 days',
 }

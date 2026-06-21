@@ -75,7 +75,7 @@
             <div class="meta-icon red">
               <el-icon :size="18"><Warning /></el-icon>
             </div>
-            <span class="meta-label">失败/异常</span>
+            <span class="meta-label">{{$t('dashboard.失败或异常_d679aea3')}}</span>
           </div>
           <div class="card-value rf-mono" style="font-size: 28px;">{{ stats.failed }}</div>
         </div>
@@ -88,7 +88,7 @@
         <div class="chart-header">
           <div>
             <h3 class="chart-title">{{ $t('dashboard.流程实例状态_851dcbd9') }}</h3>
-            <p class="chart-desc">近30天实例创建与完成趋势</p>
+            <p class="chart-desc">{{ $t('dashboard.近30天实例创建与完成趋势_d679aea') }}</p>
           </div>
           <div class="chart-legend">
             <span class="legend-item"><span class="dot blue"></span>{{ $t('dashboard.总数_9ed7d3ad') }}</span>

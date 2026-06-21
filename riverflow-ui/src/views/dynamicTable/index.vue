@@ -2,7 +2,7 @@
   <div class="rf-list-page">
     <div class="rf-list-header">
       <h1 class="title">{{ $t('dynamicTable.动态表设计器_40e83ea4') }}</h1>
-      <p class="subtitle">管理动态数据表结构，设计字段并生成 CRUD API</p>
+      <p class="subtitle">{{ $t('dynamicTable.管理动态数据表结构设计字段并生成_CRUD_API_40e83ea4') }}</p>
       <button class="btn-primary" @click="handleCreate">
         <el-icon><Plus /></el-icon>{{ $t('dynamicTable.新建表_6cf9db59_1') }}</button>
     </div>

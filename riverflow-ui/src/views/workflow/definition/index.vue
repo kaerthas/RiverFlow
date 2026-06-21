@@ -4,7 +4,7 @@
     <div class="rf-list-header">
       <div>
         <h1 class="title">{{ $t('definition.流程定义_300d6075') }}</h1>
-        <p class="subtitle">管理和配置业务流程模板，支持拖拽编排与可视化设计</p>
+        <p class="subtitle">{{ $t('definition.管理和配置业务流程模板支持拖拽编排与可视化设计_300d6075') }}</p>
       </div>
       <button class="btn-primary" @click="handleCreate">
         <el-icon :size="16"><Plus /></el-icon>

@@ -7,6 +7,8 @@ export default {
   删除成功_0007d170: 'Deleted successfully',
   删除确认_50eaf94d: 'Delete Confirm',
   动态表设计器_40e83ea4: 'Dynamic Table Designer',
+  管理动态数据表结构设计字段并生成_CRUD_API_40e83ea4:'\n' +
+      'Manage the design of fields in dynamic data table structures and generate a CRUD API',
   发布_83611abd: 'Publish',
   取消_625fb26b: 'Cancel',
   基本信息_9e5ffa06: 'Basic Info',

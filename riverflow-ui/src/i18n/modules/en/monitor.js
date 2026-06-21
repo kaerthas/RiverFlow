@@ -17,4 +17,5 @@ export default {
   省里统一认证_d41157ee: 'Provincial unified certification platform',
   运行中_d679aea3: 'Running',
   运行监控_8bf81f31: 'Runtime Monitor',
+  接口调用统计近24小时_dafasdqw:'Interface call statistics for the past 24 hours'
 }

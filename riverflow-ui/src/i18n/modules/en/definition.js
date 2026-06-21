@@ -87,6 +87,7 @@ export default {
   流程名称_794d65af: 'Flow Name',
   流程名称_794d65af_1: 'Flow Name',
   流程定义_300d6075: 'Flow Definition',
+  管理和配置业务流程模板支持拖拽编排与可视化设计_300d6075:'Manage and configure business process templates, supporting drag-and-drop orchestration and visual design',
   流程已下线_058d3d10: 'Flow is offline',
   流程编码_45668968: 'Flow Code',
   流程编码_45668968_1: 'Flow Code',

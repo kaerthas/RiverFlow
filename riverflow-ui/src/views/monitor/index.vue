@@ -34,7 +34,7 @@
       </el-col>
       <el-col :xs="24" :lg="8">
         <div class="rf-card">
-          <h4 class="card-title">接口调用统计（近24小时）</h4>
+          <h4 class="card-title">{{ $t('monitor.接口调用统计近24小时_dafasdqw') }}</h4>
           <div class="stat-number">
             <div class="number-item">
               <div class="num">12,456</div>
