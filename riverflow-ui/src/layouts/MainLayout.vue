@@ -71,6 +71,17 @@
           <div class="action-icon">
             <el-icon :size="18"><FullScreen /></el-icon>
           </div>
+          <el-dropdown @command="handleLocaleChange">
+            <div class="action-icon">
+              <el-icon :size="18"><Switch /></el-icon>
+            </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="zh-CN">简体中文</el-dropdown-item>
+                <el-dropdown-item command="en-US">English</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
           <el-dropdown>
             <div class="user-info">
               <div class="avatar-ring">
@@ -81,8 +92,8 @@
             </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item>个人中心</el-dropdown-item>
-                <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
+                <el-dropdown-item>{{ $t('layoutMainLayout.个人中心_409120b5') }}</el-dropdown-item>
+                <el-dropdown-item divided @click="handleLogout">{{ $t('layoutMainLayout.退出登录_44efd179') }}</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -98,6 +109,8 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
@@ -105,6 +118,7 @@ import SidebarItem from './components/SidebarItem.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 import { logout } from '@/api/auth'
 import { ElMessageBox } from 'element-plus'
+import { setLocale } from '@/i18n'
 
 const route = useRoute()
 const router = useRouter()
@@ -112,7 +126,7 @@ const userStore = useUserStore()
 
 const isCollapse = ref(false)
 const activeMenu = computed(() => route.path)
-const userName = computed(() => userStore.userInfo?.realName || userStore.userInfo?.username || '管理员')
+const userName = computed(() => userStore.userInfo?.realName || userStore.userInfo?.username || t('layoutMainLayout.管理员_b1dae9bc'))
 
 const menuRoutes = computed(() => {
   const layoutRoute = router.getRoutes().find(r => r.path === '/')
@@ -123,9 +137,13 @@ function toggleCollapse() {
   isCollapse.value = !isCollapse.value
 }
 
+function handleLocaleChange(locale) {
+  setLocale(locale)
+}
+
 async function handleLogout() {
   try {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', { type: 'warning' })
+    await ElMessageBox.confirm(t('layoutMainLayout.确定要退出登_13bc0ac0'), t('layoutMainLayout.提示_02d9819d'), { type: 'warning' })
     await logout().catch(() => {})
     userStore.clearToken()
     router.push('/login')

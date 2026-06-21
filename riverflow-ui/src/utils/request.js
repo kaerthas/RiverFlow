@@ -1,3 +1,5 @@
+import i18n from '@/i18n'
+const { t } = i18n.global
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
@@ -30,20 +32,20 @@ service.interceptors.response.use(
   (response) => {
     const res = response.data
     if (res.code !== 200) {
-      ElMessage.error(res.msg || '请求失败')
+      ElMessage.error(res.msg || t('utilRequest.请求失败_f50bf418'))
       if (res.code === 401) {
         handleUnauthorized()
       }
-      return Promise.reject(new Error(res.msg || '请求失败'))
+      return Promise.reject(new Error(res.msg || t('utilRequest.请求失败_f50bf418_1')))
     }
     return res.data
   },
   (error) => {
     const status = error.response?.status
-    const msg = error.response?.data?.msg || error.message || '网络请求异常'
+    const msg = error.response?.data?.msg || error.message || t('utilRequest.网络请求异常_a64a1d00')
 
     if (status === 401) {
-      ElMessage.error('登录已过期，请重新登录')
+      ElMessage.error(t('utilRequest.登录已过期请_d3ab821c'))
       handleUnauthorized()
     } else {
       ElMessage.error(msg)

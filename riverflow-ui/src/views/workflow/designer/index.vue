@@ -7,7 +7,7 @@
           <el-icon><ArrowLeft /></el-icon>
         </div>
         <div class="flow-info">
-          <span class="flow-name">{{ flowName || '未命名流程' }}</span>
+          <span class="flow-name">{{ flowName || t('designer.未命名流程_7e7b43eb') }}</span>
           <span :class="['flow-badge', flowStatus === 1 ? 'published' : 'draft']">
             {{ flowStatus === 1 ? '已发布' : '草稿' }}
           </span>
@@ -18,15 +18,15 @@
         <div class="tool-group">
           <div class="tool-item" :class="{ active: isValid }" @click="handleValidate">
             <el-icon><CircleCheck /></el-icon>
-            <span>验证</span>
+            <span>{{ $t('designer.验证_cd8992b6') }}</span>
           </div>
           <div class="tool-item" @click="handleImport">
             <el-icon><Upload /></el-icon>
-            <span>导入</span>
+            <span>{{ $t('designer.导入_8d9a071e') }}</span>
           </div>
           <div class="tool-item" @click="handleExport">
             <el-icon><Download /></el-icon>
-            <span>导出</span>
+            <span>{{ $t('designer.导出_55405ea6') }}</span>
           </div>
         </div>
         <div class="tool-divider"></div>
@@ -45,15 +45,13 @@
 
       <div class="toolbar-right">
         <button v-if="flowStatus === 1" class="btn-secondary" @click="handleCopyAndEdit">
-          <el-icon><CopyDocument /></el-icon> 创建新版本
-        </button>
+          <el-icon><CopyDocument /></el-icon>{{ $t('designer.创建新版本_217cc9bd') }}</button>
         <template v-else>
-          <button class="btn-secondary" @click="handleSave">保存草稿</button>
-          <button class="btn-primary" @click="handlePublish">发布流程</button>
+          <button class="btn-secondary" @click="handleSave">{{ $t('designer.保存草稿_4d7ea6df') }}</button>
+          <button class="btn-primary" @click="handlePublish">{{ $t('designer.发布流程_40d46d4e') }}</button>
         </template>
         <button class="btn-accent" @click="handleTestRun" :disabled="!flowId">
-          <el-icon><VideoPlay /></el-icon> 运行
-        </button>
+          <el-icon><VideoPlay /></el-icon>{{ $t('designer.运行_4c763bb6') }}</button>
       </div>
     </div>
 
@@ -64,7 +62,7 @@
           <div class="panel-icon">
             <el-icon><Grid /></el-icon>
           </div>
-          <span>组件库</span>
+          <span>{{ $t('designer.组件库_ff885d24') }}</span>
         </div>
         <div class="panel-content">
           <div class="node-group" v-for="group in nodeGroups" :key="group.name">
@@ -116,37 +114,37 @@
           <div class="panel-icon">
             <el-icon><Tools /></el-icon>
           </div>
-          <span>属性配置</span>
+          <span>{{ $t('designer.属性配置_6aab38ea') }}</span>
         </div>
         <div class="panel-content">
           <div v-if="selectedNode" class="property-form">
-            <div class="section-title">基本信息</div>
+            <div class="section-title">{{ $t('designer.基本信息_9e5ffa06') }}</div>
             <el-form label-position="top" size="default">
-              <el-form-item label="节点名称">
-                <el-input v-model="selectedNode.properties.name" placeholder="请输入节点名称" @change="updateNodeProperties" />
+              <el-form-item :label="$t('designer.节点名称_b1785ef0')">
+                <el-input v-model="selectedNode.properties.name" :placeholder="$t('designer.请输入节点名_32cb0ec7')" @change="updateNodeProperties" />
               </el-form-item>
-              <el-form-item label="节点编码">
-                <el-input v-model="selectedNode.properties.code" placeholder="自动生成" disabled />
+              <el-form-item :label="$t('designer.节点编码_c4489a2b')">
+                <el-input v-model="selectedNode.properties.code" :placeholder="$t('designer.自动生成_cc217739')" disabled />
               </el-form-item>
             </el-form>
 
             <!-- API节点配置 -->
             <template v-if="selectedNode.type === 'api'">
-              <div class="section-title">接口配置</div>
+              <div class="section-title">{{ $t('designer.接口配置_6f6f1e6f') }}</div>
               <el-form label-position="top" size="default">
-                <el-form-item label="绑定接口">
-                  <el-select v-model="selectedNode.properties.apiCode" placeholder="选择已注册的接口" clearable style="width: 100%" @change="handleApiCodeChange">
+                <el-form-item :label="$t('designer.绑定接口_0e08e884')">
+                  <el-select v-model="selectedNode.properties.apiCode" :placeholder="$t('designer.选择已注册的_42422089')" clearable style="width: 100%" @change="handleApiCodeChange">
                     <el-option v-for="api in apiCatalogOptions" :key="api.id" :label="api.apiName" :value="api.apiCode" />
                   </el-select>
                 </el-form-item>
-                <el-form-item label="超时时间(ms)">
+                <el-form-item :label="$t('designer.超时时间_80681861')">
                   <el-input-number v-model="selectedNode.properties.timeout" :min="1000" :max="120000" :step="1000" style="width: 100%" @change="updateNodeProperties" />
                 </el-form-item>
-                <el-form-item label="失败策略">
+                <el-form-item :label="$t('designer.失败策略_fa2f7a89')">
                   <el-radio-group v-model="selectedNode.properties.failStrategy" @change="updateNodeProperties">
-                    <el-radio-button label="suspend">挂起</el-radio-button>
-                    <el-radio-button label="skip">跳过</el-radio-button>
-                    <el-radio-button label="retry">重试</el-radio-button>
+                    <el-radio-button label="suspend">{{ $t('designer.挂起_65d1ff59') }}</el-radio-button>
+                    <el-radio-button label="skip">{{ $t('designer.跳过_92636e8c') }}</el-radio-button>
+                    <el-radio-button label="retry">{{ $t('designer.重试_132c5cdc') }}</el-radio-button>
                   </el-radio-group>
                 </el-form-item>
               </el-form>
@@ -154,31 +152,28 @@
 
             <!-- DB节点配置 -->
             <template v-if="selectedNode.type === 'db'">
-              <div class="section-title">数据库配置</div>
+              <div class="section-title">{{ $t('designer.数据库配置_a355312e') }}</div>
               <el-form label-position="top" size="default">
-                <el-form-item label="数据源">
-                  <el-select v-model="selectedNode.properties.dsCode" placeholder="选择数据源" clearable style="width: 100%" @change="updateNodeProperties">
+                <el-form-item :label="$t('designer.数据源_c11322c9')">
+                  <el-select v-model="selectedNode.properties.dsCode" :placeholder="$t('designer.选择数据源_bae4992d')" clearable style="width: 100%" @change="updateNodeProperties">
                     <el-option v-for="ds in datasourceOptions" :key="ds.id" :label="ds.dsName" :value="ds.dsCode" />
                   </el-select>
                 </el-form-item>
-                <el-form-item label="操作类型">
+                <el-form-item :label="$t('designer.操作类型_de9cc3dd')">
                   <el-radio-group v-model="selectedNode.properties.operation" @change="updateNodeProperties">
-                    <el-radio-button label="select">查询</el-radio-button>
-                    <el-radio-button label="insert">插入</el-radio-button>
-                    <el-radio-button label="update">更新</el-radio-button>
-                    <el-radio-button label="delete">删除</el-radio-button>
+                    <el-radio-button label="select">{{ $t('designer.查询_bee912d7') }}</el-radio-button>
+                    <el-radio-button label="insert">{{ $t('designer.插入_9bdb07e7') }}</el-radio-button>
+                    <el-radio-button label="update">{{ $t('designer.更新_32ac152b') }}</el-radio-button>
+                    <el-radio-button label="delete">{{ $t('designer.删除_2f4aaddd') }}</el-radio-button>
                   </el-radio-group>
                 </el-form-item>
-                <el-form-item label="SQL语句">
-                  <el-input v-model="selectedNode.properties.sql" type="textarea" :rows="4" placeholder="支持SpEl占位符，如 SELECT * FROM table WHERE id = #{_businessKey}" @change="updateNodeProperties" />
+                <el-form-item :label="$t('designer.语句_e4b01201')">
+                  <el-input v-model="selectedNode.properties.sql" type="textarea" :rows="4" :placeholder="$t('designer.支持占位符如_a17467ba')" @change="updateNodeProperties" />
                 </el-form-item>
                 <el-form-item>
                   <el-button type="primary" size="small" :loading="parsingColumns" @click="parseSqlColumns">
-                    <el-icon><Search /></el-icon> 解析返回字段
-                  </el-button>
-                  <el-button v-if="parsedColumns.length > 0" link type="primary" size="small" @click="addAllColumnsToOutput">
-                    全部添加至输出映射
-                  </el-button>
+                    <el-icon><Search /></el-icon>{{ $t('designer.解析返回字段_72aa2d23') }}</el-button>
+                  <el-button v-if="parsedColumns.length > 0" link type="primary" size="small" @click="addAllColumnsToOutput">{{ $t('designer.全部添加至输_1d7bc415') }}</el-button>
                 </el-form-item>
                 <!-- 解析出的字段列表 -->
                 <div v-if="parsedColumns.length > 0" class="parsed-columns-section">
@@ -186,18 +181,15 @@
                     <div v-for="col in parsedColumns" :key="col.name" class="parsed-column-item">
                       <span class="col-name">{{ col.name }}</span>
                       <span class="col-type">{{ col.type }}</span>
-                      <el-button link type="primary" size="small" @click="addOutputMappingFromColumn(col)">
-                        添加
-                      </el-button>
+                      <el-button link type="primary" size="small" @click="addOutputMappingFromColumn(col)">{{ $t('designer.添加_b58c7549') }}</el-button>
                     </div>
                   </div>
                 </div>
-                <el-form-item label="结果变量名">
-                  <el-input v-model="selectedNode.properties.resultVarName" placeholder="如 aData，查询结果将自动写入上下文供下游使用" @change="updateNodeProperties" />
+                <el-form-item :label="$t('designer.结果变量名_d3d23b6a')">
+                  <el-input v-model="selectedNode.properties.resultVarName" :placeholder="$t('designer.如查询结果将_39e2dfc5')" @change="updateNodeProperties" />
                 </el-form-item>
                 <el-alert class="form-tip" type="info" :closable="false" show-icon>
-                  <template #title>
-                    查询结果会自动放入上下文变量 <code>{{ selectedNode.properties.resultVarName || '（未设置）' }}</code>，下游节点可通过 <code>context.get('变量名')</code> 读取；也可通过下方【输出映射】将字段精确映射到上下文
+                  <template #title>{{ $t('designer.查询结果会自_87f34f9f') }}<code>{{ selectedNode.properties.resultVarName || '（未设置）' }}</code>，下游节点可通过 <code>context.get('变量名')</code> 读取；也可通过下方【输出映射】将字段精确映射到上下文
                   </template>
                 </el-alert>
               </el-form>
@@ -205,41 +197,41 @@
 
             <!-- 条件节点配置 -->
             <template v-if="selectedNode.type === 'condition'">
-              <div class="section-title">条件配置</div>
+              <div class="section-title">{{ $t('designer.条件配置_86d5c15c') }}</div>
               <el-form label-position="top" size="default">
-                <el-form-item label="条件表达式(SpEL)">
-                  <el-input v-model="selectedNode.properties.expression" type="textarea" :rows="3" placeholder="如: #{context.resultCode == 200}" @change="updateNodeProperties" />
+                <el-form-item :label="$t('designer.条件表达式_c80f9afc')">
+                  <el-input v-model="selectedNode.properties.expression" type="textarea" :rows="3" :placeholder="$t('designer.如_e178f50f')" @change="updateNodeProperties" />
                 </el-form-item>
               </el-form>
               <el-alert class="form-tip" type="info" :closable="false" show-icon>
-                <template #title>支持使用 <code>context.xxx</code> 访问上下文变量</template>
+                <template #title>{{ $t('designer.支持使用_03efe7f2') }}<code>context.xxx</code>{{ $t('designer.访问上下文变_d80a0b04') }}</template>
               </el-alert>
             </template>
 
             <!-- 定时节点配置 -->
             <template v-if="selectedNode.type === 'timer'">
-              <div class="section-title">定时配置</div>
+              <div class="section-title">{{ $t('designer.定时配置_72729616') }}</div>
               <el-form label-position="top" size="default">
-                <el-form-item label="等待方式">
+                <el-form-item :label="$t('designer.等待方式_3e2a7705')">
                   <el-radio-group v-model="selectedNode.properties.timerType" @change="updateNodeProperties">
-                    <el-radio-button label="delay">延迟</el-radio-button>
-                    <el-radio-button label="fixed">指定时间</el-radio-button>
+                    <el-radio-button label="delay">{{ $t('designer.延迟_db732ecb') }}</el-radio-button>
+                    <el-radio-button label="fixed">{{ $t('designer.指定时间_d8bab2ce_1') }}</el-radio-button>
                   </el-radio-group>
                 </el-form-item>
-                <el-form-item v-if="selectedNode.properties.timerType === 'delay'" label="延迟秒数">
+                <el-form-item v-if="selectedNode.properties.timerType === 'delay'" :label="$t('designer.延迟秒数_74c6d5a7')">
                   <el-input-number v-model="selectedNode.properties.delaySeconds" :min="1" style="width: 100%" @change="updateNodeProperties" />
                 </el-form-item>
-                <el-form-item v-else label="指定时间">
-                  <el-date-picker v-model="selectedNode.properties.fixedTime" type="datetime" placeholder="选择日期时间" style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" @change="updateNodeProperties" />
+                <el-form-item v-else :label="$t('designer.指定时间_d8bab2ce')">
+                  <el-date-picker v-model="selectedNode.properties.fixedTime" type="datetime" :placeholder="$t('designer.选择日期时间_a42ae40b')" style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" @change="updateNodeProperties" />
                 </el-form-item>
               </el-form>
             </template>
 
             <!-- 脚本节点配置 -->
             <template v-if="selectedNode.type === 'script'">
-              <div class="section-title">脚本配置</div>
+              <div class="section-title">{{ $t('designer.脚本配置_d7db92df') }}</div>
               <el-form label-position="top" size="default">
-                <el-form-item label="脚本内容 (Groovy)">
+                <el-form-item :label="$t('designer.脚本内容_4510bf02')">
                   <MonacoEditor
                     v-model="selectedNode.properties.scriptContent"
                     language="java"
@@ -249,23 +241,22 @@
                   />
                   <div style="margin-top: 8px; text-align: right;">
                     <el-button type="primary" size="small" @click="openScriptEditor">
-                      <el-icon><Edit /></el-icon> 编辑脚本
-                    </el-button>
+                      <el-icon><Edit /></el-icon>{{ $t('designer.编辑脚本_f038f48c') }}</el-button>
                   </div>
                 </el-form-item>
               </el-form>
               <el-alert class="form-tip" type="info" :closable="false" show-icon>
-                <template #title>支持 Groovy 语法，可访问 <code>args</code> 上下文变量</template>
+                <template #title>支持 Groovy 语法，可访问 <code>args</code>{{ $t('designer.上下文变量_50334fc7') }}</template>
               </el-alert>
 
               <el-alert class="form-tip" type="success" :closable="false" show-icon>
-                <template #title>脚本中 <code>context.set("key", value)</code> 会自动把变量写入上下文，下游节点可直接使用</template>
+                <template #title>{{ $t('designer.脚本中_c50d473f') }}<code>context.set("key", value)</code> 会自动把变量写入上下文，下游节点可直接使用</template>
               </el-alert>
             </template>
 
             <!-- 插件节点配置 -->
             <template v-if="isPluginNode(selectedNode?.type)">
-              <div class="section-title">插件配置</div>
+              <div class="section-title">{{ $t('designer.插件配置_4e530c4c') }}</div>
               <el-form label-position="top" size="default">
                 <template v-for="field in getPluginFields(selectedNode?.type)" :key="field.name">
                   <el-form-item :label="field.label" :required="field.required">
@@ -321,7 +312,7 @@
 
             <!-- 输入映射 -->
             <template v-if="selectedNode?.type === 'api' && currentApiParams.length > 0">
-              <div class="section-title">接口入参绑定</div>
+              <div class="section-title">{{ $t('designer.接口入参绑定_3254e54d') }}</div>
               <el-tabs v-model="apiParamActiveTab" class="api-param-tabs">
                 <el-tab-pane v-for="ptype in ['body','header','query']" :key="ptype" :label="apiParamTypeLabels[ptype]" :name="ptype">
                   <div class="api-param-mapping-list">
@@ -365,10 +356,9 @@
 
               <!-- 自定义映射 -->
               <div class="section-title">
-                <span>自定义映射</span>
+                <span>{{ $t('designer.自定义映射_65f4380a') }}</span>
                 <el-button link type="primary" size="small" @click="addInputMapping">
-                  <el-icon><Plus /></el-icon> 添加
-                </el-button>
+                  <el-icon><Plus /></el-icon>{{ $t('designer.添加_b58c7549_1') }}</el-button>
               </div>
               <div class="mapping-list">
                 <div v-for="(map, idx) in customInputMappings" :key="idx" class="mapping-card">
@@ -390,17 +380,17 @@
                       </template>
                     </el-input>
                     <el-icon class="mapping-arrow"><Right /></el-icon>
-                    <el-input v-model="map.target" placeholder="目标(节点入参)" size="small" @change="updateNodeProperties" />
+                    <el-input v-model="map.target" :placeholder="$t('designer.目标节点入参_9b28c98d')" size="small" @change="updateNodeProperties" />
                   </div>
                   <el-icon class="mapping-delete" @click="removeCustomInputMapping(map.target)"><Close /></el-icon>
                 </div>
-                <div v-if="customInputMappings.length === 0" class="mapping-empty">暂无自定义映射</div>
+                <div v-if="customInputMappings.length === 0" class="mapping-empty">{{ $t('designer.暂无自定义映_a4b96ff7') }}</div>
               </div>
             </template>
 
             <!-- API 返回参数映射 -->
             <template v-if="selectedNode?.type === 'api' && currentResponseParams.length > 0">
-              <div class="section-title">返回参数映射</div>
+              <div class="section-title">{{ $t('designer.返回参数映射_d03dd613') }}</div>
               <div class="mapping-tip">节点执行后，以下返回字段自动写入上下文</div>
               <div class="api-param-mapping-list">
                 <div v-for="param in currentResponseParams" :key="param.id || param.paramKey" class="mapping-card api-param-card">
@@ -414,7 +404,7 @@
                     <el-input
                       :model-value="getApiOutputTarget(param.paramKey)"
                       @update:model-value="setApiOutputTarget(param.paramKey, $event)"
-                      placeholder="context.变量名"
+                      :placeholder="$t('designer.变量名_fbdf13fd')"
                       size="small"
                       @change="updateNodeProperties"
                     />
@@ -425,15 +415,15 @@
 
             <!-- end 节点：流程返回参数绑定 -->
             <template v-if="selectedNode?.type === 'end' && filteredFlowOutputParams.length > 0">
-              <div class="section-title">流程返回参数绑定</div>
-              <div class="mapping-tip">选择上下文变量作为流程返回结果字段</div>
+              <div class="section-title">{{ $t('designer.流程返回参数_e3a7a9a1') }}</div>
+              <div class="mapping-tip">{{ $t('designer.选择上下文变_c038c15b') }}</div>
               <div class="api-param-mapping-list">
                 <div v-for="param in filteredFlowOutputParams" :key="param.value" class="mapping-card api-param-card">
                   <div class="mapping-row api-param-row">
                     <el-input
                       :model-value="getEndParamSource(param.value.replace(/^context\./, ''))"
                       @update:model-value="setEndParamSource(param.value.replace(/^context\./, ''), $event)"
-                      placeholder="context.变量名"
+                      :placeholder="$t('designer.变量名_fbdf13fd_1')"
                       size="small"
                       @change="updateNodeProperties"
                     >
@@ -453,15 +443,12 @@
 
             <template v-else-if="!['start', 'api', 'end'].includes(selectedNode?.type)">
               <div class="section-title">
-                <span>输入映射</span>
+                <span>{{ $t('designer.输入映射_e4b03e5d') }}</span>
                 <el-button link type="primary" size="small" @click="addInputMapping">
-                  <el-icon><Plus /></el-icon> 添加
-                </el-button>
+                  <el-icon><Plus /></el-icon>{{ $t('designer.添加_b58c7549_1') }}</el-button>
               </div>
               <div class="mapping-tip">
-                <template v-if="selectedNode?.type === 'script'">
-                  为脚本注入 <code>args</code> 参数，脚本中通过 <code>args.xxx</code> 读取上游变量
-                </template>
+                <template v-if="selectedNode?.type === 'script'">{{ $t('designer.为脚本注入_70988507') }}<code>args</code> 参数，脚本中通过 <code>args.xxx</code>{{ $t('designer.读取上游变量_a284e800') }}</template>
                 <template v-else>
                   节点执行前，从上下文变量取值映射为节点入参
                 </template>
@@ -486,7 +473,7 @@
                       </template>
                     </el-input>
                     <el-icon class="mapping-arrow"><Right /></el-icon>
-                    <el-input v-model="map.target" placeholder="节点入参字段" size="small" @change="updateNodeProperties" />
+                    <el-input v-model="map.target" :placeholder="$t('designer.节点入参字段_b8cb8f6b')" size="small" @change="updateNodeProperties" />
                   </div>
                   <el-icon class="mapping-delete" @click="removeInputMapping(idx)"><Close /></el-icon>
                 </div>
@@ -496,7 +483,7 @@
 
             <!-- 数据来源（数据血缘） -->
             <template v-if="dataSources.length > 0">
-              <div class="section-title">数据来源</div>
+              <div class="section-title">{{ $t('designer.数据来源_a094e5b7') }}</div>
               <div class="data-source-list">
                 <div v-for="ds in dataSources" :key="ds.source + ds.target" class="data-source-item">
                   <span class="ds-tag">{{ ds.target }}</span>
@@ -509,18 +496,17 @@
             <!-- 输出映射：script/start/end 节点不需要 -->
             <template v-if="!['script','start','end'].includes(selectedNode?.type)">
               <div class="section-title">
-                <span>自定义输出映射</span>
+                <span>{{ $t('designer.自定义输出映_7a9a4917') }}</span>
                 <el-button link type="primary" size="small" @click="addOutputMapping">
-                  <el-icon><Plus /></el-icon> 添加
-                </el-button>
+                  <el-icon><Plus /></el-icon>{{ $t('designer.添加_b58c7549_1') }}</el-button>
               </div>
               <div class="mapping-tip">节点执行后，自定义字段写入上下文（高级用法）</div>
               <div class="mapping-list">
                 <div v-for="(map, idx) in outputMappings" :key="idx" class="mapping-card">
                   <div class="mapping-row">
-                    <el-input v-model="map.source" placeholder="来源：节点返回字段" size="small" @change="updateNodeProperties" />
+                    <el-input v-model="map.source" :placeholder="$t('designer.来源节点返回_0c17857b')" size="small" @change="updateNodeProperties" />
                     <el-icon class="mapping-arrow"><Right /></el-icon>
-                    <el-input v-model="map.target" placeholder="目标：context.变量名" size="small" @change="updateNodeProperties" />
+                    <el-input v-model="map.target" :placeholder="$t('designer.目标变量名_452d49b0')" size="small" @change="updateNodeProperties" />
                   </div>
                   <el-icon class="mapping-delete" @click="removeOutputMapping(idx)"><Close /></el-icon>
                 </div>
@@ -530,20 +516,20 @@
           </div>
 
           <div v-else-if="selectedEdge" class="property-form">
-            <div class="section-title">连线配置</div>
+            <div class="section-title">{{ $t('designer.连线配置_b7e29ceb') }}</div>
             <el-form label-position="top" size="default">
-              <el-form-item label="条件类型">
+              <el-form-item :label="$t('designer.条件类型_22ed9ec0')">
                 <el-radio-group v-model="selectedEdge.properties.conditionType" @change="updateEdgeProperties">
-                  <el-radio-button label="default">默认</el-radio-button>
-                  <el-radio-button label="success">成功</el-radio-button>
-                  <el-radio-button label="fail">失败</el-radio-button>
-                  <el-radio-button label="custom">自定义</el-radio-button>
+                  <el-radio-button label="default">{{ $t('designer.默认_18c63459') }}</el-radio-button>
+                  <el-radio-button label="success">{{ $t('designer.成功_330363df') }}</el-radio-button>
+                  <el-radio-button label="fail">{{ $t('designer.失败_acd5cb84') }}</el-radio-button>
+                  <el-radio-button label="custom">{{ $t('designer.自定义_f1d4ff50') }}</el-radio-button>
                 </el-radio-group>
               </el-form-item>
-              <el-form-item v-if="selectedEdge.properties.conditionType === 'custom'" label="SpEL表达式">
+              <el-form-item v-if="selectedEdge.properties.conditionType === 'custom'" :label="$t('designer.表达式_9a995ebb')">
                 <el-input v-model="selectedEdge.properties.conditionExpression" type="textarea" :rows="2" placeholder="#{context.resultCode == 200}" @change="updateEdgeProperties" />
               </el-form-item>
-              <el-form-item label="优先级">
+              <el-form-item :label="$t('designer.优先级_ee8ecb9e')">
                 <el-input-number v-model="selectedEdge.properties.priority" :min="0" :max="100" style="width: 100%" @change="updateEdgeProperties" />
               </el-form-item>
             </el-form>
@@ -557,29 +543,29 @@
                 <div class="empty-satellite s2"></div>
               </div>
             </div>
-            <div class="empty-text">选择节点或连线</div>
-            <div class="empty-desc">在画布上点击元素以编辑属性</div>
+            <div class="empty-text">{{ $t('designer.选择节点或连_48f83e15') }}</div>
+            <div class="empty-desc">{{ $t('designer.在画布上点击_ad082c05') }}</div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 测试运行弹窗 -->
-    <el-dialog v-model="testRunVisible" title="测试运行流程" width="480px" class="flow-dialog">
+    <el-dialog v-model="testRunVisible" :title="$t('designer.测试运行流程_bb35500e')" width="480px" class="flow-dialog">
       <el-form label-width="100px">
-        <el-form-item label="业务主键">
-          <el-input v-model="testBusinessKey" placeholder="请输入业务主键（如办件流水号）" />
+        <el-form-item :label="$t('designer.业务主键_21cb4583')">
+          <el-input v-model="testBusinessKey" :placeholder="$t('designer.请输入业务主_79504ce7')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="testRunVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmTestRun" :loading="testLoading">启动实例</el-button>
+        <el-button @click="testRunVisible = false">{{ $t('designer.取消_625fb26b') }}</el-button>
+        <el-button type="primary" @click="confirmTestRun" :loading="testLoading">{{ $t('designer.启动实例_a4d87739') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 变量选择器弹窗 -->
-    <el-dialog v-model="varPickerVisible" title="选择变量" width="560px" class="var-picker-dialog" destroy-on-close>
-      <el-input v-model="varSearch" placeholder="搜索变量..." size="small" clearable style="margin-bottom: 12px">
+    <el-dialog v-model="varPickerVisible" :title="$t('designer.选择变量_90577989')" width="560px" class="var-picker-dialog" destroy-on-close>
+      <el-input v-model="varSearch" :placeholder="$t('designer.搜索变量_e5cb406d')" size="small" clearable style="margin-bottom: 12px">
         <template #prefix><el-icon><Search /></el-icon></template>
       </el-input>
       <div class="var-picker-content">
@@ -595,12 +581,12 @@
             </el-tooltip>
           </div>
         </div>
-        <div v-if="filteredVars.length === 0" class="var-empty">未找到匹配的变量</div>
+        <div v-if="filteredVars.length === 0" class="var-empty">{{ $t('designer.未找到匹配的_df9fb9e0') }}</div>
       </div>
     </el-dialog>
 
     <!-- 脚本编辑弹窗 -->
-    <el-dialog v-model="scriptEditorVisible" title="编辑脚本 (Groovy)" width="800px" class="script-editor-dialog" destroy-on-close>
+    <el-dialog v-model="scriptEditorVisible" :title="$t('designer.编辑脚本_1d40fd6c')" width="800px" class="script-editor-dialog" destroy-on-close>
       <MonacoEditor
         v-model="scriptEditorContent"
         language="java"
@@ -608,14 +594,16 @@
         height="480px"
       />
       <template #footer>
-        <el-button @click="scriptEditorVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveScriptContent">保存</el-button>
+        <el-button @click="scriptEditorVisible = false">{{ $t('designer.取消_625fb26b_1') }}</el-button>
+        <el-button type="primary" @click="saveScriptContent">{{ $t('designer.保存_be5fbbe3') }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -640,9 +628,12 @@ const route = useRoute()
 const router = useRouter()
 const canvasRef = ref(null)
 let lf = null
+// 已注册的 LogicFlow 节点类型（防止兜底注册覆盖内置/插件节点）
+const registeredNodeTypes = new Set()
 
 const flowId = ref(route.query.id ? String(route.query.id) : null)
-const flowName = ref('未命名流程')
+const activeRightTab = ref('property')
+const flowName = ref(t('designer.未命名流程_7e7b43eb_1'))
 const flowStatus = ref(0)
 const flowExecutionMode = ref('ASYNC')
 const version = ref(1)
@@ -724,30 +715,30 @@ function saveScriptContent() {
   selectedNode.value.properties.scriptContent = scriptEditorContent.value
   updateNodeProperties()
   scriptEditorVisible.value = false
-  ElMessage.success('脚本内容已保存')
+  ElMessage.success(t('designer.脚本内容已保_d4a53fd4'))
 }
 
 const baseNodeGroups = [
   {
-    name: '基础节点',
+    name: t('designer.基础节点_96339bc4'),
     nodes: [
-      { type: 'start', label: '开始', desc: '流程起点', icon: 'VideoPlay', color: '#22c55e' },
-      { type: 'end', label: '结束', desc: '流程终点', icon: 'CircleCheck', color: '#ef4444' }
+      { type: 'start', label: t('designer.开始_a3e3b883'), desc: t('designer.流程起点_44dbc2c9'), icon: 'VideoPlay', color: '#22c55e' },
+      { type: 'end', label: t('designer.结束_12f1d7ef'), desc: t('designer.流程终点_ca3d4b76'), icon: 'CircleCheck', color: '#ef4444' }
     ]
   },
   {
-    name: '数据处理',
+    name: t('designer.数据处理_cfc089f7'),
     nodes: [
-      { type: 'api', label: '接口调用', desc: '调用外部API', icon: 'Upload', color: '#3b82f6' },
-      { type: 'db', label: '数据库', desc: '执行SQL操作', icon: 'Coin', color: '#8b5cf6' },
-      { type: 'script', label: '脚本处理', desc: 'Groovy脚本', icon: 'DocumentCopy', color: '#ec4899' }
+      { type: 'api', label: t('designer.接口调用_1cad7047'), desc: t('designer.调用外部_b4538e96'), icon: 'Upload', color: '#3b82f6' },
+      { type: 'db', label: t('designer.数据库_68051bf4'), desc: t('designer.执行操作_e486baae'), icon: 'Coin', color: '#8b5cf6' },
+      { type: 'script', label: t('designer.脚本处理_7f9fd8e3'), desc: t('designer.脚本_87001cda'), icon: 'DocumentCopy', color: '#ec4899' }
     ]
   },
   {
-    name: '控制流',
+    name: t('designer.控制流_22151ac4'),
     nodes: [
-      { type: 'condition', label: '条件判断', desc: '分支条件', icon: 'Share', color: '#f59e0b' },
-      { type: 'timer', label: '定时等待', desc: '延迟或定时', icon: 'Timer', color: '#06b6d4' }
+      { type: 'condition', label: t('designer.条件判断_56c64d53'), desc: t('designer.分支条件_7f959c51'), icon: 'Share', color: '#f59e0b' },
+      { type: 'timer', label: t('designer.定时等待_2bcb4c55'), desc: t('designer.延迟或定时_841a4a33'), icon: 'Timer', color: '#06b6d4' }
     ]
   }
 ]
@@ -769,21 +760,21 @@ const loadPluginNodes = async () => {
           try {
             pluginSchemas.value[plugin.nodeType] = JSON.parse(plugin.configSchema)
           } catch (e) {
-            console.error('解析插件schema失败', plugin.nodeType, e)
+            console.error(t('designer.解析插件失败_44207290'), plugin.nodeType, e)
           }
         }
         if (plugin.outputSchema) {
           try {
             pluginOutputSchemas.value[plugin.nodeType] = JSON.parse(plugin.outputSchema)
           } catch (e) {
-            console.error('解析插件输出schema失败', plugin.nodeType, e)
+            console.error(t('designer.解析插件输出_1d1aecd4'), plugin.nodeType, e)
           }
         }
         
         return {
           type: plugin.nodeType,
           label: plugin.nodeName,
-          desc: plugin.description || '插件节点',
+          desc: plugin.description || t('designer.插件节点_4b5dd1a2'),
           icon: plugin.icon || 'Box',
           color: '#6366f1',
           configTemplate: plugin.configTemplate
@@ -791,7 +782,7 @@ const loadPluginNodes = async () => {
       })
       
       const pluginGroup = {
-        name: '插件节点',
+        name: t('designer.插件节点_4b5dd1a2_1'),
         nodes: pluginNodes
       }
       
@@ -864,14 +855,15 @@ const loadPluginNodes = async () => {
 
           try {
             lf.register({ type: node.type, model: NodeModel, view: NodeView })
+            registeredNodeTypes.add(node.type)
           } catch (e) {
-            console.log('节点已注册:', node.type)
+            console.log(t('designer.节点已注册_e157305a'), node.type)
           }
         })
       }
     }
   } catch (error) {
-    console.error('加载插件节点失败', error)
+    console.error(t('designer.加载插件节点_ae63008d'), error)
   }
 }
 
@@ -1014,7 +1006,7 @@ function initLogicFlow() {
   })
 
   lf.on('connection:not-allowed', (data) => {
-    ElMessage.warning(data.msg || '不允许的连线')
+    ElMessage.warning(data.msg || t('designer.不允许的连线_0e422f06'))
   })
 
   loadPluginNodes().then(() => {
@@ -1025,8 +1017,8 @@ function initLogicFlow() {
       console.log('[Designer] render default nodes')
       lf.render({
         nodes: [
-          { id: 'start_1', type: 'start', x: 240, y: 320, text: '开始', properties: { name: '开始', code: 'start_1' } },
-          { id: 'end_1', type: 'end', x: 640, y: 320, text: '结束', properties: { name: '结束', code: 'end_1' } }
+          { id: 'start_1', type: 'start', x: 240, y: 320, text: t('designer.开始_a3e3b883_1'), properties: { name: t('designer.开始_a3e3b883_1'), code: 'start_1' } },
+          { id: 'end_1', type: 'end', x: 640, y: 320, text: t('designer.结束_12f1d7ef_1'), properties: { name: t('designer.结束_12f1d7ef_1'), code: 'end_1' } }
         ],
         edges: []
       })
@@ -1036,13 +1028,13 @@ function initLogicFlow() {
 
 function registerCustomNodes() {
   const nodeConfig = {
-    start:  { color: '#22c55e', label: '开始',  w: 140, h: 52 },
-    end:    { color: '#ef4444', label: '结束',  w: 140, h: 52 },
-    api:    { color: '#3b82f6', label: '接口',  w: 148, h: 56 },
-    db:     { color: '#8b5cf6', label: '数据库', w: 148, h: 56 },
-    script: { color: '#ec4899', label: '脚本',  w: 148, h: 56 },
-    condition: { color: '#f59e0b', label: '条件', w: 148, h: 56 },
-    timer:  { color: '#06b6d4', label: '定时',  w: 148, h: 56 }
+    start:  { color: '#22c55e', label: t('designer.开始_a3e3b883_1'),  w: 140, h: 52 },
+    end:    { color: '#ef4444', label: t('designer.结束_12f1d7ef_1'),  w: 140, h: 52 },
+    api:    { color: '#3b82f6', label: t('designer.接口_54ea89b4'),  w: 148, h: 56 },
+    db:     { color: '#8b5cf6', label: t('designer.数据库_68051bf4_1'), w: 148, h: 56 },
+    script: { color: '#ec4899', label: t('designer.脚本_ba311d8a'),  w: 148, h: 56 },
+    condition: { color: '#f59e0b', label: t('designer.条件_69fbb2e5'), w: 148, h: 56 },
+    timer:  { color: '#06b6d4', label: t('designer.定时_72ebfe28'),  w: 148, h: 56 }
   }
 
   Object.entries(nodeConfig).forEach(([type, cfg]) => {
@@ -1156,6 +1148,7 @@ function registerCustomNodes() {
     }
 
     lf.register({ type, model: NodeModel, view: NodeView })
+    registeredNodeTypes.add(type)
   })
 
   // 注册贝塞尔曲线边，启用拖拽调整控制点
@@ -1197,13 +1190,84 @@ function registerCustomNodes() {
     grad.appendChild(stop2)
     defs.appendChild(grad)
     svg.prepend(defs)
-  }
+  }}
+
+
+/**
+ * 对流程图中尚未注册的节点类型进行兜底注册。
+ * 插件节点（如 minio）可能因后端未加载插件而缺失，导致渲染失败；
+ * 这里用通用矩形节点兜底，保证流程图能正常展示。
+ */
+function ensureNodesRegistered(graphData) {
+  if (!graphData || !Array.isArray(graphData.nodes)) return
+  graphData.nodes.forEach(node => {
+    if (!node.type || registeredNodeTypes.has(node.type)) return
+    const FallbackModel = class extends RectNodeModel {
+      initNodeData(data) {
+        super.initNodeData(data)
+        this.width = 148
+        this.height = 56
+      }
+      getNodeStyle() {
+        const style = super.getNodeStyle()
+        style.fill = 'transparent'
+        style.stroke = 'transparent'
+        style.strokeWidth = 0
+        return style
+      }
+      getTextStyle() {
+        const style = super.getTextStyle()
+        style.color = '#334155'
+        style.fontSize = 13
+        style.fontWeight = 600
+        return style
+      }
+    }
+    const FallbackView = class extends RectNode {
+      getShape() {
+        const { model } = this.props
+        const { x, y, width, height, properties, isSelected } = model
+        const color = properties.color || '#64748b'
+        const rx = 12
+        const ry = 12
+        const barW = 3
+        const pad = 2
+        return h('g', {}, [
+          h('rect', {
+            x: x - width / 2,
+            y: y - height / 2,
+            width,
+            height,
+            rx,
+            ry,
+            fill: '#ffffff',
+            stroke: isSelected ? color + '60' : '#e2e8f0',
+            strokeWidth: isSelected ? 1.5 : 1
+          }),
+          h('rect', {
+            x: x - width / 2 + pad,
+            y: y - height / 2 + pad + 10,
+            width: barW,
+            height: height - pad * 2 - 20,
+            rx: barW / 2,
+            fill: color
+          })
+        ])
+      }
+    }
+    try {
+      lf.register({ type: node.type, model: FallbackModel, view: FallbackView })
+      registeredNodeTypes.add(node.type)
+    } catch (e) {
+      console.log(t('designer.节点已注册_e157305a_1'), node.type)
+    }
+  })
 }
 
 function handleDragStart(e, node) {
   console.log('[Designer] dragstart', { executionMode: flowExecutionMode.value, nodeType: node.type })
   if (flowExecutionMode.value === 'SYNC' && node.type === 'timer') {
-    ElMessage.warning('同步流程不支持定时(timer)节点')
+    ElMessage.warning(t('designer.同步流程不支_593bb799'))
     e.preventDefault()
     return
   }
@@ -1241,7 +1305,7 @@ function handleDrop(e) {
     const data = JSON.parse(dataStr)
     console.log('[Designer] drop parsed', { type: data.type, text: data.text, properties: data.properties })
     if (flowExecutionMode.value === 'SYNC' && data.type === 'timer') {
-      ElMessage.warning('同步流程不支持定时(timer)节点')
+      ElMessage.warning(t('designer.同步流程不支_593bb799_1'))
       return
     }
     const rect = canvasRef.value.getBoundingClientRect()
@@ -1260,7 +1324,7 @@ function handleDrop(e) {
     })
     console.log('[Designer] addNode success')
   } catch (err) {
-    console.error('[Designer] 添加节点失败', err)
+    console.error(t('designer.添加节点失败_9423299f'), err)
   }
 }
 
@@ -1290,12 +1354,12 @@ function updateEdgeProperties() {
 
 async function parseSqlColumns() {
   if (!selectedNode.value?.properties?.sql) {
-    ElMessage.warning('请先输入SQL语句')
+    ElMessage.warning(t('designer.请先输入语句_6d7e8355'))
     return
   }
   const sql = selectedNode.value.properties.sql.trim()
   if (!sql.toLowerCase().startsWith('select')) {
-    ElMessage.warning('仅支持解析 SELECT 语句')
+    ElMessage.warning(t('designer.仅支持解析语_4113eae4'))
     return
   }
   parsingColumns.value = true
@@ -1310,12 +1374,12 @@ async function parseSqlColumns() {
     })
     parsedColumns.value = res || []
     if (parsedColumns.value.length === 0) {
-      ElMessage.info('未解析到字段，请检查SQL语法')
+      ElMessage.info(t('designer.未解析到字段_28f58720'))
     } else {
       ElMessage.success(`解析到 ${parsedColumns.value.length} 个字段`)
     }
   } catch (e) {
-    ElMessage.error('字段解析失败: ' + (e.message || e))
+    ElMessage.error(t('designer.字段解析失败_663c5ecd') + (e.message || e))
   } finally {
     parsingColumns.value = false
   }
@@ -1325,7 +1389,7 @@ function addOutputMappingFromColumn(col) {
   const sourcePath = `result.data[0].${col.name}`
   const exists = outputMappings.value.some(m => m.source === sourcePath)
   if (exists) {
-    ElMessage.warning('该字段已在输出映射中')
+    ElMessage.warning(t('designer.该字段已在输_d505d09c'))
     return
   }
   outputMappings.value.push({ source: sourcePath, target: '' })
@@ -1480,7 +1544,7 @@ async function loadApiParamsByCode(apiCode) {
     try {
       await loadApiCatalogOptions()
     } catch (e) {
-      console.warn('加载接口目录失败', e)
+      console.warn(t('designer.加载接口目录_a975ef62'), e)
     }
   }
   const api = apiCatalogOptions.value.find(a => a.apiCode === apiCode)
@@ -1495,13 +1559,13 @@ async function loadApiParamsByCode(apiCode) {
         p => p.paramType === 'response' && (p.parentId == 0 || p.parentId == null)
       )
     } catch (e) {
-      console.warn('加载接口参数失败', apiCode, e)
+      console.warn(t('designer.加载接口参数_c840e7bc'), apiCode, e)
       currentApiParams.value = []
       currentResponseParams.value = []
       allApiParams.value = []
     }
   } else {
-    console.warn('接口目录中未找到', apiCode)
+    console.warn(t('designer.接口目录中未_20a64c88'), apiCode)
     currentApiParams.value = []
     currentResponseParams.value = []
     allApiParams.value = []
@@ -1611,13 +1675,13 @@ const availableVariables = computed(() => {
   // 流程入参
   if (flowInputParams.value && flowInputParams.value.length > 0) {
     groups.push({
-      name: '流程入参',
+      name: t('designer.流程入参_7b2f0dde'),
       items: flowInputParams.value
     })
   }
   // 系统变量
   groups.push({
-    name: '系统变量',
+    name: t('designer.系统变量_979a5068'),
     items: [
       { label: '_businessKey', value: 'context._businessKey', level: 0, type: '' },
       { label: '_instanceId', value: 'context._instanceId', level: 0, type: '' },
@@ -1755,16 +1819,16 @@ function handleValidate() {
   const data = lf.getGraphData()
   const hasStart = data.nodes.some(n => n.type === 'start')
   const hasEnd = data.nodes.some(n => n.type === 'end')
-  if (!hasStart) { ElMessage.error('流程必须包含开始节点'); isValid.value = false; return }
-  if (!hasEnd) { ElMessage.error('流程必须包含结束节点'); isValid.value = false; return }
-  ElMessage.success('流程验证通过')
+  if (!hasStart) { ElMessage.error(t('designer.流程必须包含_3040782b')); isValid.value = false; return }
+  if (!hasEnd) { ElMessage.error(t('designer.流程必须包含_ea80468d')); isValid.value = false; return }
+  ElMessage.success(t('designer.流程验证通过_b0dddcc2'))
   isValid.value = true
 }
 
 async function handleSave() {
   if (!lf) return
   if (flowStatus.value === 1) {
-    ElMessage.warning('已发布的流程不可修改，请创建新版本')
+    ElMessage.warning(t('designer.已发布的流程_de563ed8'))
     return
   }
   debugger
@@ -1790,15 +1854,15 @@ async function handleSave() {
       await saveFlowGraph(flowId.value, graphData)
     }
 
-    ElMessage.success('流程草稿已保存')
+    ElMessage.success(t('designer.流程草稿已保_8c4c7816'))
   } catch (e) {
-    ElMessage.error('保存失败: ' + e.message)
+    ElMessage.error(t('designer.保存失败_40f90217') + e.message)
   }
 }
 
 async function handlePublish() {
   if (!flowId.value) {
-    ElMessage.warning('请先保存流程')
+    ElMessage.warning(t('designer.请先保存流程_c9962fab'))
     return
   }
   try {
@@ -1810,9 +1874,9 @@ async function handlePublish() {
       // 更新URL参数
       router.replace({ path: '/workflow/designer', query: { id: newId } })
     }
-    ElMessage.success('流程发布成功')
+    ElMessage.success(t('designer.流程发布成功_634bc1ae'))
   } catch (e) {
-    ElMessage.error('发布失败: ' + e.message)
+    ElMessage.error(t('designer.发布失败_bd774adc') + e.message)
   }
 }
 
@@ -1820,14 +1884,14 @@ async function handleCopyAndEdit() {
   if (!flowId.value) return
   try {
     const newId = await copyFlowDefinition(flowId.value)
-    ElMessage.success('已创建新版本，正在跳转...')
+    ElMessage.success(t('designer.已创建新版本_5adee0d7'))
     router.replace({ path: '/workflow/designer', query: { id: newId } })
     // 刷新页面数据
     flowId.value = newId
     flowStatus.value = 0
     await loadFlowData()
   } catch (e) {
-    ElMessage.error('创建新版本失败: ' + e.message)
+    ElMessage.error(t('designer.创建新版本失_8ca3ce42') + e.message)
   }
 }
 
@@ -1840,7 +1904,7 @@ async function confirmTestRun() {
   testLoading.value = true
   try {
     const data = await startFlowInstance(flowId.value, testBusinessKey.value)
-    ElMessage.success('流程实例启动成功，ID: ' + data)
+    ElMessage.success(t('designer.流程实例启动_fd3448f3') + data)
     testRunVisible.value = false
     router.push('/workflow/instance')
   } catch (e) {
@@ -1861,14 +1925,15 @@ function handleImport() {
       const text = await file.text()
       const data = JSON.parse(text)
       if (!data.nodes || !Array.isArray(data.nodes)) {
-        ElMessage.error('无效的流程图数据')
+        ElMessage.error(t('designer.无效的流程图_31a7b4ff'))
         return
       }
       lf.clearData()
+      ensureNodesRegistered(data)
       lf.render(data)
-      ElMessage.success('导入成功')
+      ElMessage.success(t('designer.导入成功_b6d16a81'))
     } catch (err) {
-      ElMessage.error('导入失败: ' + err.message)
+      ElMessage.error(t('designer.导入失败_45332d13') + err.message)
     }
   }
   input.click()
@@ -1890,7 +1955,7 @@ async function loadFlowData() {
   try {
     const def = await getFlowDefinitionDetail(flowId.value)
     if (def) {
-      flowName.value = def.flowName || '未命名流程'
+      flowName.value = def.flowName || t('designer.未命名流程_7e7b43eb')
       flowStatus.value = def.status || 0
       flowExecutionMode.value = def.executionMode || 'ASYNC'
       version.value = def.version || 1
@@ -1917,13 +1982,14 @@ async function loadFlowData() {
       console.log('[Designer] loadFlowData', { executionMode: flowExecutionMode.value, flowId: flowId.value })
       if (def.graphJson) {
         const graphData = JSON.parse(def.graphJson)
+        ensureNodesRegistered(graphData)
         lf.render(graphData)
       } else {
         lf.render({ nodes: [], edges: [] })
       }
     }
   } catch (e) {
-    console.error('加载流程数据失败', e)
+    console.error(t('designer.加载流程数据_6c80b539'), e)
   }
 }
 

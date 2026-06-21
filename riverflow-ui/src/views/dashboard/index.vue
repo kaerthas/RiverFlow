@@ -3,13 +3,13 @@
     <!-- 页面标题区 -->
     <div class="page-header">
       <div>
-        <h1 class="page-title">数据大盘</h1>
-        <p class="page-subtitle">实时监控流程实例运行状态与系统健康度</p>
+        <h1 class="page-title">{{ $t('dashboard.数据大盘_8a3adf76') }}</h1>
+        <p class="page-subtitle">{{ $t('dashboard.实时监控流程_2438e3dd') }}</p>
       </div>
       <div class="header-actions">
         <div class="live-indicator">
           <span class="pulse-dot"></span>
-          <span class="live-text">实时更新</span>
+          <span class="live-text">{{ $t('dashboard.实时更新_aca43234') }}</span>
         </div>
       </div>
     </div>
@@ -24,14 +24,14 @@
             <div class="meta-icon blue">
               <el-icon :size="20"><Document /></el-icon>
             </div>
-            <span class="meta-label">流程实例总数</span>
+            <span class="meta-label">{{ $t('dashboard.流程实例总数_bf47a6ae') }}</span>
           </div>
           <div class="card-value rf-mono">{{ stats.total }}</div>
           <div class="card-trend">
             <span class="trend-badge up">
               <el-icon><ArrowUp /></el-icon> 12.5%
             </span>
-            <span class="trend-label">较上月</span>
+            <span class="trend-label">{{ $t('dashboard.较上月_bfb0700f') }}</span>
           </div>
         </div>
       </div>
@@ -43,14 +43,14 @@
             <div class="meta-icon green">
               <el-icon :size="20"><CircleCheck /></el-icon>
             </div>
-            <span class="meta-label">已完成</span>
+            <span class="meta-label">{{ $t('dashboard.已完成_fad5222c_1') }}</span>
           </div>
           <div class="card-value rf-mono">{{ stats.completed }}</div>
           <div class="card-trend">
             <span class="trend-badge up">
               <el-icon><ArrowUp /></el-icon> 8.3%
             </span>
-            <span class="trend-label">较上月</span>
+            <span class="trend-label">{{ $t('dashboard.较上月_bfb0700f_1') }}</span>
           </div>
         </div>
       </div>
@@ -62,7 +62,7 @@
             <div class="meta-icon orange">
               <el-icon :size="18"><Loading /></el-icon>
             </div>
-            <span class="meta-label">运行中</span>
+            <span class="meta-label">{{ $t('dashboard.运行中_d679aea3_1') }}</span>
           </div>
           <div class="card-value rf-mono" style="font-size: 28px;">{{ stats.running }}</div>
         </div>
@@ -87,13 +87,13 @@
       <div class="chart-card chart-card--wide">
         <div class="chart-header">
           <div>
-            <h3 class="chart-title">流程实例状态分布</h3>
+            <h3 class="chart-title">{{ $t('dashboard.流程实例状态_851dcbd9') }}</h3>
             <p class="chart-desc">近30天实例创建与完成趋势</p>
           </div>
           <div class="chart-legend">
-            <span class="legend-item"><span class="dot blue"></span>总数</span>
-            <span class="legend-item"><span class="dot green"></span>已完成</span>
-            <span class="legend-item"><span class="dot orange"></span>运行中</span>
+            <span class="legend-item"><span class="dot blue"></span>{{ $t('dashboard.总数_9ed7d3ad') }}</span>
+            <span class="legend-item"><span class="dot green"></span>{{ $t('dashboard.已完成_fad5222c_1') }}</span>
+            <span class="legend-item"><span class="dot orange"></span>{{ $t('dashboard.运行中_d679aea3_1') }}</span>
           </div>
         </div>
         <div ref="barChartRef" class="chart-body"></div>
@@ -102,8 +102,8 @@
       <div class="chart-card">
         <div class="chart-header">
           <div>
-            <h3 class="chart-title">实例状态占比</h3>
-            <p class="chart-desc">当前实例分布</p>
+            <h3 class="chart-title">{{ $t('dashboard.实例状态占比_f2656a33') }}</h3>
+            <p class="chart-desc">{{ $t('dashboard.当前实例分布_f27e68e6') }}</p>
           </div>
         </div>
         <div ref="pieChartRef" class="chart-body"></div>
@@ -114,29 +114,28 @@
     <div class="log-card">
       <div class="log-header">
         <div>
-          <h3 class="log-title">最近运行日志</h3>
-          <p class="log-desc">系统最近执行的流程节点记录</p>
+          <h3 class="log-title">{{ $t('dashboard.最近运行日志_21701682') }}</h3>
+          <p class="log-desc">{{ $t('dashboard.系统最近执行_c2d90fd0') }}</p>
         </div>
-        <el-button type="primary" text size="small" class="view-all-btn" @click="$router.push('/workflow/instance')">
-          查看全部 <el-icon><ArrowRight /></el-icon>
+        <el-button type="primary" text size="small" class="view-all-btn" @click="$router.push('/workflow/instance')">{{ $t('dashboard.查看全部_0467cc92') }}<el-icon><ArrowRight /></el-icon>
         </el-button>
       </div>
       <el-table :data="recentLogs" size="default" v-loading="logLoading" class="rf-table">
-        <el-table-column prop="instanceId" label="实例ID" width="160">
+        <el-table-column prop="instanceId" :label="$t('dashboard.实例_1782d6af')" width="160">
           <template #default="{ row }">
             <span class="id-badge">{{ row.instanceId }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="nodeName" label="节点名称" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="logType" label="类型" width="90">
+        <el-table-column prop="nodeName" :label="$t('dashboard.节点名称_b1785ef0')" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="logType" :label="$t('dashboard.类型_226b0912')" width="90">
           <template #default="{ row }">
             <span :class="['type-tag', row.logType || 'info']">
               {{ row.logType || 'info' }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="message" label="日志内容" min-width="240" show-overflow-tooltip />
-        <el-table-column prop="createTime" label="时间" width="160">
+        <el-table-column prop="message" :label="$t('dashboard.日志内容_a19a72d2')" min-width="240" show-overflow-tooltip />
+        <el-table-column prop="createTime" :label="$t('dashboard.时间_19fcb9eb')" width="160">
           <template #default="{ row }">
             <span class="time-text">{{ row.createTime }}</span>
           </template>
@@ -147,6 +146,8 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { getMonitorStats, getRecentLogs } from '@/api/monitor'
@@ -181,7 +182,7 @@ function initBarChart() {
     grid: { left: '2%', right: '4%', bottom: '3%', top: '8%', containLabel: true },
     xAxis: {
       type: 'category',
-      data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+      data: [t('dashboard.周一_1603b069'), t('dashboard.周二_b5a6a07e'), t('dashboard.周三_e60725e7'), t('dashboard.周四_170fc8e2'), t('dashboard.周五_eb79cea6'), t('dashboard.周六_24575130'), t('dashboard.周日_562d7476')],
       axisLine: { lineStyle: { color: '#e5e7eb' } },
       axisTick: { show: false },
       axisLabel: { color: '#9ca3af', fontSize: 11 }
@@ -239,7 +240,7 @@ function initPieChart() {
       textStyle: { color: '#6b7280', fontSize: 11 }
     },
     series: [{
-      name: '实例状态',
+      name: t('dashboard.实例状态_2eeb27f9'),
       type: 'pie',
       radius: ['44%', '72%'],
       center: ['50%', '46%'],
@@ -262,9 +263,9 @@ function initPieChart() {
         scaleSize: 8
       },
       data: [
-        { value: stats.completed, name: '已完成', itemStyle: { color: '#10b981' } },
-        { value: stats.running, name: '运行中', itemStyle: { color: '#f59e0b' } },
-        { value: stats.failed, name: '失败', itemStyle: { color: '#ef4444' } }
+        { value: stats.completed, name: t('dashboard.已完成_fad5222c'), itemStyle: { color: '#10b981' } },
+        { value: stats.running, name: t('dashboard.运行中_d679aea3'), itemStyle: { color: '#f59e0b' } },
+        { value: stats.failed, name: t('dashboard.失败_acd5cb84'), itemStyle: { color: '#ef4444' } }
       ].filter(d => d.value > 0)
     }]
   }

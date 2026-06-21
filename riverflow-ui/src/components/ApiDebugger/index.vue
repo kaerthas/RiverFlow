@@ -1,7 +1,7 @@
 <template>
   <div class="api-debugger">
     <el-form label-width="80px" size="small">
-      <el-form-item label="代理后地址">
+      <el-form-item :label="$t('compApiDebugger.代理后地址_0fb04c26')">
         <div class="debug-hint">此地址为平台统一暴露的代理路径，请求将经由平台转发处理</div>
         <el-input v-model="debugUrl" placeholder="http://...">
           <template #prepend>
@@ -28,7 +28,7 @@
         </el-button>
       </el-form-item>
 
-      <el-form-item label="请求参数">
+      <el-form-item :label="$t('compApiDebugger.请求参数_527466ff')">
         <el-radio-group v-model="paramType" size="small">
           <el-radio-button label="json">JSON</el-radio-button>
           <el-radio-button label="form">Form</el-radio-button>
@@ -48,12 +48,11 @@
           </el-button>
         </div>
         <el-button link type="primary" size="small" @click="formParams.push({ key: '', value: '' })">
-          <el-icon><Plus /></el-icon> 添加参数
-        </el-button>
+          <el-icon><Plus /></el-icon>{{ $t('compApiDebugger.添加参数_52288dd0') }}</el-button>
       </el-form-item>
 
       <el-form-item>
-        <el-button type="primary" :loading="sending" @click="sendRequest">发送请求</el-button>
+        <el-button type="primary" :loading="sending" @click="sendRequest">{{ $t('compApiDebugger.发送请求_4f02d2ef') }}</el-button>
       </el-form-item>
     </el-form>
 
@@ -68,6 +67,8 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import MonacoEditor from '@/components/MonacoEditor/index.vue'
@@ -101,7 +102,7 @@ const responseBody = computed(() => {
 
 async function sendRequest() {
   if (!debugUrl.value) {
-    ElMessage.warning('请输入请求地址')
+    ElMessage.warning(t('compApiDebugger.请输入请求地_e98b8137'))
     return
   }
   sending.value = true

@@ -1,0 +1,18 @@
+export default {
+  去接口注册_16: 'Go to API registration',
+  复制_j_s_o_n_15: 'Copy JSON',
+  复制失败_4: 'Copy failed',
+  已复制_j_s_o_n_3: 'Copied JSON',
+  接口文档内容_5: 'API doc content',
+  接口文档智能解析_8: 'API Doc Intelligence Parse',
+  接口文档解析失败_2: 'API Doc Parse Failed',
+  提取参数_10: 'Extract parameters',
+  提取响应_11: 'Extract response',
+  生成映射推荐_12: 'Generate mapping recommendation',
+  粘贴_open_a_p_6: 'Paste OpenAPI',
+  粘贴_open_a_p_9: 'Paste OpenAPI',
+  解析文档_13: 'Parse document',
+  解析结果_14: 'Parse result',
+  解析选项_7: 'Parse options',
+  请输入接口文档内_1: 'Please enter API doc content',
+}

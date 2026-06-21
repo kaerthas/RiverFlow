@@ -1,0 +1,15 @@
+export default {
+  关闭_b15d9127: 'Close',
+  刷新验证码_2810644a: 'Refresh Captcha',
+  安全验证_6fcf54a0: 'Security Verification',
+  未知错误_974e7484: 'Unknown error',
+  等待验证码容_634969ea: 'Waiting for captcha container size to stabilize timed out',
+  重试_132c5cdc: 'Retry',
+  验证失败_d52df629: '[CaptchaModal] Verification failed:',
+  验证成功但未_8cc1d558: '[CaptchaModal] Verification succeeded but no token returned',
+  验证码加载失_213a8110: 'Captcha load failed',
+  验证码容器未_d0e13334: 'Captcha container is not ready',
+  验证码挂载元_a5461cac: 'Captcha mount element does not exist',
+  验证码未加载_766181c5: 'TAC captcha SDK not loaded',
+  验证码渲染超_dd4770d5: 'Captcha rendering timed out, please check API response and TAC SDK status',
+}

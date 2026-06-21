@@ -1,0 +1,18 @@
+export default {
+  _a_i流程生成_11: 'AI Flow Generation',
+  例如每天早上8点_6: 'e.g. every morning at 8 o\'clock',
+  去设计器导入_cd38e361: 'Go to designer to import',
+  复制_ffe38355: 'Copy',
+  复制失败_4: 'Copy failed',
+  已复制_j_s_o_n_3: 'Copied JSON',
+  流程名称_7: 'Flow Name',
+  流程概览_14: 'Flow Overview',
+  流程生成失败_2: 'Flow generation failed',
+  生成流程草稿_13: 'Generate Flow Draft',
+  用自然语言描述业_12: 'Describe business in natural language',
+  用自然语言描述你_5: 'Describe your flow in natural language',
+  节点数_9: 'Node Count',
+  触发方式_8: 'Trigger Mode',
+  请输入流程描述_1: 'Please enter flow description',
+  边数_10: 'Edge Count',
+}

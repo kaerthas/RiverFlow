@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>插件管理</span>
+          <span>{{ $t('pluginManager.插件管理_f20cdea7') }}</span>
           <div class="header-actions">
             <el-upload
               :action="uploadUrl"
@@ -14,103 +14,93 @@
               :show-file-list="false"
               accept=".jar"
             >
-              <el-button type="primary" icon="Upload">
-                上传插件
-              </el-button>
+              <el-button type="primary" icon="Upload">{{ $t('pluginManager.上传插件_214cf777') }}</el-button>
             </el-upload>
           </div>
         </div>
       </template>
 
       <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="插件名称">
-          <el-input v-model="searchForm.pluginName" placeholder="请输入插件名称" clearable />
+        <el-form-item :label="$t('pluginManager.插件名称_ce411cbe')">
+          <el-input v-model="searchForm.pluginName" :placeholder="$t('pluginManager.请输入插件名_c2196c87')" clearable />
         </el-form-item>
-        <el-form-item label="分类">
-          <el-select v-model="searchForm.category" placeholder="请选择分类" clearable>
+        <el-form-item :label="$t('pluginManager.分类_d0771a42')">
+          <el-select v-model="searchForm.category" :placeholder="$t('pluginManager.请选择分类_8bb820b8')" clearable>
             <el-option v-for="cat in categories" :key="cat" :label="cat" :value="cat" />
           </el-select>
         </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-            <el-option label="已启用" value="enabled" />
-            <el-option label="已禁用" value="disabled" />
+        <el-form-item :label="$t('pluginManager.状态_3fea7ca7')">
+          <el-select v-model="searchForm.status" :placeholder="$t('pluginManager.请选择状态_e1c965ef')" clearable>
+            <el-option :label="$t('pluginManager.已启用_53ace430')" value="enabled" />
+            <el-option :label="$t('pluginManager.已禁用_1c1ed981')" value="disabled" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadPlugins">查询</el-button>
-          <el-button @click="resetSearch">重置</el-button>
+          <el-button type="primary" @click="loadPlugins">{{ $t('pluginManager.查询_bee912d7') }}</el-button>
+          <el-button @click="resetSearch">{{ $t('pluginManager.重置_4b9c3271') }}</el-button>
         </el-form-item>
       </el-form>
 
       <el-table :data="plugins" v-loading="loading" border stripe>
-        <el-table-column prop="pluginName" label="插件名称" width="180" />
-        <el-table-column prop="pluginType" label="类型标识" width="120" />
-        <el-table-column prop="pluginScope" label="作用域" width="100">
+        <el-table-column prop="pluginName" :label="$t('pluginManager.插件名称_ce411cbe_1')" width="180" />
+        <el-table-column prop="pluginType" :label="$t('pluginManager.类型标识_5613a66e')" width="120" />
+        <el-table-column prop="pluginScope" :label="$t('pluginManager.作用域_4705b884')" width="100">
           <template #default="{ row }">
             <el-tag size="small" :type="row.pluginScope === 'both' ? 'success' : row.pluginScope === 'api' ? 'primary' : 'info'">
               {{ { node: '节点', api: '接口', both: '两者' }[row.pluginScope] || row.pluginScope || '节点' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="category" label="分类" width="100">
+        <el-table-column prop="category" :label="$t('pluginManager.分类_d0771a42_1')" width="100">
           <template #default="{ row }">
             <el-tag size="small">{{ row.category }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="description" label="描述" show-overflow-tooltip />
-        <el-table-column prop="fileSize" label="文件大小" width="120">
+        <el-table-column prop="description" :label="$t('pluginManager.描述_3bdd08ad')" show-overflow-tooltip />
+        <el-table-column prop="fileSize" :label="$t('pluginManager.文件大小_396b7d3f')" width="120">
           <template #default="{ row }">
             {{ formatFileSize(row.fileSize) }}
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="status" :label="$t('pluginManager.状态_3fea7ca7_1')" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 'enabled' ? 'success' : 'info'">
               {{ row.status === 'enabled' ? '已启用' : '已禁用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="loaded" label="加载状态" width="100">
+        <el-table-column prop="loaded" :label="$t('pluginManager.加载状态_0915992e')" width="100">
           <template #default="{ row }">
             <el-tag :type="row.loaded ? 'success' : 'warning'">
               {{ row.loaded ? '已加载' : '未加载' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="上传时间" width="180" />
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column prop="createTime" :label="$t('pluginManager.上传时间_cae25527')" width="180" />
+        <el-table-column :label="$t('pluginManager.操作_2b6bc0f2')" width="280" fixed="right">
           <template #default="{ row }">
             <el-button 
               v-if="row.status === 'disabled'" 
               type="success" 
               size="small" 
               @click="enablePlugin(row)"
-            >
-              启用
-            </el-button>
+            >{{ $t('pluginManager.启用_7854b52a') }}</el-button>
             <el-button 
               v-else 
               type="warning" 
               size="small" 
               @click="disablePlugin(row)"
-            >
-              禁用
-            </el-button>
+            >{{ $t('pluginManager.禁用_710ad08b') }}</el-button>
             <el-button 
               type="primary" 
               size="small" 
               @click="reloadPlugin(row)"
-            >
-              重载
-            </el-button>
+            >{{ $t('pluginManager.重载_aaeb5463') }}</el-button>
             <el-button 
               type="danger" 
               size="small" 
               @click="deletePlugin(row)"
-            >
-              删除
-            </el-button>
+            >{{ $t('pluginManager.删除_2f4aaddd') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -130,6 +120,8 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
@@ -176,7 +168,7 @@ const loadPlugins = async () => {
     plugins.value = res.records || []
     total.value = res.total || 0
   } catch (error) {
-    ElMessage.error('加载插件列表失败')
+    ElMessage.error(t('pluginManager.加载插件列表_bf0bcfe9'))
   } finally {
     loading.value = false
   }
@@ -191,20 +183,20 @@ const loadCategories = async () => {
     
     categories.value = res || []
   } catch (error) {
-    console.error('加载分类失败', error)
+    console.error(t('pluginManager.加载分类失败_87b0ac09'), error)
   }
 }
 
 const beforeUpload = (file) => {
   const isJar = file.name.endsWith('.jar')
   if (!isJar) {
-    ElMessage.error('只能上传JAR文件')
+    ElMessage.error(t('pluginManager.只能上传文件_30a533ea'))
     return false
   }
   
   const isLt50M = file.size / 1024 / 1024 < 50
   if (!isLt50M) {
-    ElMessage.error('文件大小不能超过50MB')
+    ElMessage.error(t('pluginManager.文件大小不能_b90f5a36'))
     return false
   }
   
@@ -213,21 +205,21 @@ const beforeUpload = (file) => {
 
 const handleUploadSuccess = (response) => {
   if (response.code === 200) {
-    ElMessage.success('插件上传成功')
+    ElMessage.success(t('pluginManager.插件上传成功_b7140c04'))
     loadPlugins()
     loadCategories()
   } else {
-    ElMessage.error(response.msg || '插件上传失败')
+    ElMessage.error(response.msg || t('pluginManager.插件上传失败_d2578c40'))
   }
 }
 
 const handleUploadError = () => {
-  ElMessage.error('插件上传失败')
+  ElMessage.error(t('pluginManager.插件上传失败_d2578c40_1'))
 }
 
 const enablePlugin = async (row) => {
   try {
-    await ElMessageBox.confirm('确定要启用该插件吗？', '提示', {
+    await ElMessageBox.confirm(t('pluginManager.确定要启用该_26f14467'), t('pluginManager.提示_02d9819d'), {
       type: 'warning'
     })
     
@@ -236,18 +228,18 @@ const enablePlugin = async (row) => {
       method: 'post'
     })
     
-    ElMessage.success('插件启用成功')
+    ElMessage.success(t('pluginManager.插件启用成功_605a9317'))
     loadPlugins()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('插件启用失败')
+      ElMessage.error(t('pluginManager.插件启用失败_d932aa57'))
     }
   }
 }
 
 const disablePlugin = async (row) => {
   try {
-    await ElMessageBox.confirm('确定要禁用该插件吗？', '提示', {
+    await ElMessageBox.confirm(t('pluginManager.确定要禁用该_8f903af0'), t('pluginManager.提示_02d9819d_1'), {
       type: 'warning'
     })
     
@@ -256,18 +248,18 @@ const disablePlugin = async (row) => {
       method: 'post'
     })
     
-    ElMessage.success('插件已禁用')
+    ElMessage.success(t('pluginManager.插件已禁用_c0f58904'))
     loadPlugins()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('插件禁用失败')
+      ElMessage.error(t('pluginManager.插件禁用失败_5809e95b'))
     }
   }
 }
 
 const reloadPlugin = async (row) => {
   try {
-    await ElMessageBox.confirm('确定要重新加载该插件吗？', '提示', {
+    await ElMessageBox.confirm(t('pluginManager.确定要重新加_c4deae67'), t('pluginManager.提示_02d9819d_1'), {
       type: 'warning'
     })
     
@@ -276,11 +268,11 @@ const reloadPlugin = async (row) => {
       method: 'post'
     })
     
-    ElMessage.success('插件重新加载成功')
+    ElMessage.success(t('pluginManager.插件重新加载_d6993121'))
     loadPlugins()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('插件重新加载失败')
+      ElMessage.error(t('pluginManager.插件重新加载_b8a14a16'))
     }
   }
 }
@@ -288,12 +280,12 @@ const reloadPlugin = async (row) => {
 const deletePlugin = async (row) => {
   try {
     await ElMessageBox.confirm(
-      '确定要删除该插件吗？',
-      '提示',
+      t('pluginManager.确定要删除该_17e0abc7'),
+      t('pluginManager.提示_02d9819d_1'),
       {
         type: 'warning',
-        confirmButtonText: '确定',
-        cancelButtonText: '取消'
+        confirmButtonText: t('pluginManager.确定_38cf16f2'),
+        cancelButtonText: t('pluginManager.取消_625fb26b')
       }
     )
     
@@ -302,12 +294,12 @@ const deletePlugin = async (row) => {
       method: 'delete'
     })
     
-    ElMessage.success('插件删除成功')
+    ElMessage.success(t('pluginManager.插件删除成功_64c09e31'))
     loadPlugins()
     loadCategories()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('插件删除失败')
+      ElMessage.error(t('pluginManager.插件删除失败_dac0b403'))
     }
   }
 }

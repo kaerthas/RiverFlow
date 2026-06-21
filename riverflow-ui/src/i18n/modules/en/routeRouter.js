@@ -1,0 +1,17 @@
+export default {
+  AI助手_1306956f: 'AI Assistant',
+  事项管理_b3d49744: 'Task Management',
+  动态表设计_b33c7316: 'Dynamic Table',
+  实例监控_a92a32fa: 'Instance Monitor',
+  工作流_228526dc: 'Workflow',
+  接口注册_5c992ccb: 'API Registration',
+  插件管理_f20cdea7: 'Plugin Management',
+  数据大盘_8a3adf76: 'Dashboard',
+  数据源管理_4feab28d: 'Datasource Management',
+  河狸流程编排_a118db9e: 'RiverFlow · RiverFlow Platform',
+  流程定义_300d6075: 'Flow Definition',
+  流程设计器_98d0b1b0: 'Flow Designer',
+  登录_402d19e5: 'Login',
+  脚本管理_a1fb7f16: 'Script Management',
+  运行监控_8bf81f31: 'Runtime Monitor',
+}

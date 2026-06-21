@@ -44,8 +44,8 @@
               clearable
               style="width: 180px"
             >
-              <el-option label="是" :value="1" />
-              <el-option label="否" :value="0" />
+              <el-option :label="$t('compDynamicCrudDrawer.是_0a60ac8f_1')" :value="1" />
+              <el-option :label="$t('compDynamicCrudDrawer.否_c9744f45_1')" :value="0" />
             </el-select>
             <el-input
               v-else
@@ -55,9 +55,9 @@
             />
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
-            <el-button :icon="RefreshRight" @click="handleReset">重置</el-button>
-            <el-button type="success" :icon="Plus" @click="handleCreate">新增</el-button>
+            <el-button type="primary" :icon="Search" @click="handleSearch">{{ $t('compDynamicCrudDrawer.查询_bee912d7') }}</el-button>
+            <el-button :icon="RefreshRight" @click="handleReset">{{ $t('compDynamicCrudDrawer.重置_4b9c3271') }}</el-button>
+            <el-button type="success" :icon="Plus" @click="handleCreate">{{ $t('compDynamicCrudDrawer.新增_66ab5e9f') }}</el-button>
             <el-button
               v-if="queryColumns.length > QUERY_COLLAPSE_COUNT"
               link
@@ -98,10 +98,10 @@
               <span>{{ formatCellValue(row[col.columnCode], col) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="120" fixed="right" align="center">
+          <el-table-column :label="$t('compDynamicCrudDrawer.操作_2b6bc0f2')" width="120" fixed="right" align="center">
             <template #default="{ row }">
-              <el-button link type="primary" :icon="Edit" @click="handleEdit(row)">编辑</el-button>
-              <el-button link type="danger" :icon="Delete" @click="handleDelete(row)">删除</el-button>
+              <el-button link type="primary" :icon="Edit" @click="handleEdit(row)">{{ $t('compDynamicCrudDrawer.编辑_95b351c8') }}</el-button>
+              <el-button link type="danger" :icon="Delete" @click="handleDelete(row)">{{ $t('compDynamicCrudDrawer.删除_2f4aaddd') }}</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -203,14 +203,16 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="formVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">保存</el-button>
+        <el-button @click="formVisible = false">{{ $t('compDynamicCrudDrawer.取消_625fb26b') }}</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">{{ $t('compDynamicCrudDrawer.保存_be5fbbe3') }}</el-button>
       </template>
     </el-dialog>
   </el-drawer>
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { ref, reactive, computed, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Edit, Delete, Search, RefreshRight, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
@@ -233,7 +235,7 @@ const showAllQuery = ref(false)
 const QUERY_COLLAPSE_COUNT = 3
 const submitLoading = ref(false)
 const formVisible = ref(false)
-const formTitle = ref('新增数据')
+const formTitle = ref(t('compDynamicCrudDrawer.新增数据_50abd0bf'))
 const formRef = ref(null)
 
 const columns = ref([])
@@ -382,7 +384,7 @@ function handleReset() {
 
 // 新增
 function handleCreate() {
-  formTitle.value = '新增数据'
+  formTitle.value = t('compDynamicCrudDrawer.新增数据_50abd0bf_1')
   Object.keys(formData).forEach(key => delete formData[key])
   formColumns.value.forEach(col => {
     const type = (col.dataType || '').toLowerCase()
@@ -399,7 +401,7 @@ function handleCreate() {
 
 // 编辑
 function handleEdit(row) {
-  formTitle.value = '编辑数据'
+  formTitle.value = t('compDynamicCrudDrawer.编辑数据_7695a3b5')
   Object.keys(formData).forEach(key => delete formData[key])
   // 复制当前行数据到表单
   formColumns.value.forEach(col => {
@@ -440,7 +442,7 @@ async function handleSubmit() {
       }
     })
     await saveDynamicCrudData(props.tableId, payload)
-    ElMessage.success('保存成功')
+    ElMessage.success(t('compDynamicCrudDrawer.保存成功_3b108349'))
     formVisible.value = false
     loadData()
   } catch (e) {
@@ -455,13 +457,13 @@ async function handleDelete(row) {
   const pk = pkColumn.value
   const id = row[pk]
   if (id === undefined || id === null) {
-    ElMessage.warning('无法获取主键值')
+    ElMessage.warning(t('compDynamicCrudDrawer.无法获取主键_80bd5607'))
     return
   }
   try {
-    await ElMessageBox.confirm('确认删除该条数据？', '删除确认', { type: 'warning' })
+    await ElMessageBox.confirm(t('compDynamicCrudDrawer.确认删除该条_55d46f7f'), t('compDynamicCrudDrawer.删除确认_50eaf94d'), { type: 'warning' })
     await deleteDynamicCrudData(props.tableId, id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('compDynamicCrudDrawer.删除成功_0007d170'))
     loadData()
   } catch (e) {
     // 取消或失败
@@ -481,7 +483,7 @@ function formatCellValue(value, col) {
     return String(value).replace('T', ' ')
   }
   if (isBooleanType(col)) {
-    return value === 1 || value === true || value === '1' ? '是' : '否'
+    return value === 1 || value === true || value === '1' ? t('compDynamicCrudDrawer.是_0a60ac8f') : t('compDynamicCrudDrawer.否_c9744f45')
   }
   return value
 }

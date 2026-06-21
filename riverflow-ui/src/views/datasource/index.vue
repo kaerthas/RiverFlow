@@ -1,12 +1,10 @@
 <template>
   <div class="rf-page">
     <div class="rf-page-title">
-      <el-icon><DataAnalysis /></el-icon>
-      数据源管理
-    </div>
+      <el-icon><DataAnalysis /></el-icon>{{ $t('datasource.数据源管理_4feab28d') }}</div>
     <div class="rf-card">
       <div class="toolbar">
-        <el-button type="primary" @click="handleAdd"><el-icon><Plus /></el-icon> 新增数据源</el-button>
+        <el-button type="primary" @click="handleAdd"><el-icon><Plus /></el-icon>{{ $t('datasource.新增数据源_9a50895a_1') }}</el-button>
       </div>
       <el-row :gutter="16">
         <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="ds in datasourceList" :key="ds.id">
@@ -14,17 +12,17 @@
             <div class="ds-header">
               <el-icon :size="32" :color="ds.status === 1 ? '#1677FF' : '#8C8C8C'"><Coin /></el-icon>
               <div class="ds-status">
-                <el-tag v-if="ds.status === 1" type="success" size="small">在线</el-tag>
-                <el-tag v-else type="info" size="small">离线</el-tag>
+                <el-tag v-if="ds.status === 1" type="success" size="small">{{ $t('datasource.在线_68905cf3') }}</el-tag>
+                <el-tag v-else type="info" size="small">{{ $t('datasource.离线_50d4a850') }}</el-tag>
               </div>
             </div>
             <h4 class="ds-name">{{ ds.dsName }}</h4>
             <p class="ds-code">{{ ds.dsCode }} | {{ ds.dbType }}</p>
             <p class="ds-url" :title="ds.url">{{ ds.url }}</p>
             <div class="ds-actions">
-              <el-button link type="primary" size="small" @click="handleTest(ds)">测试连接</el-button>
-              <el-button link type="primary" size="small" @click="handleEdit(ds)">编辑</el-button>
-              <el-button link type="danger" size="small" @click="handleDelete(ds)">删除</el-button>
+              <el-button link type="primary" size="small" @click="handleTest(ds)">{{ $t('datasource.测试连接_69e74756') }}</el-button>
+              <el-button link type="primary" size="small" @click="handleEdit(ds)">{{ $t('datasource.编辑_95b351c8') }}</el-button>
+              <el-button link type="danger" size="small" @click="handleDelete(ds)">{{ $t('datasource.删除_2f4aaddd') }}</el-button>
             </div>
           </div>
         </el-col>
@@ -34,31 +32,31 @@
     <!-- 新增/编辑弹窗 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="560px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="110px">
-        <el-form-item label="数据源编码" prop="dsCode">
-          <el-input v-model="form.dsCode" placeholder="如 master、biz_db" :disabled="!!form.id" />
+        <el-form-item :label="$t('datasource.数据源编码_7183fb32')" prop="dsCode">
+          <el-input v-model="form.dsCode" :placeholder="$t('datasource.如_ff3e84c7')" :disabled="!!form.id" />
         </el-form-item>
-        <el-form-item label="数据源名称" prop="dsName">
-          <el-input v-model="form.dsName" placeholder="如 主库(MySQL)" />
+        <el-form-item :label="$t('datasource.数据源名称_2739083c')" prop="dsName">
+          <el-input v-model="form.dsName" :placeholder="$t('datasource.如主库_53cbc46b')" />
         </el-form-item>
-        <el-form-item label="数据库类型" prop="dbType">
-          <el-select v-model="form.dbType" placeholder="请选择" style="width: 100%" @change="onDbTypeChange">
+        <el-form-item :label="$t('datasource.数据库类型_84b916da')" prop="dbType">
+          <el-select v-model="form.dbType" :placeholder="$t('datasource.请选择_708c9d6d')" style="width: 100%" @change="onDbTypeChange">
             <el-option label="MySQL" value="mysql" />
             <el-option label="Oracle" value="oracle" />
             <el-option label="PostgreSQL" value="postgresql" />
             <el-option label="SQL Server" value="sqlserver" />
-            <el-option label="达梦" value="dm" />
+            <el-option :label="$t('datasource.达梦_a39b17f1')" value="dm" />
           </el-select>
         </el-form-item>
-        <el-form-item label="驱动类" prop="driverClass">
-          <el-input v-model="form.driverClass" placeholder="驱动类全限定名" />
+        <el-form-item :label="$t('datasource.驱动类_d4723bcb')" prop="driverClass">
+          <el-input v-model="form.driverClass" :placeholder="$t('datasource.驱动类全限定_368560a3')" />
         </el-form-item>
-        <el-form-item label="连接URL" prop="url">
+        <el-form-item :label="$t('datasource.连接_7c59946f')" prop="url">
           <el-input v-model="form.url" type="textarea" :rows="2" placeholder="jdbc:mysql://host:port/db" />
         </el-form-item>
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" placeholder="数据库用户名" />
+        <el-form-item :label="$t('datasource.用户名_819767ad')" prop="username">
+          <el-input v-model="form.username" :placeholder="$t('datasource.数据库用户名_c1b94f24')" />
         </el-form-item>
-        <el-form-item label="密码" prop="password" :rules="passwordRule">
+        <el-form-item :label="$t('datasource.密码_a8105204')" prop="password" :rules="passwordRule">
           <el-input
             v-model="form.password"
             type="password"
@@ -71,14 +69,16 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ $t('datasource.取消_625fb26b') }}</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">{{ $t('datasource.确定_38cf16f2') }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -91,7 +91,7 @@ import {
 
 const loading = ref(false)
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增数据源')
+const dialogTitle = ref(t('datasource.新增数据源_9a50895a'))
 const formRef = ref(null)
 const submitLoading = ref(false)
 const isEdit = ref(false)
@@ -110,18 +110,18 @@ const form = reactive({
 })
 
 const formRules = {
-  dsCode: [{ required: true, message: '请输入数据源编码', trigger: 'blur' }],
-  dsName: [{ required: true, message: '请输入数据源名称', trigger: 'blur' }],
-  dbType: [{ required: true, message: '请选择数据库类型', trigger: 'change' }],
-  url: [{ required: true, message: '请输入连接URL', trigger: 'blur' }],
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }]
+  dsCode: [{ required: true, message: t('datasource.请输入数据源_87dc3372'), trigger: 'blur' }],
+  dsName: [{ required: true, message: t('datasource.请输入数据源_1389576d'), trigger: 'blur' }],
+  dbType: [{ required: true, message: t('datasource.请选择数据库_262c627f'), trigger: 'change' }],
+  url: [{ required: true, message: t('datasource.请输入连接_19a9ec08'), trigger: 'blur' }],
+  username: [{ required: true, message: t('datasource.请输入用户名_08b1fa13'), trigger: 'blur' }]
 }
 
 // 密码校验规则（新增必填，编辑可选）
 const passwordRule = computed(() => {
   return isEdit.value
     ? []
-    : [{ required: true, message: '请输入密码', trigger: 'blur' }]
+    : [{ required: true, message: t('datasource.请输入密码_e39ffe99'), trigger: 'blur' }]
 })
 
 const dbTypeDriverMap = {
@@ -149,7 +149,7 @@ async function loadList() {
 }
 
 function handleAdd() {
-  dialogTitle.value = '新增数据源'
+  dialogTitle.value = t('datasource.新增数据源_9a50895a_1')
   isEdit.value = false
   Object.assign(form, {
     id: null,
@@ -165,7 +165,7 @@ function handleAdd() {
 }
 
 function handleEdit(ds) {
-  dialogTitle.value = '编辑数据源'
+  dialogTitle.value = t('datasource.编辑数据源_d1090e03')
   isEdit.value = true
   Object.assign(form, { ...ds, password: '' })
   dialogVisible.value = true
@@ -178,10 +178,10 @@ async function handleSubmit() {
   try {
     if (form.id) {
       await updateDatasource(form)
-      ElMessage.success('修改成功')
+      ElMessage.success(t('datasource.修改成功_69be6717'))
     } else {
       await createDatasource(form)
-      ElMessage.success('新增成功')
+      ElMessage.success(t('datasource.新增成功_a5bfd70d'))
     }
     dialogVisible.value = false
     loadList()
@@ -194,9 +194,9 @@ async function handleSubmit() {
 
 async function handleDelete(ds) {
   try {
-    await ElMessageBox.confirm(`确认删除数据源「${ds.dsName}」？`, '删除确认', { type: 'warning' })
+    await ElMessageBox.confirm(`确认删除数据源「${ds.dsName}」？`, t('datasource.删除确认_50eaf94d'), { type: 'warning' })
     await deleteDatasource(ds.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('datasource.删除成功_0007d170'))
     loadList()
   } catch (e) {
     // 取消或失败

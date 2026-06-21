@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -26,7 +27,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  */
 @Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     @Autowired
@@ -55,21 +56,22 @@ public class SecurityConfig {
             .accessDeniedHandler(accessDeniedHandler())
             .and()
             // 请求授权
-            .authorizeRequests()
+            .authorizeHttpRequests(auth -> auth
             // 允许匿名访问的路径
-            .antMatchers("/login").permitAll()
-            .antMatchers("/refresh").permitAll()
-            .antMatchers("/captcha/**").permitAll()
-            .antMatchers("/doc.html").permitAll()
-            .antMatchers("/webjars/**").permitAll()
-            .antMatchers("/swagger-resources/**").permitAll()
-            .antMatchers("/v3/api-docs/**").permitAll()
-            .antMatchers("/open/**").permitAll()  // 由 OpenApiAuthFilter 做应用级认证
-            .antMatchers("/example/**").denyAll()  // 示例/调试接口禁止外部访问
-            .antMatchers("/plugin/**").authenticated()  // 插件管理需要登录
-            .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            .requestMatchers("/login").permitAll()
+            .requestMatchers("/refresh").permitAll()
+            .requestMatchers("/captcha/**").permitAll()
+            .requestMatchers("/doc.html").permitAll()
+            .requestMatchers("/webjars/**").permitAll()
+            .requestMatchers("/swagger-resources/**").permitAll()
+            .requestMatchers("/v3/api-docs/**").permitAll()
+            .requestMatchers("/open/**").permitAll()  // 由 OpenApiAuthFilter 做应用级认证
+            .requestMatchers("/example/**").denyAll()  // 示例/调试接口禁止外部访问
+            .requestMatchers("/plugin/**").authenticated()  // 插件管理需要登录
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             // 其他请求需要认证
-            .anyRequest().authenticated();
+            .anyRequest().authenticated()
+            );
 
         // 添加 JWT 过滤器
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

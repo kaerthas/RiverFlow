@@ -2,28 +2,27 @@
   <div class="table-designer">
     <div class="designer-toolbar">
       <el-button type="primary" size="small" @click="handleAddColumn">
-        <el-icon><Plus /></el-icon> 添加字段
-      </el-button>
+        <el-icon><Plus /></el-icon>{{ $t('compTableDesigner.添加字段_4484fa04') }}</el-button>
       <el-button size="small" @click="handleImportSql">
         <el-icon><Document /></el-icon> 从SQL导入
       </el-button>
     </div>
 
     <el-table :data="columns" stripe size="small" border max-height="480">
-      <el-table-column type="index" label="序号" width="50" align="center" />
-      <el-table-column label="字段编码" width="160">
+      <el-table-column type="index" :label="$t('compTableDesigner.序号_faaadc44')" width="50" align="center" />
+      <el-table-column :label="$t('compTableDesigner.字段编码_1c7e0f2e')" width="160">
         <template #default="{ row, $index }">
           <el-input v-model="row.columnCode" size="small" placeholder="column_code" />
         </template>
       </el-table-column>
-      <el-table-column label="字段名称" width="140">
+      <el-table-column :label="$t('compTableDesigner.字段名称_e996419d')" width="140">
         <template #default="{ row }">
-          <el-input v-model="row.columnName" size="small" placeholder="字段名称" />
+          <el-input v-model="row.columnName" size="small" :placeholder="$t('compTableDesigner.字段名称_e996419d_1')" />
         </template>
       </el-table-column>
-      <el-table-column label="数据类型" width="130">
+      <el-table-column :label="$t('compTableDesigner.数据类型_185f7bf6')" width="130">
         <template #default="{ row }">
-          <el-select v-model="row.dataType" size="small" placeholder="类型" style="width: 100%">
+          <el-select v-model="row.dataType" size="small" :placeholder="$t('compTableDesigner.类型_226b0912')" style="width: 100%">
             <el-option label="VARCHAR" value="varchar" />
             <el-option label="INT" value="int" />
             <el-option label="BIGINT" value="bigint" />
@@ -36,60 +35,62 @@
           </el-select>
         </template>
       </el-table-column>
-      <el-table-column label="长度" width="80">
+      <el-table-column :label="$t('compTableDesigner.长度_dfd0cd7f')" width="80">
         <template #default="{ row }">
           <el-input-number v-model="row.length" size="small" :min="0" :controls="false" style="width: 100%" />
         </template>
       </el-table-column>
-      <el-table-column label="小数位" width="70">
+      <el-table-column :label="$t('compTableDesigner.小数位_0378d98d')" width="70">
         <template #default="{ row }">
           <el-input-number v-model="row.decimalScale" size="small" :min="0" :controls="false" style="width: 100%" />
         </template>
       </el-table-column>
-      <el-table-column label="主键" width="60" align="center">
+      <el-table-column :label="$t('compTableDesigner.主键_475cdfca')" width="60" align="center">
         <template #default="{ row }">
           <el-checkbox v-model="row.isPk" :true-label="1" :false-label="0" />
         </template>
       </el-table-column>
-      <el-table-column label="必填" width="60" align="center">
+      <el-table-column :label="$t('compTableDesigner.必填_537b39a8')" width="60" align="center">
         <template #default="{ row }">
           <el-checkbox v-model="row.isRequired" :true-label="1" :false-label="0" />
         </template>
       </el-table-column>
-      <el-table-column label="索引" width="60" align="center">
+      <el-table-column :label="$t('compTableDesigner.索引_b271e427')" width="60" align="center">
         <template #default="{ row }">
           <el-checkbox v-model="row.isIndex" :true-label="1" :false-label="0" />
         </template>
       </el-table-column>
-      <el-table-column label="默认值" width="120">
+      <el-table-column :label="$t('compTableDesigner.默认值_225f3ed0')" width="120">
         <template #default="{ row }">
-          <el-input v-model="row.defaultValue" size="small" placeholder="默认值" />
+          <el-input v-model="row.defaultValue" size="small" :placeholder="$t('compTableDesigner.默认值_225f3ed0_1')" />
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="70" align="center" fixed="right">
+      <el-table-column :label="$t('compTableDesigner.操作_2b6bc0f2')" width="70" align="center" fixed="right">
         <template #default="{ $index }">
-          <el-button link type="danger" size="small" @click="handleRemove($index)">删除</el-button>
+          <el-button link type="danger" size="small" @click="handleRemove($index)">{{ $t('compTableDesigner.删除_2f4aaddd') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
 
     <!-- SQL导入弹窗 -->
-    <el-dialog v-model="sqlDialogVisible" title="从 CREATE TABLE SQL 导入字段" width="600px" destroy-on-close>
+    <el-dialog v-model="sqlDialogVisible" :title="$t('compTableDesigner.从导入字段_d6ee1ff1')" width="600px" destroy-on-close>
       <el-input
         v-model="sqlText"
         type="textarea"
         :rows="10"
-        placeholder="粘贴 CREATE TABLE 语句，如：\nCREATE TABLE t_demo (\n  id BIGINT PRIMARY KEY,\n  name VARCHAR(100) NOT NULL\n)"
+        :placeholder="$t('compTableDesigner.粘贴语句如_ddcfccc6')"
       />
       <template #footer>
-        <el-button @click="sqlDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="parseSql">解析</el-button>
+        <el-button @click="sqlDialogVisible = false">{{ $t('compTableDesigner.取消_625fb26b') }}</el-button>
+        <el-button type="primary" @click="parseSql">{{ $t('compTableDesigner.解析_aa357cb9') }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 
@@ -145,7 +146,7 @@ function parseSql() {
     // 提取括号内的内容
     const match = text.match(/\((.*)\)/s)
     if (!match) {
-      ElMessage.warning('无法解析 SQL，请确保包含括号内的字段定义')
+      ElMessage.warning(t('compTableDesigner.无法解析请确_a7984752'))
       return
     }
     const inner = match[1]
@@ -219,14 +220,14 @@ function parseSql() {
     })
 
     if (parsed.length === 0) {
-      ElMessage.warning('未解析到有效字段')
+      ElMessage.warning(t('compTableDesigner.未解析到有效_c49d9245'))
       return
     }
     columns.value = [...columns.value, ...parsed]
     ElMessage.success(`成功导入 ${parsed.length} 个字段`)
     sqlDialogVisible.value = false
   } catch (e) {
-    ElMessage.error('SQL 解析失败：' + e.message)
+    ElMessage.error(t('compTableDesigner.解析失败_7cd0399a') + e.message)
   }
 }
 

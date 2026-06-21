@@ -1,35 +1,33 @@
 <template>
   <div class="rf-page">
     <div class="rf-page-title">
-      <el-icon><Monitor /></el-icon>
-      运行监控
-    </div>
+      <el-icon><Monitor /></el-icon>{{ $t('monitor.运行监控_8bf81f31') }}</div>
 
     <el-row :gutter="16">
       <el-col :xs="24" :lg="8">
         <div class="rf-card">
-          <h4 class="card-title">实例统计</h4>
+          <h4 class="card-title">{{ $t('monitor.实例统计_0417f7db') }}</h4>
           <div class="stat-number">
             <div class="number-item">
               <div class="num">{{ stats.total }}</div>
-              <div class="label">总实例</div>
+              <div class="label">{{ $t('monitor.总实例_6ca5089b') }}</div>
             </div>
             <div class="number-item">
               <div class="num success">{{ stats.completed }}</div>
-              <div class="label">已完成</div>
+              <div class="label">{{ $t('monitor.已完成_fad5222c') }}</div>
             </div>
             <div class="number-item">
               <div class="num danger">{{ stats.failed }}</div>
-              <div class="label">失败</div>
+              <div class="label">{{ $t('monitor.失败_acd5cb84') }}</div>
             </div>
           </div>
           <el-divider />
           <div class="monitor-item">
-            <span>运行中</span>
+            <span>{{ $t('monitor.运行中_d679aea3') }}</span>
             <el-progress :percentage="runningPercent" :color="'#1677FF'" />
           </div>
           <div class="monitor-item">
-            <span>待执行任务</span>
+            <span>{{ $t('monitor.待执行任务_1d3ec277') }}</span>
             <el-progress :percentage="pendingTasksPercent" :color="'#FAAD14'" />
           </div>
         </div>
@@ -40,15 +38,15 @@
           <div class="stat-number">
             <div class="number-item">
               <div class="num">12,456</div>
-              <div class="label">总调用次数</div>
+              <div class="label">{{ $t('monitor.总调用次数_7f6f35c4') }}</div>
             </div>
             <div class="number-item">
               <div class="num success">98.5%</div>
-              <div class="label">成功率</div>
+              <div class="label">{{ $t('monitor.成功率_b664352f') }}</div>
             </div>
             <div class="number-item">
               <div class="num danger">186</div>
-              <div class="label">失败次数</div>
+              <div class="label">{{ $t('monitor.失败次数_d3e480c8') }}</div>
             </div>
           </div>
           <el-divider />
@@ -63,7 +61,7 @@
       </el-col>
       <el-col :xs="24" :lg="8">
         <div class="rf-card">
-          <h4 class="card-title">最近异常</h4>
+          <h4 class="card-title">{{ $t('monitor.最近异常_bf45b0c5') }}</h4>
           <el-timeline>
             <el-timeline-item
               v-for="alert in recentErrors"
@@ -82,20 +80,22 @@
     </el-row>
 
     <div class="rf-card" style="margin-top: 16px;">
-      <h4 class="card-title">实时日志</h4>
+      <h4 class="card-title">{{ $t('monitor.实时日志_a94180c2') }}</h4>
       <div class="log-console" ref="logConsoleRef">
         <div v-for="(log, idx) in logs" :key="idx" class="log-line">
           <span class="log-time">{{ formatTime(log.createTime) }}</span>
           <span class="log-level" :class="log.logType?.toUpperCase()">{{ log.logType?.toUpperCase() || 'INFO' }}</span>
           <span class="log-msg">{{ log.logContent }}</span>
         </div>
-        <div v-if="logs.length === 0" class="empty-logs">暂无日志</div>
+        <div v-if="logs.length === 0" class="empty-logs">{{ $t('monitor.暂无日志_8b9c17a1') }}</div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import request from '@/utils/request'
 
@@ -116,11 +116,11 @@ const pendingTasksPercent = computed(() => {
 })
 
 const topApis = ref([
-  { name: '省里统一认证平台', count: 3456 },
-  { name: '协同调度中心', count: 2890 },
-  { name: '中残申请接口', count: 1567 },
-  { name: '查询办件列表', count: 1234 },
-  { name: '材料上传接口', count: 890 }
+  { name: t('monitor.省里统一认证_d41157ee'), count: 3456 },
+  { name: t('monitor.协同调度中心_5b915bec'), count: 2890 },
+  { name: t('monitor.中残申请接口_f870da4c'), count: 1567 },
+  { name: t('monitor.查询办件列表_a651dddd'), count: 1234 },
+  { name: t('monitor.材料上传接口_7caf26c0'), count: 890 }
 ])
 
 function formatTime(time) {

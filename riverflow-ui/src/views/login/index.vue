@@ -36,7 +36,7 @@
           </svg>
         </div>
         <h1>RiverFlow</h1>
-        <p class="subtitle">河狸流程编排平台</p>
+        <p class="subtitle">{{ $t('login.河狸流程编排_7238121c') }}</p>
       </div>
 
       <el-form
@@ -50,7 +50,7 @@
         <el-form-item prop="username">
           <el-input
             v-model="form.username"
-            placeholder="用户名"
+            :placeholder="$t('login.用户名_819767ad')"
             :prefix-icon="User"
             clearable
           />
@@ -59,7 +59,7 @@
           <el-input
             v-model="form.password"
             type="password"
-            placeholder="密码"
+            :placeholder="$t('login.密码_a8105204')"
             :prefix-icon="Lock"
             show-password
             clearable
@@ -71,9 +71,7 @@
             :loading="loading"
             class="login-btn"
             @click="handleLogin"
-          >
-            登 录
-          </el-button>
+          >{{ $t('login.登录_e43613ca') }}</el-button>
         </el-form-item>
       </el-form>
 
@@ -93,6 +91,8 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -113,8 +113,8 @@ const form = reactive({
 })
 
 const rules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  username: [{ required: true, message: t('login.请输入用户名_08b1fa13'), trigger: 'blur' }],
+  password: [{ required: true, message: t('login.请输入密码_e39ffe99'), trigger: 'blur' }]
 }
 
 /**
@@ -149,7 +149,7 @@ async function onCaptchaSuccess(captchaToken) {
     } catch (e) {
       // 使用登录返回的基础信息
     }
-    ElMessage.success('登录成功')
+    ElMessage.success(t('login.登录成功_71fa3bd0'))
     router.push('/')
   } catch (error) {
     // 错误已在 request 拦截器中提示
@@ -163,7 +163,7 @@ async function onCaptchaSuccess(captchaToken) {
  * 验证码验证失败
  */
 function onCaptchaFail() {
-  ElMessage.error('验证码验证失败，请重试')
+  ElMessage.error(t('login.验证码验证失_228e798c'))
 }
 </script>
 

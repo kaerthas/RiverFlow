@@ -5,13 +5,13 @@
         <div class="captcha-glow" aria-hidden="true" />
 
         <div class="captcha-actions">
-          <button class="captcha-action-btn" type="button" aria-label="刷新验证码" @click="reloadCaptcha">
+          <button class="captcha-action-btn" type="button" :aria-label="$t('compCaptchaModal.刷新验证码_2810644a')" @click="reloadCaptcha">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M1 7C1 3.686 3.686 1 7 1s6 2.686 6 6-2.686 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
               <path d="M7 4v3l2 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
-          <button class="captcha-action-btn" type="button" aria-label="关闭" @click="handleClose">
+          <button class="captcha-action-btn" type="button" :aria-label="$t('compCaptchaModal.关闭_b15d9127')" @click="handleClose">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
             </svg>
@@ -20,7 +20,7 @@
 
         <div class="captcha-hint">
           <span class="captcha-dot" />
-          <span class="captcha-hint-text">安全验证</span>
+          <span class="captcha-hint-text">{{ $t('compCaptchaModal.安全验证_6fcf54a0') }}</span>
         </div>
 
         <div class="captcha-box">
@@ -31,8 +31,8 @@
               <span>加载中...</span>
             </template>
             <template v-else>
-              <span>验证码加载失败</span>
-              <button type="button" @click="initCaptcha">重试</button>
+              <span>{{ $t('compCaptchaModal.验证码加载失_213a8110') }}</span>
+              <button type="button" @click="initCaptcha">{{ $t('compCaptchaModal.重试_132c5cdc') }}</button>
             </template>
           </div>
         </div>
@@ -42,6 +42,8 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { ref, watch, onUnmounted } from 'vue'
 
 const props = defineProps({
@@ -102,7 +104,7 @@ function observeCaptchaRender(el) {
   // 兜底：3 秒后仍未渲染成功则视为失败
   readyTimer = setTimeout(() => {
     if (status.value !== 'ready') {
-      setError('验证码渲染超时，请检查接口返回与 TAC SDK 状态')
+      setError(t('compCaptchaModal.验证码渲染超_dd4770d5'))
     }
   }, 3000)
 }
@@ -115,7 +117,7 @@ function patchTacRequests(config) {
     return originalGenerate().then((res) => {
       console.log('[CaptchaModal] captcha data response:', res)
       if (!res || res.code !== 200) {
-        setError(`验证码生成失败: ${res?.msg || '未知错误'}`)
+        setError(`验证码生成失败: ${res?.msg || t('compCaptchaModal.未知错误_974e7484')}`)
       }
       return res
     }).catch((err) => {
@@ -153,7 +155,7 @@ function waitForStableBox() {
       const el = captchaBox.value
       if (!el) {
         cleanup()
-        return reject(new Error('验证码挂载元素不存在'))
+        return reject(new Error(t('compCaptchaModal.验证码挂载元_a5461cac')))
       }
 
       const rect = el.getBoundingClientRect()
@@ -170,7 +172,7 @@ function waitForStableBox() {
 
     timeoutId = setTimeout(() => {
       cleanup()
-      reject(new Error('等待验证码容器尺寸稳定超时'))
+      reject(new Error(t('compCaptchaModal.等待验证码容_634969ea')))
     }, 3000)
 
     rafId = requestAnimationFrame(check)
@@ -184,7 +186,7 @@ function initCaptcha() {
   status.value = 'loading'
 
   if (typeof window.TAC === 'undefined') {
-    setError('TAC 验证码 SDK 未加载')
+    setError(t('compCaptchaModal.验证码未加载_766181c5'))
     isInitializing = false
     return
   }
@@ -202,13 +204,13 @@ function initCaptcha() {
               tacInstance.destroyWindow()
               emit('verify-success', captchaToken)
             } else {
-              console.warn('[CaptchaModal] 验证成功但未返回 token')
+              console.warn(t('compCaptchaModal.验证成功但未_8cc1d558'))
               tacInstance.reloadCaptcha()
               emit('verify-fail')
             }
           },
           validFail: (res, captchaInstance, tacInstance) => {
-            console.warn('[CaptchaModal] 验证失败:', res)
+            console.warn(t('compCaptchaModal.验证失败_d52df629'), res)
             tacInstance.reloadCaptcha()
             emit('verify-fail')
           },
@@ -232,7 +234,7 @@ function initCaptcha() {
       }
     })
     .catch((err) => {
-      setError(err?.message || '验证码容器未就绪')
+      setError(err?.message || t('compCaptchaModal.验证码容器未_d0e13334'))
       isInitializing = false
     })
 }
