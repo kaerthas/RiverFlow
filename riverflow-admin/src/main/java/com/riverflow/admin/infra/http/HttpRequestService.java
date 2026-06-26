@@ -47,6 +47,7 @@ public class HttpRequestService {
 
         // 将 query 参数拼接到 URL
         String finalUrl = buildUrlWithQueryParams(url, queryParams);
+        log.info("HTTP请求准备: url={}, method={}, contentType={}, body={}", finalUrl, method, contentType, body);
 
         try {
             JSONObject result;

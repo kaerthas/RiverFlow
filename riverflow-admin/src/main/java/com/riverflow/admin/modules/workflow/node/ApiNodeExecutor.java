@@ -75,8 +75,8 @@ public class ApiNodeExecutor implements NodeExecutor {
         Object body = null;
 
         String inputMapping = node.getInputMapping();
-        log.info("[流程实例:{}] API节点 inputMapping={}, context={}",
-                context.getInstanceId(), inputMapping, context.toJsonString());
+        log.info("[流程实例:{}] API节点 inputMapping={}, instanceId={}",
+                context.getInstanceId(), inputMapping, context.getInstanceId());
         if (inputMapping != null && !inputMapping.isEmpty()) {
             JSONArray mappings = JSON.parseArray(inputMapping);
             for (int i = 0; i < mappings.size(); i++) {
@@ -86,8 +86,10 @@ public class ApiNodeExecutor implements NodeExecutor {
                 String type = map.getString("type");
                 // type = "const" 时直接使用 source 作为常量值，否则从上下文取值
                 Object value = "const".equals(type) ? source : context.getByPath(source);
-                log.info("[流程实例:{}] 映射解析: source={}, target={}, type={}, value={}",
-                        context.getInstanceId(), source, target, type, value);
+                if (log.isDebugEnabled()) {
+                    log.debug("[流程实例:{}] 映射解析: source={}, target={}, type={}, value={}",
+                            context.getInstanceId(), source, target, type, value);
+                }
                 if (value == null) continue;
 
                 // target 格式：header.xxx / body.xxx / body.xxx.yyy / query.xxx

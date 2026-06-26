@@ -73,6 +73,31 @@ public class FlowTask extends BaseEntity {
     private LocalDateTime nextExecuteTime;
 
     /**
+     * 所属循环节点ID
+     */
+    private String loopNodeId;
+
+    /**
+     * 循环迭代下标
+     */
+    private Integer iterationIndex;
+
+    /**
+     * 是否循环体内部任务
+     */
+    private Integer isLoopInternal;
+
+    /**
+     * 任务类型：NODE / LOOP_ITERATION / LOOP_AGGREGATE
+     */
+    private String taskType;
+
+    /**
+     * 并行循环批次号
+     */
+    private String batchNo;
+
+    /**
      * 开始时间
      */
     private LocalDateTime startTime;

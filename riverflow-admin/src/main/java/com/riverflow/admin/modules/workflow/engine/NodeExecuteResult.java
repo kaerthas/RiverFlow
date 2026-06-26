@@ -43,6 +43,38 @@ public class NodeExecuteResult implements Serializable {
      */
     private Long nextExecuteTime;
 
+    // ==================== 循环节点扩展字段 ====================
+
+    /**
+     * 指定下一入口节点（用于循环跳转）
+     */
+    private String nextEntryNodeId;
+
+    /**
+     * 是否退出循环
+     */
+    private boolean exitLoop;
+
+    /**
+     * 是否是循环控制节点产生的跳转
+     */
+    private boolean loopControl;
+
+    /**
+     * 循环节点 ID（循环控制结果携带，用于任务标记）
+     */
+    private String loopNodeId;
+
+    /**
+     * 循环迭代下标（循环控制结果携带）
+     */
+    private Integer iterationIndex;
+
+    /**
+     * 是否终止当前执行链（用于异步并行 foreach 调度后不再继续流转）
+     */
+    private boolean terminateChain;
+
     public static NodeExecuteResult success() {
         return NodeExecuteResult.builder().success(true).build();
     }
@@ -57,5 +89,30 @@ public class NodeExecuteResult implements Serializable {
 
     public static NodeExecuteResult waiting(Long nextExecuteTime) {
         return NodeExecuteResult.builder().success(true).waiting(true).nextExecuteTime(nextExecuteTime).build();
+    }
+
+    public NodeExecuteResult withNextEntryNode(String nextEntryNodeId) {
+        this.nextEntryNodeId = nextEntryNodeId;
+        this.loopControl = true;
+        return this;
+    }
+
+    public NodeExecuteResult withNextEntryNode(String nextEntryNodeId, String loopNodeId, Integer iterationIndex) {
+        this.nextEntryNodeId = nextEntryNodeId;
+        this.loopNodeId = loopNodeId;
+        this.iterationIndex = iterationIndex;
+        this.loopControl = true;
+        return this;
+    }
+
+    public NodeExecuteResult withExitLoop(boolean exitLoop) {
+        this.exitLoop = exitLoop;
+        this.loopControl = true;
+        return this;
+    }
+
+    public NodeExecuteResult withTerminateChain(boolean terminateChain) {
+        this.terminateChain = terminateChain;
+        return this;
     }
 }

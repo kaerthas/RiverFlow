@@ -49,4 +49,9 @@ public class FlowEdge extends BaseEntity {
      * 优先级（数字小的先匹配）
      */
     private Integer priority;
+
+    /**
+     * 画布上是否隐藏（如循环回跳边）
+     */
+    private Integer isHidden;
 }

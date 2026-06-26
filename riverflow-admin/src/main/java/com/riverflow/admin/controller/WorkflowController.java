@@ -6,11 +6,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
 import com.riverflow.admin.modules.workflow.engine.FlowEngine;
+import com.riverflow.admin.modules.workflow.loop.LoopState;
 import com.riverflow.admin.service.*;
 import com.riverflow.api.entity.*;
 import com.riverflow.api.enums.FlowInstanceStatusEnum;
 import com.riverflow.api.enums.FlowNodeTypeEnum;
 import com.riverflow.api.enums.FlowTaskStatusEnum;
+import com.riverflow.api.enums.FlowTaskTypeEnum;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +50,8 @@ public class WorkflowController {
     private FlowLogService flowLogService;
     @Autowired
     private FlowEngine flowEngine;
+    @Autowired
+    private com.riverflow.admin.modules.workflow.loop.LoopValidator loopValidator;
     @Autowired
     private DynamicDataSourceService dynamicDataSourceService;
 
@@ -274,6 +278,33 @@ public class WorkflowController {
         }
 
         com.alibaba.fastjson2.JSONArray nodes = request.getJSONArray("nodes");
+
+        // 循环结构校验
+        List<FlowNode> nodeListForValidate = new ArrayList<>();
+        List<FlowEdge> edgeListForValidate = new ArrayList<>();
+        if (nodes != null) {
+            for (int i = 0; i < nodes.size(); i++) {
+                com.alibaba.fastjson2.JSONObject nodeJson = nodes.getJSONObject(i);
+                FlowNode node = new FlowNode();
+                node.setNodeId(nodeJson.getString("id"));
+                node.setNodeName(nodeJson.getString("text"));
+                node.setNodeType(nodeJson.getString("type"));
+                node.setConfigJson(nodeJson.getJSONObject("properties") != null ?
+                        nodeJson.getJSONObject("properties").toJSONString() : null);
+                nodeListForValidate.add(node);
+            }
+        }
+        com.alibaba.fastjson2.JSONArray edgesForValidate = request.getJSONArray("edges");
+        if (edgesForValidate != null) {
+            for (int i = 0; i < edgesForValidate.size(); i++) {
+                com.alibaba.fastjson2.JSONObject edgeJson = edgesForValidate.getJSONObject(i);
+                FlowEdge edge = new FlowEdge();
+                edge.setSourceNode(edgeJson.getString("sourceNodeId"));
+                edge.setTargetNode(edgeJson.getString("targetNodeId"));
+                edgeListForValidate.add(edge);
+            }
+        }
+        loopValidator.validate(nodeListForValidate, edgeListForValidate);
 
         // 同步流程校验：不能包含 timer 节点
         if ("SYNC".equals(def.getExecutionMode()) && nodes != null) {
@@ -545,6 +576,92 @@ public class WorkflowController {
     public R<List<FlowTask>> getInstanceTasks(@PathVariable Long instanceId) {
         return R.ok(flowTaskService.list(new QueryWrapper<FlowTask>()
                 .eq("instance_id", instanceId).orderByAsc("create_time")));
+    }
+
+    /**
+     * 查询循环节点执行进度
+     */
+    @GetMapping("/instance/{instanceId}/loop-progress")
+    public R<Map<String, Object>> getLoopProgress(@PathVariable Long instanceId,
+                                                   @RequestParam String loopNodeId) {
+        FlowInstance instance = flowInstanceService.getById(instanceId);
+        if (instance == null) {
+            return R.fail("实例不存在");
+        }
+
+        FlowContext context = FlowContext.fromJson(instance.getContextJson());
+        LoopState state = LoopState.from(context.getGlobal(LoopState.key(loopNodeId)));
+
+        boolean isParallel = state != null && state.isParallel();
+        int total = state != null ? state.getTotal() : 0;
+        int currentIndex = state != null ? state.getIndex() : 0;
+
+        List<FlowTask> iterationTasks;
+        if (isParallel) {
+            iterationTasks = flowTaskService.listByInstanceIdAndLoopNodeIdAndTaskType(
+                    instanceId, loopNodeId, FlowTaskTypeEnum.LOOP_ITERATION.getCode());
+        } else {
+            // 串行模式：入口节点任务被合并复用，按 loop_node_id 查询即可
+            iterationTasks = flowTaskService.list(
+                    new QueryWrapper<FlowTask>()
+                            .eq("instance_id", instanceId)
+                            .eq("loop_node_id", loopNodeId)
+                            .orderByAsc("create_time")
+            );
+        }
+
+        long completedCount = 0;
+        long failedCount = 0;
+        long runningCount = 0;
+        long pendingCount = 0;
+        for (FlowTask task : iterationTasks) {
+            String status = task.getStatus();
+            if (FlowTaskStatusEnum.SUCCESS.getCode().equals(status)) {
+                completedCount++;
+            } else if (FlowTaskStatusEnum.FAIL.getCode().equals(status)) {
+                failedCount++;
+            } else if (FlowTaskStatusEnum.RUNNING.getCode().equals(status)) {
+                runningCount++;
+            } else if (FlowTaskStatusEnum.PENDING.getCode().equals(status)) {
+                pendingCount++;
+            }
+        }
+        if (!isParallel && state != null) {
+            // 串行进度以 LoopState 为准
+            completedCount = Math.min(state.getResults() != null ? state.getResults().size() : 0, total);
+        }
+        int progress = total > 0 ? (int) ((completedCount * 100) / total) : 0;
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("loopNodeId", loopNodeId);
+        result.put("parallel", isParallel);
+        result.put("total", total);
+        result.put("currentIndex", currentIndex);
+        result.put("progress", progress);
+        result.put("completed", completedCount);
+        result.put("failed", failedCount);
+        result.put("running", runningCount);
+        result.put("pending", pendingCount);
+        result.put("batchNo", state != null ? state.getBatchNo() : null);
+
+        List<Map<String, Object>> iterations = new ArrayList<>();
+        for (FlowTask task : iterationTasks) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("taskId", task.getId());
+            item.put("taskType", task.getTaskType());
+            item.put("iterationIndex", task.getIterationIndex());
+            item.put("nodeId", task.getNodeId());
+            item.put("nodeName", task.getNodeName());
+            item.put("status", task.getStatus());
+            item.put("executeCount", task.getExecuteCount());
+            item.put("startTime", task.getStartTime());
+            item.put("endTime", task.getEndTime());
+            item.put("errorMsg", task.getErrorMsg());
+            iterations.add(item);
+        }
+        result.put("iterations", iterations);
+
+        return R.ok(result);
     }
 
     @GetMapping("/instance/{instanceId}/logs")
