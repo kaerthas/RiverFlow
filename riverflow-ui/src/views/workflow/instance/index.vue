@@ -202,14 +202,30 @@
           <el-tab-pane :label="$t('instance.任务列表_ca27b7bc')" name="tasks">
             <el-table :data="instanceTasks" stripe size="small">
               <el-table-column prop="nodeName" :label="$t('instance.节点_3bf3c0a8')" />
-              <el-table-column prop="status" :label="$t('instance.状态_3fea7ca7_1')" width="120">
+              <el-table-column prop="nodeType" label="节点类型" width="110" />
+              <el-table-column prop="status" :label="$t('instance.状态_3fea7ca7_1')" width="100">
                 <template #default="{ row }">
                   <el-tag :type="taskStatusType(row.status)" size="small">{{ row.status }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="loopNodeId" label="循环节点" width="140" show-overflow-tooltip />
+              <el-table-column prop="iterationIndex" label="迭代" width="80" align="center">
+                <template #default="{ row }">
+                  <span>{{ row.iterationIndex != null ? row.iterationIndex : '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="isLoopInternal" label="循环内" width="80" align="center">
+                <template #default="{ row }">
+                  <el-tag v-if="row.isLoopInternal === 1" type="info" size="small">是</el-tag>
+                  <span v-else>-</span>
                 </template>
               </el-table-column>
               <el-table-column prop="executeCount" :label="$t('instance.执行次数_d4aea8d7')" width="90" />
               <el-table-column prop="errorMsg" :label="$t('instance.错误信息_4604d502')" show-overflow-tooltip />
             </el-table>
+          </el-tab-pane>
+          <el-tab-pane label="循环概览" name="loops">
+            <LoopProgressPanel :instance-id="currentInstance?.id" />
           </el-tab-pane>
         </el-tabs>
       </div>
@@ -223,6 +239,7 @@ const { t } = useI18n()
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { View, VideoPlay, CircleClose, VideoPause, RefreshRight, Refresh } from '@element-plus/icons-vue'
+import LoopProgressPanel from './components/LoopProgressPanel.vue'
 import {
   getFlowInstanceList,
   getFlowInstanceDetail,
@@ -233,6 +250,7 @@ import {
   retryFlowInstance,
   getInstanceTasks,
   getInstanceLogs,
+  getLoopProgress,
   getFlowDefinitionList,
   startFlowInstance
 } from '@/api/workflow'

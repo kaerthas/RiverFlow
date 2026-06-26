@@ -22,6 +22,8 @@ public class JsonPostRequestExecutor extends HttpRequestExecutor {
     }
 
     public JSONObject execute(String url, Map<String, String> headers, Object body, int timeout) throws IOException {
+        String bodyStr = body != null ? (body instanceof String ? (String) body : JSON.toJSONString(body)) : "null";
+        log.info("JSON POST请求: url={}, body={}", url, bodyStr);
         HttpPost httpPost = new HttpPost(url);
         httpPost.setHeader("Content-Type", "application/json;charset=UTF-8");
         if (headers != null) {

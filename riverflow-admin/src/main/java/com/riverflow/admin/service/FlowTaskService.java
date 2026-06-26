@@ -8,4 +8,8 @@ import java.util.List;
 
 public interface FlowTaskService extends IService<FlowTask> {
     List<FlowTask> getPendingTasks(LocalDateTime now);
+
+    List<FlowTask> listByInstanceIdAndBatchNo(Long instanceId, String batchNo);
+
+    List<FlowTask> listByInstanceIdAndLoopNodeIdAndTaskType(Long instanceId, String loopNodeId, String taskType);
 }

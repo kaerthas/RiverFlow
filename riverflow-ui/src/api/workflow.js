@@ -156,6 +156,14 @@ export function getInstanceLogs(instanceId, page = 1, size = 5) {
   })
 }
 
+export function getLoopProgress(instanceId, loopNodeId) {
+  return request({
+    url: `/workflow/instance/${instanceId}/loop-progress`,
+    method: 'get',
+    params: { loopNodeId }
+  })
+}
+
 // ==================== 同步流程执行（对外接口，管理后台调试使用）====================
 
 export function executeSyncFlow(data) {

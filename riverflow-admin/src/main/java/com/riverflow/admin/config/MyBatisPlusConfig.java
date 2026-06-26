@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;
@@ -67,7 +68,8 @@ public class MyBatisPlusConfig {
     @Bean
     public SqlSessionFactory sqlSessionFactory(DataSource dataSource,
                                                 MybatisPlusProperties properties,
-                                                MybatisPlusInterceptor mybatisPlusInterceptor) throws Exception {
+                                                MybatisPlusInterceptor mybatisPlusInterceptor,
+                                                MetaObjectHandler metaObjectHandler) throws Exception {
         MybatisSqlSessionFactoryBean factoryBean = new MybatisSqlSessionFactoryBean();
         factoryBean.setDataSource(dataSource);
 
@@ -98,9 +100,12 @@ public class MyBatisPlusConfig {
             properties.getConfiguration().applyTo(configuration);
             factoryBean.setConfiguration(configuration);
         }
-        if (properties.getGlobalConfig() != null) {
-            factoryBean.setGlobalConfig(properties.getGlobalConfig());
-        }
+        // 手动组装 GlobalConfig，确保自动填充处理器生效
+        GlobalConfig globalConfig = properties.getGlobalConfig() != null
+                ? properties.getGlobalConfig()
+                : new GlobalConfig();
+        globalConfig.setMetaObjectHandler(metaObjectHandler);
+        factoryBean.setGlobalConfig(globalConfig);
 
         return factoryBean.getObject();
     }
