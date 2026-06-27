@@ -692,7 +692,7 @@ import {
 } from '@logicflow/extension'
 import '@logicflow/core/dist/style/index.css'
 import '@logicflow/extension/lib/style/index.css'
-import { saveFlowDefinition, saveFlowGraph, getFlowDefinitionDetail, publishFlowDefinition, startFlowInstance, copyFlowDefinition } from '@/api/workflow'
+import { saveFlowDefinition, saveFlowGraph, getFlowDefinitionDetail, publishFlowDefinition, validateFlowDefinition, startFlowInstance, copyFlowDefinition } from '@/api/workflow'
 import { getDatasourceList } from '@/api/datasource'
 import { getApiCatalogList, getApiParams } from '@/api/apiMgr'
 import request from '@/utils/request'
@@ -2590,7 +2590,7 @@ function stopResizePropertyPanel() {
   document.removeEventListener('mouseup', stopResizePropertyPanel)
 }
 
-function handleValidate() {
+async function handleValidate() {
   if (!lf) return
   const data = lf.getGraphData()
   const hasStart = data.nodes.some(n => n.type === 'start')
@@ -2620,6 +2620,32 @@ function handleValidate() {
     ElMessage.error('循环开始节点与结束节点数量不匹配')
     isValid.value = false
     return
+  }
+
+  // DB 节点 SQL 占位符必须在输入映射中配置（基于当前画布数据校验）
+  const sqlPlaceholderPattern = /#\{([^}]+)}/g
+  for (const node of data.nodes) {
+    if (node.type !== 'db') continue
+    const sql = node.properties?.sql || ''
+    const rawInput = node.properties?.inputMapping
+    let nodeInputMappings = []
+    try {
+      nodeInputMappings = rawInput ? (typeof rawInput === 'string' ? JSON.parse(rawInput) : rawInput) : []
+    } catch (e) { nodeInputMappings = [] }
+    const mappedTargets = new Set(nodeInputMappings.map(m => m.target).filter(Boolean))
+    const placeholders = new Set()
+    let match
+    while ((match = sqlPlaceholderPattern.exec(sql)) !== null) {
+      placeholders.add(match[1].trim())
+    }
+    sqlPlaceholderPattern.lastIndex = 0
+    for (const placeholder of placeholders) {
+      if (!mappedTargets.has(placeholder)) {
+        ElMessage.error(`数据库节点 [${node.properties?.name || node.text?.value || node.id}] SQL占位符 [#{${placeholder}}] 未在输入映射中配置`)
+        isValid.value = false
+        return
+      }
+    }
   }
 
   ElMessage.success(t('designer.流程验证通过_b0dddcc2'))
@@ -2668,6 +2694,8 @@ async function handlePublish() {
     return
   }
   try {
+    // 发布前先进行后端校验
+    await validateFlowDefinition(flowId.value)
     const newId = await publishFlowDefinition(flowId.value)
     flowStatus.value = 1
     // 如果返回了新的ID，说明创建了新版，更新当前ID
