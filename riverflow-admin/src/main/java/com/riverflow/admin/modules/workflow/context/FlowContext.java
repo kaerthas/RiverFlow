@@ -64,7 +64,7 @@ public class FlowContext implements Serializable {
     private transient boolean asyncMode = false;
 
     /**
-     * 表达式求值缓存（不序列化），避免同一上下文中重复解析大集合
+     * 表达式求值缓存（不序列化），用于缓存 evaluateCollection 转换后的大集合
      */
     private transient Map<String, Object> evaluationCache = new ConcurrentHashMap<>();
 
@@ -140,12 +140,26 @@ public class FlowContext implements Serializable {
     }
 
     /**
-     * 设置变量：如果在作用域内则写入当前 scope，否则写入 global。
+     * 设置变量：
+     * 1. 当前作用域已存在该 key，更新当前作用域；
+     * 2. 当前作用域不存在但全局已存在，更新全局（如 while 循环体中脚本修改 counter）；
+     * 3. 都不存在，则在当前作用域顶层创建新变量。
      * 保持向后兼容：旧代码未使用 pushScope 时等价于旧行为。
      */
     public void set(String key, Object value) {
         if (!scopeStack.isEmpty()) {
-            scopeStack.peek().put(key, value);
+            Map<String, Object> currentScope = scopeStack.peek();
+            if (currentScope.containsKey(key)) {
+                currentScope.put(key, value);
+                return;
+            }
+            // 若全局已存在，则更新全局，避免循环体内对全局变量的修改被写入 scope 后丢失
+            if (globalVariables.containsKey(key)) {
+                globalVariables.put(key, value);
+                return;
+            }
+            // 否则在当前 scope 顶层创建新变量
+            currentScope.put(key, value);
         } else {
             globalVariables.put(key, value);
         }

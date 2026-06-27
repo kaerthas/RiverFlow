@@ -29,6 +29,9 @@ public class WhileNodeExecutor implements NodeExecutor {
     public NodeExecuteResult execute(FlowNode node, FlowContext context) {
         log.info("[流程实例:{}] 执行 while 节点: {}", context.getInstanceId(), node.getNodeName());
 
+        // 进入新一次循环迭代前清理表达式缓存，避免循环体中 evaluateCollection 使用旧值
+        context.clearEvaluationCache();
+
         LoopConfig config = parseConfig(node.getConfigJson());
         if (config.getConditionExpr() == null || config.getConditionExpr().trim().isEmpty()) {
             throw new BusinessException("while 节点缺少条件表达式");
