@@ -71,6 +71,9 @@ public class ForeachNodeExecutor implements NodeExecutor {
         log.info("[流程实例:{}] >>> 进入 ForeachNodeExecutor.execute: nodeId={}, nodeName={}",
                 context.getInstanceId(), node.getNodeId(), node.getNodeName());
 
+        // 进入新一次循环迭代前清理表达式缓存，避免循环体中 evaluateCollection 使用旧值
+        context.clearEvaluationCache();
+
         LoopConfig config = parseConfig(node.getConfigJson());
         log.info("[流程实例:{}] foreach 配置解析完成: sourceExpr={}, itemVar={}, indexVar={}, resultVar={}, parallel={}",
                 context.getInstanceId(), config.getSourceExpr(), config.getItemVar(),

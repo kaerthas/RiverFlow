@@ -61,7 +61,7 @@ public class LoopUtils {
     }
 
     /**
-     * 求值 SpEL 表达式，返回对象（带上下文缓存）
+     * 求值 SpEL 表达式，返回对象
      */
     @SuppressWarnings("unchecked")
     public static Object evaluateExpression(String expression, FlowContext context) {
@@ -69,12 +69,6 @@ public class LoopUtils {
             return null;
         }
         log.info("[LoopUtils] 开始求值表达式: {}", expression);
-        // 同一上下文内，相同表达式只 evaluate 一次
-        Object cached = context.getEvaluationCache(expression);
-        if (cached != null) {
-            log.info("[LoopUtils] 表达式命中缓存: {}", expression);
-            return cached;
-        }
 
         String expr = expression.trim();
         if (expr.startsWith("#{")) {
@@ -96,7 +90,6 @@ public class LoopUtils {
             } else {
                 result = PARSER.parseExpression(expr).getValue(evalContext);
             }
-            context.putEvaluationCache(expression, result);
             log.info("[LoopUtils] 表达式求值完成: {}, resultType={}", expression,
                     result != null ? result.getClass().getSimpleName() : "null");
             return result;
@@ -122,6 +115,10 @@ public class LoopUtils {
 
     /**
      * 求值集合并表达式（带上下文缓存）
+     * <p>
+     * 缓存转换后的大集合，避免 foreach 每次迭代都重复解析/转换。
+     * 注意：该缓存假设 sourceExpr 对应的集合在循环生命周期内稳定；
+     * 若业务需要在循环体中动态改变集合，应通过 clearEvaluationCache 清理。
      */
     @SuppressWarnings("unchecked")
     public static Collection<?> evaluateCollection(String expression, FlowContext context) {
