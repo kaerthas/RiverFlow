@@ -111,7 +111,12 @@
       </div>
 
       <!-- 右侧浮动属性面板 -->
-      <div class="property-panel" :class="{ active: selectedNode || selectedEdge }">
+      <div
+        class="property-panel"
+        :class="{ active: selectedNode || selectedEdge, resizing: isResizingPropertyPanel }"
+        :style="{ width: propertyPanelWidth + 'px' }"
+      >
+        <div class="resize-handle" @mousedown="startResizePropertyPanel"></div>
         <div class="panel-header">
           <div class="panel-icon">
             <el-icon><Tools /></el-icon>
@@ -685,7 +690,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import LogicFlow, {
@@ -722,8 +727,35 @@ const version = ref(1)
 const flowInputParams = ref([])
 const flowOutputParams = ref([])
 
+// 属性面板宽度（可拖动调整）
+const propertyPanelWidth = ref(340)
+const MIN_PROPERTY_PANEL_WIDTH = 280
+const MAX_PROPERTY_PANEL_WIDTH = 600
+const isResizingPropertyPanel = ref(false)
+
+// 画布脏标记：用于已发布流程创建新版本前提示
+const isDirty = ref(false)
+// 加载流程时的原始 graphJson，用于可靠判断是否有修改
+const originalGraphJson = ref('')
+
 const filteredFlowOutputParams = computed(() => {
   return flowOutputParams.value.filter(p => p.type !== 'object')
+})
+
+// 已发布流程一旦被修改，立即提示用户需要先创建新版本；取消则还原改动
+watch(isDirty, (newVal, oldVal) => {
+  if (newVal && !oldVal && flowStatus.value === 1) {
+    ElMessageBox.confirm(
+      '当前流程已发布，修改前需要创建新版本。是否立即创建新版本？',
+      '提示',
+      { confirmButtonText: '创建新版本', cancelButtonText: '取消', type: 'warning' }
+    ).then(() => {
+      handleCopyAndEdit()
+    }).catch(async () => {
+      await loadFlowData()
+      ElMessage.info('已还原至上一次保存状态')
+    })
+  }
 })
 
 function flattenInputParams(obj, prefix = 'context', level = 0) {
@@ -1163,6 +1195,7 @@ function initLogicFlow() {
   })
 
   lf.on('node:delete', (eventData) => {
+    isDirty.value = true
     selectedNode.value = null
     selectedEdge.value = null
     parsedColumns.value = []
@@ -1195,6 +1228,7 @@ function initLogicFlow() {
   })
 
   lf.on('edge:delete', () => {
+    isDirty.value = true
     selectedNode.value = null
     selectedEdge.value = null
     parsedColumns.value = []
@@ -1245,8 +1279,12 @@ function initLogicFlow() {
 
   // 监听画布变化，重新渲染循环容器框
   const loopContainerEvents = ['node:add', 'node:delete', 'node:drag', 'node:drop', 'node:mousemove', 'edge:add', 'edge:delete', 'graph:transform']
+  const dirtyEvents = ['node:add', 'node:delete', 'node:drag', 'node:drop', 'edge:add', 'edge:delete']
   loopContainerEvents.forEach(eventName => {
     lf.on(eventName, () => {
+      if (dirtyEvents.includes(eventName)) {
+        isDirty.value = true
+      }
       requestAnimationFrame(renderLoopContainers)
     })
   })
@@ -1503,6 +1541,7 @@ function handleDrop(e) {
       text: data.text,
       properties: data.properties
     })
+    isDirty.value = true
     console.log('[Designer] addNode success')
   } catch (err) {
     console.error('[Designer] 添加节点失败', err)
@@ -1571,12 +1610,13 @@ function addLoopNodePair(loopType, x, y, text) {
     }
   })
 
+  isDirty.value = true
   console.log('[Designer] addLoopNodePair success', { startId, endId })
 }
 
 /**
  * 渲染循环容器视觉框
- * 通过 lf.getTransform() 手动把逻辑坐标转成屏幕坐标，使框在滚轮缩放/平移时跟随节点。
+ * 将容器组挂到 LogicFlow 的 graph 变换组下，使虚线框随滚轮缩放/平移自动跟随节点。
  */
 function renderLoopContainers() {
   if (!lf) return
@@ -1585,26 +1625,27 @@ function renderLoopContainers() {
     const svg = lf.container?.querySelector('svg')
     if (!svg) return
 
-    // 获取画布当前的缩放与平移，用于把逻辑坐标映射到屏幕坐标
-    const transform = lf.getTransform() || {}
-    const scaleX = transform.SCALE_X ?? 1
-    const scaleY = transform.SCALE_Y ?? 1
-    const translateX = transform.TRANSLATE_X ?? 0
-    const translateY = transform.TRANSLATE_Y ?? 0
-
-    // 容器组直接挂在最外层 SVG 下，通过手动计算屏幕坐标跟随缩放
+    // 容器组挂在 LogicFlow 的 graph 变换组下，随画布自动缩放/平移
+    let graphGroup = svg.querySelector('g.lf-graph') || svg.querySelector('g[transform]')
     let containerGroup = svg.querySelector('#loop-containers')
     if (!containerGroup) {
       containerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
       containerGroup.setAttribute('id', 'loop-containers')
-      if (svg.firstChild) {
+    }
+
+    containerGroup.innerHTML = ''
+
+    // 确保容器组位于 graph 变换组内（且在最前面，作为背景层）
+    const parent = graphGroup || svg
+    if (containerGroup.parentNode !== parent) {
+      if (graphGroup && graphGroup.firstChild) {
+        graphGroup.insertBefore(containerGroup, graphGroup.firstChild)
+      } else if (svg.firstChild) {
         svg.insertBefore(containerGroup, svg.firstChild)
       } else {
         svg.appendChild(containerGroup)
       }
     }
-
-    containerGroup.innerHTML = ''
 
     const pairs = findLoopPairs(graphData)
     const nodeMap = {}
@@ -1625,11 +1666,11 @@ function renderLoopContainers() {
       const bounds = computeLoopBounds(startId, endId, graphData)
       if (!bounds) continue
 
-      // 逻辑坐标 -> 屏幕坐标
-      const screenX = bounds.x * scaleX + translateX
-      const screenY = bounds.y * scaleY + translateY
-      const screenW = bounds.width * scaleX
-      const screenH = bounds.height * scaleY
+      // 使用逻辑坐标，由父级 graph 变换组统一缩放/平移
+      const loopX = bounds.x
+      const loopY = bounds.y
+      const loopW = bounds.width
+      const loopH = bounds.height
 
       const level = levels.get(startId) || 0
       const isForeach = startNode.type === 'foreach'
@@ -1643,10 +1684,10 @@ function renderLoopContainers() {
 
       // 容器背景矩形
       const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
-      rect.setAttribute('x', screenX)
-      rect.setAttribute('y', screenY)
-      rect.setAttribute('width', screenW)
-      rect.setAttribute('height', screenH)
+      rect.setAttribute('x', loopX)
+      rect.setAttribute('y', loopY)
+      rect.setAttribute('width', loopW)
+      rect.setAttribute('height', loopH)
       rect.setAttribute('rx', 16)
       rect.setAttribute('fill', `rgba(${baseColor}, ${fillOpacity})`)
       rect.setAttribute('stroke', `rgba(${baseColor}, 0.35)`)
@@ -1664,8 +1705,8 @@ function renderLoopContainers() {
       const labelHeight = fontSize + textPaddingY * 2
 
       const labelRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
-      labelRect.setAttribute('x', screenX + 12)
-      labelRect.setAttribute('y', screenY + 8)
+      labelRect.setAttribute('x', loopX + 12)
+      labelRect.setAttribute('y', loopY + 8)
       labelRect.setAttribute('width', approxWidth)
       labelRect.setAttribute('height', labelHeight)
       labelRect.setAttribute('rx', 6)
@@ -1676,8 +1717,8 @@ function renderLoopContainers() {
 
       // 标签文字
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-      text.setAttribute('x', screenX + 12 + textPaddingX)
-      text.setAttribute('y', screenY + 8 + labelHeight - textPaddingY - 1)
+      text.setAttribute('x', loopX + 12 + textPaddingX)
+      text.setAttribute('y', loopY + 8 + labelHeight - textPaddingY - 1)
       text.setAttribute('fill', `rgba(${baseColor}, 0.9)`)
       text.setAttribute('font-size', fontSize)
       text.setAttribute('font-weight', 600)
@@ -1686,8 +1727,8 @@ function renderLoopContainers() {
 
       // 右上角删除按钮：点击删除整个循环体
       const btnSize = 16
-      const btnX = screenX + screenW - btnSize - 10
-      const btnY = screenY + 8
+      const btnX = loopX + loopW - btnSize - 10
+      const btnY = loopY + 8
       const btnGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
       btnGroup.setAttribute('class', 'loop-delete-btn')
       btnGroup.style.cursor = 'pointer'
@@ -1926,6 +1967,7 @@ function deleteLoopContainer(startId) {
 }
 
 function updateNodeProperties() {
+  isDirty.value = true
   if (selectedNode.value && lf) {
     // 将输入/输出映射同步回 properties（后端以JSON字符串存储）
     selectedNode.value.properties.inputMapping = JSON.stringify(inputMappings.value)
@@ -1942,6 +1984,7 @@ function updateNodeProperties() {
 }
 
 function updateEdgeProperties() {
+  isDirty.value = true
   if (selectedEdge.value && lf) {
     lf.setProperties(selectedEdge.value.id, selectedEdge.value.properties)
   }
@@ -2459,6 +2502,32 @@ function handleZoomIn() { lf?.zoom(true) }
 function handleZoomOut() { lf?.zoom(false) }
 function handleFitView() { lf?.resetZoom() }
 
+// 属性面板宽度拖动调整
+let resizeStartX = 0
+let resizeStartWidth = 0
+function startResizePropertyPanel(e) {
+  e.preventDefault()
+  e.stopPropagation()
+  isResizingPropertyPanel.value = true
+  resizeStartX = Number(e.clientX) || 0
+  resizeStartWidth = Number(propertyPanelWidth.value) || 340
+  document.addEventListener('mousemove', onPropertyPanelResize)
+  document.addEventListener('mouseup', stopResizePropertyPanel)
+}
+function onPropertyPanelResize(e) {
+  if (!isResizingPropertyPanel.value) return
+  const clientX = Number(e.clientX) || resizeStartX
+  const deltaX = resizeStartX - clientX
+  const startWidth = Number.isFinite(resizeStartWidth) ? resizeStartWidth : 340
+  const newWidth = Math.max(MIN_PROPERTY_PANEL_WIDTH, Math.min(MAX_PROPERTY_PANEL_WIDTH, startWidth + deltaX))
+  propertyPanelWidth.value = Number.isFinite(newWidth) ? newWidth : 340
+}
+function stopResizePropertyPanel() {
+  isResizingPropertyPanel.value = false
+  document.removeEventListener('mousemove', onPropertyPanelResize)
+  document.removeEventListener('mouseup', stopResizePropertyPanel)
+}
+
 function handleValidate() {
   if (!lf) return
   const data = lf.getGraphData()
@@ -2525,6 +2594,7 @@ async function handleSave() {
     }
 
     ElMessage.success('流程草稿已保存')
+    isDirty.value = false
   } catch (e) {
     ElMessage.error('保存失败: ' + e.message)
   }
@@ -2545,6 +2615,7 @@ async function handlePublish() {
       router.replace({ path: '/workflow/designer', query: { id: newId } })
     }
     ElMessage.success('流程发布成功')
+    isDirty.value = false
   } catch (e) {
     ElMessage.error('发布失败: ' + e.message)
   }
@@ -2552,6 +2623,20 @@ async function handlePublish() {
 
 async function handleCopyAndEdit() {
   if (!flowId.value) return
+  // 已发布流程若存在未保存的修改，创建新版本会丢失这些修改，需提示用户
+  const currentGraphData = lf ? JSON.stringify(lf.getGraphData()) : ''
+  const hasUnsavedChanges = isDirty.value || (currentGraphData !== originalGraphJson.value)
+  if (hasUnsavedChanges) {
+    try {
+      await ElMessageBox.confirm(
+        '当前流程存在未保存的修改，创建新版本会丢失这些修改，是否继续？',
+        '创建新版本',
+        { confirmButtonText: '继续创建新版本', cancelButtonText: '取消', type: 'warning' }
+      )
+    } catch (e) {
+      return
+    }
+  }
   try {
     const newId = await copyFlowDefinition(flowId.value)
     ElMessage.success('已创建新版本，正在跳转...')
@@ -2600,6 +2685,7 @@ function handleImport() {
       }
       lf.clearData()
       lf.render(data)
+      isDirty.value = true
       ElMessage.success('导入成功')
     } catch (err) {
       ElMessage.error('导入失败: ' + err.message)
@@ -2628,6 +2714,7 @@ async function loadFlowData() {
       flowStatus.value = def.status || 0
       flowExecutionMode.value = def.executionMode || 'ASYNC'
       version.value = def.version || 1
+      isDirty.value = false
       if (def.inputParams) {
         try {
           const obj = JSON.parse(def.inputParams)
@@ -2656,6 +2743,15 @@ async function loadFlowData() {
       } else {
         lf.render({ nodes: [], edges: [] })
       }
+      // 记录当前画布原始数据，用于判断后续是否有修改
+      originalGraphJson.value = JSON.stringify(lf.getGraphData())
+      // 清空选中状态，避免属性面板显示旧数据
+      selectedNode.value = null
+      selectedEdge.value = null
+      parsedColumns.value = []
+      currentApiParams.value = []
+      currentResponseParams.value = []
+      allApiParams.value = []
     }
   } catch (e) {
     console.error('加载流程数据失败', e)
@@ -3178,6 +3274,29 @@ $text-muted: #94a3b8;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   transition: transform 0.3s var(--ease-out-expo), opacity 0.3s;
+  position: relative;
+
+  &.resizing {
+    transition: none;
+    user-select: none;
+  }
+
+  .resize-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: col-resize;
+    z-index: 10;
+    background: transparent;
+    transition: background 0.2s;
+
+    &:hover,
+    &:active {
+      background: rgba(59, 130, 246, 0.15);
+    }
+  }
 
   .panel-header {
     height: 48px;
