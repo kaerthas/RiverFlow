@@ -53,6 +53,8 @@ public class WorkflowController {
     @Autowired
     private com.riverflow.admin.modules.workflow.loop.LoopValidator loopValidator;
     @Autowired
+    private com.riverflow.admin.modules.workflow.validate.FlowValidator flowValidator;
+    @Autowired
     private DynamicDataSourceService dynamicDataSourceService;
 
     // ==================== 流程定义 ====================
@@ -166,18 +168,39 @@ public class WorkflowController {
         return R.ok(String.valueOf(definition.getId()));
     }
 
+    @PostMapping("/definition/{id}/validate")
+    public R<Void> validateDefinition(@PathVariable Long id) {
+        FlowDefinition def = flowDefinitionService.getById(id);
+        if (def == null) return R.fail("流程定义不存在");
+        List<FlowNode> nodes = flowNodeService.getNodesByFlowId(id);
+        List<String> errors = flowValidator.validate(nodes);
+        if (!errors.isEmpty()) {
+            return R.fail(String.join("; ", errors));
+        }
+        return R.ok();
+    }
+
     @PutMapping("/definition/{id}/publish")
     @Transactional(rollbackFor = Exception.class)
     public R<String> publishDefinition(@PathVariable Long id) {
         FlowDefinition def = flowDefinitionService.getById(id);
         if (def == null) return R.fail("流程定义不存在");
 
+        List<FlowNode> nodes = flowNodeService.getNodesByFlowId(id);
+
         // 同步流程发布前校验：不能包含 timer 节点
         if ("SYNC".equals(def.getExecutionMode())) {
-            List<FlowNode> nodes = flowNodeService.getNodesByFlowId(id);
             boolean hasTimer = nodes.stream().anyMatch(n -> "timer".equals(n.getNodeType()));
             if (hasTimer) {
                 return R.fail("同步流程不能包含定时(timer)节点，请修改流程图后重新发布");
+            }
+        }
+
+        // 发布前校验：DB 节点 SQL 占位符必须在输入映射中配置
+        if (def.getStatus() == null || def.getStatus() != 1) {
+            List<String> errors = flowValidator.validate(nodes);
+            if (!errors.isEmpty()) {
+                return R.fail(String.join("; ", errors));
             }
         }
 

@@ -31,6 +31,13 @@ export function publishFlowDefinition(id) {
   })
 }
 
+export function validateFlowDefinition(id) {
+  return request({
+    url: `/workflow/definition/${id}/validate`,
+    method: 'post'
+  })
+}
+
 export function deleteFlowDefinition(id) {
   return request({
     url: `/workflow/definition/${id}`,

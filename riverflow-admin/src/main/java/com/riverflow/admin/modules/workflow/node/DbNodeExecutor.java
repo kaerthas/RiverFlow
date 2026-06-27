@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -57,8 +58,8 @@ public class DbNodeExecutor implements NodeExecutor {
             return NodeExecuteResult.fail("数据库节点未配置SQL");
         }
 
-        // 解析 SQL 中的 SpEL 占位符
-        PreparedSql prepared = resolvePreparedSql(sql, context);
+        // 解析 SQL 中的 SpEL 占位符（必须从输入映射取值）
+        PreparedSql prepared = resolvePreparedSql(sql, node, context);
         String resolvedSql = prepared.getSql();
         Object[] args = prepared.getArgs();
         log.debug("[流程实例:{}] 解析后SQL: {}", context.getInstanceId(), resolvedSql);
@@ -108,14 +109,19 @@ public class DbNodeExecutor implements NodeExecutor {
 
     /**
      * 解析 SQL 中的 SpEL 占位符，转为 PreparedStatement 参数化SQL
+     * 占位符必须从输入映射（inputMapping）中取值，不允许黑盒读取上下文
      */
-    private PreparedSql resolvePreparedSql(String sql, FlowContext context) {
+    private PreparedSql resolvePreparedSql(String sql, FlowNode node, FlowContext context) {
+        Map<String, Object> paramMap = buildInputParamMap(node, context);
         Matcher matcher = SPEL_PATTERN.matcher(sql);
         StringBuffer sb = new StringBuffer();
         List<Object> args = new ArrayList<>();
         while (matcher.find()) {
-            String expression = matcher.group(1);
-            Object value = context.getByPath(expression);
+            String expression = matcher.group(1).trim();
+            if (!paramMap.containsKey(expression)) {
+                throw new IllegalArgumentException("SQL占位符 [#{" + expression + "}] 未在输入映射中配置");
+            }
+            Object value = paramMap.get(expression);
             if (value instanceof Map || value instanceof List) {
                 value = JSON.toJSONString(value);
             }
@@ -124,6 +130,39 @@ public class DbNodeExecutor implements NodeExecutor {
         }
         matcher.appendTail(sb);
         return new PreparedSql(sb.toString(), args.toArray());
+    }
+
+    /**
+     * 根据输入映射构建参数表
+     */
+    private Map<String, Object> buildInputParamMap(FlowNode node, FlowContext context) {
+        Map<String, Object> paramMap = new HashMap<>();
+        String inputMapping = node.getInputMapping();
+        if (inputMapping == null || inputMapping.isEmpty()) {
+            return paramMap;
+        }
+        try {
+            JSONArray mappings = JSON.parseArray(inputMapping);
+            for (int i = 0; i < mappings.size(); i++) {
+                JSONObject map = mappings.getJSONObject(i);
+                String target = map.getString("target");
+                String source = map.getString("source");
+                String type = map.getString("type");
+                if (target == null || target.isEmpty()) {
+                    continue;
+                }
+                Object value;
+                if ("const".equals(type)) {
+                    value = source;
+                } else {
+                    value = context.getByPath(source);
+                }
+                paramMap.put(target, value);
+            }
+        } catch (Exception e) {
+            log.warn("输入映射解析失败: {}", e.getMessage());
+        }
+        return paramMap;
     }
 
     private static class PreparedSql {
