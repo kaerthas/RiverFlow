@@ -3,6 +3,7 @@ package com.riverflow.admin.controller;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.dynamic.datasource.DynamicRoutingDataSource;
 import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
 import com.riverflow.admin.infra.groovy.GroovySandboxExecutor;
 import com.riverflow.admin.infra.http.HttpRequestService;
@@ -29,6 +30,7 @@ import com.riverflow.api.enums.FlowNodeTypeEnum;
 import com.riverflow.api.enums.FlowTaskStatusEnum;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -82,6 +84,15 @@ public class OpenApiController {
     private StringRedisTemplate redisTemplate;
     @Autowired
     private ApiPluginLoader apiPluginLoader;
+    @Autowired
+    private DynamicRoutingDataSource dynamicRoutingDataSource;
+
+    private JdbcTemplate dynamicJdbcTemplate;
+
+    @PostConstruct
+    public void init() {
+        this.dynamicJdbcTemplate = new JdbcTemplate(dynamicRoutingDataSource);
+    }
 
     @PostMapping("/flow/start")
     public R<Map<String, Object>> startFlow(@RequestBody(required = false) Map<String, Object> params) {
@@ -398,8 +409,8 @@ public class OpenApiController {
                 final String execSql = resolvedSql;
                 final Object[] execArgs = args;
                 result = dynamicDataSourceService.executeWithDs(ds.getDsCode(), () -> {
-                    return isSelect ? jdbcTemplate.queryForList(execSql, execArgs)
-                            : jdbcTemplate.update(execSql, execArgs);
+                    return isSelect ? dynamicJdbcTemplate.queryForList(execSql, execArgs)
+                            : dynamicJdbcTemplate.update(execSql, execArgs);
                 });
             }
 

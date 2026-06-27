@@ -101,7 +101,6 @@ jasypt:
     password: riverflow-secret-key
     algorithm: PBEWithMD5AndDES
     iv-generator-classname: org.jasypt.iv.NoIvGenerator
-
 # tianai-captcha 行为验证码配置
 captcha:
   # Redis key 前缀
@@ -147,6 +146,12 @@ logging:
     com.riverflow: debug
     org.springframework.security: warn
 riverflow:
+  datasource:
+    driver:
+      # 自定义 JDBC 驱动 JAR 包存储目录
+      dir: ${user.home}/riverflow/drivers
+      # 单个驱动 JAR 最大 50MB
+      max-file-size: 52428800
   plugin:
     # 启用插件系统
     enabled: true

@@ -51,6 +51,11 @@ public class Datasource extends BaseEntity {
     private String driverClass;
 
     /**
+     * 驱动JAR包路径（自定义驱动时使用）
+     */
+    private String driverJarPath;
+
+    /**
      * 状态：0-停用，1-启用
      */
     private Integer status;

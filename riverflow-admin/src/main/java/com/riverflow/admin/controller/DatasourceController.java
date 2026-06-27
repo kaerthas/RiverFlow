@@ -3,6 +3,8 @@ package com.riverflow.admin.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
+import com.riverflow.admin.infra.dynamicds.JdbcDriverJarLoader;
+import com.riverflow.admin.infra.dynamicds.JdbcDriverJarValidator;
 import com.riverflow.admin.service.DatasourceService;
 import com.riverflow.api.entity.Datasource;
 import com.riverflow.common.result.R;
@@ -11,7 +13,11 @@ import org.jasypt.encryption.StringEncryptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -28,6 +34,10 @@ public class DatasourceController {
     private DynamicDataSourceService dynamicDataSourceService;
     @Autowired
     private StringEncryptor stringEncryptor;
+    @Autowired
+    private JdbcDriverJarLoader driverJarLoader;
+    @Autowired
+    private JdbcDriverJarValidator driverJarValidator;
 
     /**
      * 密码脱敏占位符，前端编辑时传回该值表示不修改密码
@@ -52,6 +62,10 @@ public class DatasourceController {
 
     @PostMapping
     public R<Long> save(@RequestBody Datasource datasource) {
+        R<Long> validateResult = validateCustomDriver(datasource);
+        if (validateResult != null) {
+            return validateResult;
+        }
         // 新增时密码必填，且加密存储
         encryptPasswordIfNeeded(datasource);
         datasourceService.saveOrUpdate(datasource);
@@ -66,15 +80,25 @@ public class DatasourceController {
             return R.fail("数据源ID不能为空");
         }
 
+        R<Long> validateResult = validateCustomDriver(datasource);
+        if (validateResult != null) {
+            return validateResult;
+        }
+
+        Datasource old = datasourceService.getById(id);
+        if (old == null) {
+            return R.fail("数据源不存在");
+        }
+
         // 如果前端未填写密码或传回脱敏值，保持数据库原密码不变
         if (shouldKeepOldPassword(datasource.getPassword())) {
-            Datasource old = datasourceService.getById(id);
-            if (old != null) {
-                datasource.setPassword(old.getPassword());
-            }
+            datasource.setPassword(old.getPassword());
         } else {
             encryptPasswordIfNeeded(datasource);
         }
+
+        // 如果驱动 JAR 路径变更，清理旧的 ClassLoader 和 JAR 文件
+        cleanupOldDriverJarIfChanged(old, datasource);
 
         datasourceService.updateById(datasource);
         // 更新后重新加载或移除连接池，确保配置实时生效
@@ -87,6 +111,7 @@ public class DatasourceController {
         Datasource ds = datasourceService.getById(id);
         if (ds != null) {
             dynamicDataSourceService.removeDataSource(ds.getDsCode());
+            cleanupDriverJar(ds);
         }
         datasourceService.removeById(id);
         return R.ok();
@@ -107,6 +132,40 @@ public class DatasourceController {
         dynamicDataSourceService.removeDataSource(ds.getDsCode());
         dynamicDataSourceService.addDataSource(ds);
         return R.ok();
+    }
+
+    /**
+     * 上传 JDBC 驱动 JAR 包
+     *
+     * @param dsCode      数据源编码
+     * @param driverClass 驱动类名
+     * @param file        JAR 文件
+     * @return 保存后的相对路径
+     */
+    @PostMapping("/uploadDriverJar")
+    public R<String> uploadDriverJar(
+            @RequestParam("dsCode") String dsCode,
+            @RequestParam("driverClass") String driverClass,
+            @RequestParam("file") MultipartFile file) {
+        if (!StringUtils.hasText(dsCode)) {
+            return R.fail("数据源编码不能为空");
+        }
+        if (!StringUtils.hasText(driverClass)) {
+            return R.fail("驱动类名不能为空");
+        }
+
+        R<String> validateResult = driverJarValidator.validate(file, driverClass);
+        if (validateResult != null) {
+            return validateResult;
+        }
+
+        try {
+            String jarPath = driverJarLoader.saveJar(dsCode, file);
+            return R.ok(jarPath);
+        } catch (Exception e) {
+            log.error("上传驱动 JAR 失败: {}", e.getMessage(), e);
+            return R.fail("上传驱动 JAR 失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -169,5 +228,59 @@ public class DatasourceController {
                 ds.setPassword(PASSWORD_MASK);
             }
         }
+    }
+
+    /**
+     * 驱动 JAR 路径变更时，清理旧的 ClassLoader 和 JAR 文件
+     */
+    private void cleanupOldDriverJarIfChanged(Datasource oldDs, Datasource newDs) {
+        if (!StringUtils.hasText(oldDs.getDriverJarPath())) {
+            return;
+        }
+        String oldPath = oldDs.getDriverJarPath();
+        String newPath = newDs.getDriverJarPath();
+        if (oldPath.equals(newPath)) {
+            return;
+        }
+        // 路径变更，先移除 ClassLoader，再删除旧文件
+        driverJarLoader.removeClassLoader(oldDs.getDsCode());
+        deleteJarFile(oldPath);
+    }
+
+    /**
+     * 清理数据源关联的驱动 JAR 文件
+     */
+    private void cleanupDriverJar(Datasource ds) {
+        if (!StringUtils.hasText(ds.getDriverJarPath())) {
+            return;
+        }
+        driverJarLoader.removeClassLoader(ds.getDsCode());
+        deleteJarFile(ds.getDriverJarPath());
+    }
+
+    private void deleteJarFile(String jarPath) {
+        try {
+            Path path = driverJarLoader.resolveJarPath(jarPath);
+            Files.deleteIfExists(path);
+            log.info("已删除旧驱动 JAR: {}", path);
+        } catch (IOException e) {
+            log.warn("删除旧驱动 JAR 失败: {}, error={}", jarPath, e.getMessage());
+        }
+    }
+
+    /**
+     * 校验自定义数据库类型的驱动信息是否完整
+     */
+    private R<Long> validateCustomDriver(Datasource datasource) {
+        if (!"other".equalsIgnoreCase(datasource.getDbType())) {
+            return null;
+        }
+        if (!StringUtils.hasText(datasource.getDriverClass())) {
+            return R.fail("自定义数据库类型必须填写驱动类名");
+        }
+        if (!StringUtils.hasText(datasource.getDriverJarPath())) {
+            return R.fail("自定义数据库类型必须上传驱动 JAR 包");
+        }
+        return null;
     }
 }
