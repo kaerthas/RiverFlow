@@ -1211,3 +1211,7 @@ ALTER TABLE `wf_api_app` ADD UNIQUE KEY IF NOT EXISTS `uk_app_key` (`app_key`);
 
 -- 为 wf_api_catalog 增加 IP 白名单字段
 ALTER TABLE `wf_api_catalog` ADD COLUMN IF NOT EXISTS `allowed_ips` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '调用方 IP 白名单，多个用逗号分隔，支持 CIDR，如 10.0.0.0/24,192.168.1.10' AFTER `auth_type`;
+
+-- 动态数据源新增驱动 JAR 包路径字段
+ALTER TABLE `wf_datasource`
+    ADD COLUMN IF NOT EXISTS `driver_jar_path` VARCHAR(500) NULL COMMENT '驱动JAR包路径（自定义驱动时使用）' AFTER `driver_class`;

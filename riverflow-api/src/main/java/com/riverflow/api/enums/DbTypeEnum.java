@@ -10,8 +10,8 @@ public enum DbTypeEnum {
 
     MYSQL("mysql", "com.mysql.cj.jdbc.Driver"),
     ORACLE("oracle", "oracle.jdbc.driver.OracleDriver"),
-    SQLSERVER("sqlserver", "com.microsoft.sqlserver.jdbc.SQLServerDriver"),
-    POSTGRESQL("postgresql", "org.postgresql.Driver");
+    POSTGRESQL("postgresql", "org.postgresql.Driver"),
+    OTHER("other", null);
 
     private final String code;
     private final String driverClass;
@@ -27,6 +27,15 @@ public enum DbTypeEnum {
                 return type;
             }
         }
-        return MYSQL;
+        return OTHER;
+    }
+
+    /**
+     * 是否为内置驱动类型（无需用户上传 JAR）
+     */
+    public static boolean isBuiltIn(String code) {
+        return MYSQL.getCode().equalsIgnoreCase(code)
+                || ORACLE.getCode().equalsIgnoreCase(code)
+                || POSTGRESQL.getCode().equalsIgnoreCase(code);
     }
 }

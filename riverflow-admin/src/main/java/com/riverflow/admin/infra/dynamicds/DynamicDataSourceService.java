@@ -28,6 +28,8 @@ public class DynamicDataSourceService {
     private RiverFlowDynamicDataSourceProvider dataSourceProvider;
     @Autowired
     private DynamicRoutingDataSource dynamicRoutingDataSource;
+    @Autowired
+    private JdbcDriverJarLoader driverJarLoader;
 
     /**
      * 应用启动时加载所有启用的数据源
@@ -54,7 +56,7 @@ public class DynamicDataSourceService {
     public void addDataSource(Datasource ds) {
         DataSource dataSource = dataSourceProvider.createDataSource(
                 ds.getDsCode(), ds.getUrl(), ds.getUsername(),
-                ds.getPassword(), ds.getDriverClass(), ds.getDbType());
+                ds.getPassword(), ds.getDriverClass(), ds.getDbType(), ds.getDriverJarPath());
         // 使用 dynamic-datasource 的公共API添加
         dynamicRoutingDataSource.addDataSource(ds.getDsCode(), dataSource);
     }
@@ -64,6 +66,8 @@ public class DynamicDataSourceService {
      */
     public void removeDataSource(String dsCode) {
         dynamicRoutingDataSource.removeDataSource(dsCode);
+        // 清理自定义驱动的 ClassLoader
+        driverJarLoader.removeClassLoader(dsCode);
     }
 
     /**
@@ -71,7 +75,7 @@ public class DynamicDataSourceService {
      */
     public boolean testConnection(Datasource ds) {
         return dataSourceProvider.testConnection(ds.getUrl(), ds.getUsername(),
-                ds.getPassword(), ds.getDriverClass(), ds.getDbType());
+                ds.getPassword(), ds.getDriverClass(), ds.getDbType(), ds.getDriverJarPath());
     }
 
     /**
