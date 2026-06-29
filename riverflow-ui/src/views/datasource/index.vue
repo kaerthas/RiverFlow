@@ -32,8 +32,8 @@
     </div>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="560px" destroy-on-close>
-      <el-form ref="formRef" :model="form" :rules="formRules" label-width="110px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="620px" destroy-on-close>
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="120px">
         <el-form-item label="数据源编码" prop="dsCode">
           <el-input v-model="form.dsCode" placeholder="如 master、biz_db" :disabled="!!form.id" />
         </el-form-item>
@@ -47,13 +47,14 @@
             <el-option label="PostgreSQL" value="postgresql" />
             <el-option label="SQL Server" value="sqlserver" />
             <el-option label="达梦" value="dm" />
+            <el-option label="其他" value="other" />
           </el-select>
         </el-form-item>
         <el-form-item label="驱动类" prop="driverClass">
-          <el-input v-model="form.driverClass" placeholder="驱动类全限定名" />
+          <el-input v-model="form.driverClass" placeholder="驱动类全限定名" :disabled="isBuiltInType" />
         </el-form-item>
         <el-form-item label="连接URL" prop="url">
-          <el-input v-model="form.url" type="textarea" :rows="2" placeholder="jdbc:mysql://host:port/db" />
+          <el-input v-model="form.url" type="textarea" :rows="2" :placeholder="urlPlaceholder" />
         </el-form-item>
         <el-form-item label="用户名" prop="username">
           <el-input v-model="form.username" placeholder="数据库用户名" />
@@ -69,6 +70,24 @@
             @focus="($event) => $event.target.removeAttribute('readonly')"
           />
         </el-form-item>
+        <!-- 自定义驱动 JAR 上传 -->
+        <el-form-item v-if="isCustomType" label="驱动 JAR" prop="driverJarPath">
+          <el-upload
+            ref="uploadRef"
+            :http-request="customUpload"
+            :before-upload="beforeUpload"
+            :show-file-list="false"
+            accept=".jar"
+          >
+            <el-button type="primary" :icon="Upload">上传驱动 JAR</el-button>
+          </el-upload>
+          <div v-if="form.driverJarPath" class="driver-jar-info">
+            <el-icon><Document /></el-icon>
+            <span class="jar-name">已上传: {{ jarFileName }}</span>
+            <el-button link type="danger" size="small" @click="removeDriverJar">移除</el-button>
+          </div>
+          <div class="upload-tip">请上传对应数据库的 JDBC 驱动 JAR 包（最大 50MB）</div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -81,12 +100,14 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { DataAnalysis, Plus, Coin, Upload, Document } from '@element-plus/icons-vue'
 import {
   getDatasourceList,
   createDatasource,
   updateDatasource,
   deleteDatasource,
-  testConnection
+  testConnection,
+  uploadDriverJar
 } from '@/api/datasource'
 
 const loading = ref(false)
@@ -95,6 +116,7 @@ const dialogTitle = ref('新增数据源')
 const formRef = ref(null)
 const submitLoading = ref(false)
 const isEdit = ref(false)
+const uploadRef = ref(null)
 
 const datasourceList = ref([])
 
@@ -106,16 +128,50 @@ const form = reactive({
   driverClass: '',
   url: '',
   username: '',
-  password: ''
+  password: '',
+  driverJarPath: ''
 })
 
-const formRules = {
+const dbTypeDriverMap = {
+  mysql: 'com.mysql.cj.jdbc.Driver',
+  oracle: 'oracle.jdbc.driver.OracleDriver',
+  postgresql: 'org.postgresql.Driver'
+}
+
+const dbTypeUrlPlaceholderMap = {
+  mysql: 'jdbc:mysql://host:port/db',
+  oracle: 'jdbc:oracle:thin:@host:port:SID',
+  postgresql: 'jdbc:postgresql://host:port/db',
+  other: 'jdbc:xxx://host:port/db'
+}
+
+const isBuiltInType = computed(() => {
+  return form.dbType && form.dbType !== 'other'
+})
+
+const isCustomType = computed(() => {
+  return form.dbType === 'other'
+})
+
+const urlPlaceholder = computed(() => {
+  return dbTypeUrlPlaceholderMap[form.dbType] || 'jdbc:xxx://host:port/db'
+})
+
+const jarFileName = computed(() => {
+  if (!form.driverJarPath) return ''
+  const parts = form.driverJarPath.split(/[/\\]/)
+  return parts[parts.length - 1] || form.driverJarPath
+})
+
+const formRules = computed(() => ({
   dsCode: [{ required: true, message: '请输入数据源编码', trigger: 'blur' }],
   dsName: [{ required: true, message: '请输入数据源名称', trigger: 'blur' }],
   dbType: [{ required: true, message: '请选择数据库类型', trigger: 'change' }],
   url: [{ required: true, message: '请输入连接URL', trigger: 'blur' }],
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }]
-}
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  driverClass: [{ required: true, message: '请输入驱动类名', trigger: 'blur' }],
+  driverJarPath: [{ required: isCustomType.value, message: '请上传驱动 JAR 包', trigger: 'change' }]
+}))
 
 // 密码校验规则（新增必填，编辑可选）
 const passwordRule = computed(() => {
@@ -124,17 +180,58 @@ const passwordRule = computed(() => {
     : [{ required: true, message: '请输入密码', trigger: 'blur' }]
 })
 
-const dbTypeDriverMap = {
-  mysql: 'com.mysql.cj.jdbc.Driver',
-  oracle: 'oracle.jdbc.OracleDriver',
-  postgresql: 'org.postgresql.Driver',
-  sqlserver: 'com.microsoft.sqlserver.jdbc.SQLServerDriver',
-  dm: 'dm.jdbc.driver.DmDriver'
+function onDbTypeChange(val) {
+  // 内置类型自动填充驱动类
+  if (dbTypeDriverMap[val]) {
+    form.driverClass = dbTypeDriverMap[val]
+  } else if (val === 'other') {
+    form.driverClass = ''
+  }
+  // 清空已上传的驱动 JAR
+  form.driverJarPath = ''
 }
 
-function onDbTypeChange(val) {
-  if (dbTypeDriverMap[val] && !form.driverClass) {
-    form.driverClass = dbTypeDriverMap[val]
+function beforeUpload(file) {
+  if (!form.dsCode) {
+    ElMessage.error('请先填写数据源编码')
+    return false
+  }
+  if (!form.driverClass) {
+    ElMessage.error('请先填写驱动类名')
+    return false
+  }
+  const isJar = file.name.toLowerCase().endsWith('.jar')
+  if (!isJar) {
+    ElMessage.error('只能上传 JAR 文件')
+    return false
+  }
+  const isLt50M = file.size / 1024 / 1024 < 50
+  if (!isLt50M) {
+    ElMessage.error('文件大小不能超过 50MB')
+    return false
+  }
+  return true
+}
+
+async function customUpload(options) {
+  try {
+    const formData = new FormData()
+    formData.append('dsCode', form.dsCode)
+    formData.append('driverClass', form.driverClass)
+    formData.append('file', options.file)
+    const jarPath = await uploadDriverJar(formData)
+    form.driverJarPath = jarPath
+    ElMessage.success('驱动 JAR 上传成功')
+  } catch (e) {
+    options.onError(e)
+    throw e
+  }
+}
+
+function removeDriverJar() {
+  form.driverJarPath = ''
+  if (uploadRef.value) {
+    uploadRef.value.clearFiles()
   }
 }
 
@@ -148,9 +245,7 @@ async function loadList() {
   }
 }
 
-function handleAdd() {
-  dialogTitle.value = '新增数据源'
-  isEdit.value = false
+function resetForm() {
   Object.assign(form, {
     id: null,
     dsCode: '',
@@ -159,8 +254,18 @@ function handleAdd() {
     driverClass: '',
     url: '',
     username: '',
-    password: ''
+    password: '',
+    driverJarPath: ''
   })
+  if (uploadRef.value) {
+    uploadRef.value.clearFiles()
+  }
+}
+
+function handleAdd() {
+  dialogTitle.value = '新增数据源'
+  isEdit.value = false
+  resetForm()
   dialogVisible.value = true
 }
 
@@ -266,5 +371,25 @@ onMounted(() => {
     display: flex;
     gap: 8px;
   }
+}
+
+.driver-jar-info {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #262626;
+  font-size: 13px;
+
+  .jar-name {
+    flex: 1;
+    word-break: break-all;
+  }
+}
+
+.upload-tip {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #8C8C8C;
 }
 </style>

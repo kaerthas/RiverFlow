@@ -31,6 +31,13 @@ export function publishFlowDefinition(id) {
   })
 }
 
+export function validateFlowDefinition(id) {
+  return request({
+    url: `/workflow/definition/${id}/validate`,
+    method: 'post'
+  })
+}
+
 export function deleteFlowDefinition(id) {
   return request({
     url: `/workflow/definition/${id}`,
@@ -153,6 +160,14 @@ export function getInstanceLogs(instanceId, page = 1, size = 5) {
     url: `/workflow/instance/${instanceId}/logs`,
     method: 'get',
     params: { page, size }
+  })
+}
+
+export function getLoopProgress(instanceId, loopNodeId) {
+  return request({
+    url: `/workflow/instance/${instanceId}/loop-progress`,
+    method: 'get',
+    params: { loopNodeId }
   })
 }
 

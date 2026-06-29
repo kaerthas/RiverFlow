@@ -203,14 +203,30 @@
           <el-tab-pane label="任务列表" name="tasks">
             <el-table :data="instanceTasks" stripe size="small">
               <el-table-column prop="nodeName" label="节点" />
-              <el-table-column prop="status" label="状态" width="120">
+              <el-table-column prop="nodeType" label="节点类型" width="110" />
+              <el-table-column prop="status" label="状态" width="100">
                 <template #default="{ row }">
                   <el-tag :type="taskStatusType(row.status)" size="small">{{ row.status }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="loopNodeId" label="循环节点" width="140" show-overflow-tooltip />
+              <el-table-column prop="iterationIndex" label="迭代" width="80" align="center">
+                <template #default="{ row }">
+                  <span>{{ row.iterationIndex != null ? row.iterationIndex : '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="isLoopInternal" label="循环内" width="80" align="center">
+                <template #default="{ row }">
+                  <el-tag v-if="row.isLoopInternal === 1" type="info" size="small">是</el-tag>
+                  <span v-else>-</span>
                 </template>
               </el-table-column>
               <el-table-column prop="executeCount" label="执行次数" width="90" />
               <el-table-column prop="errorMsg" label="错误信息" show-overflow-tooltip />
             </el-table>
+          </el-tab-pane>
+          <el-tab-pane label="循环概览" name="loops">
+            <LoopProgressPanel :instance-id="currentInstance?.id" />
           </el-tab-pane>
         </el-tabs>
       </div>
@@ -222,6 +238,7 @@
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { View, VideoPlay, CircleClose, VideoPause, RefreshRight, Refresh } from '@element-plus/icons-vue'
+import LoopProgressPanel from './components/LoopProgressPanel.vue'
 import {
   getFlowInstanceList,
   getFlowInstanceDetail,
@@ -232,6 +249,7 @@ import {
   retryFlowInstance,
   getInstanceTasks,
   getInstanceLogs,
+  getLoopProgress,
   getFlowDefinitionList,
   startFlowInstance
 } from '@/api/workflow'

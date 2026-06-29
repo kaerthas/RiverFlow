@@ -3,6 +3,7 @@ package com.riverflow.admin.modules.workflow.engine;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
+import com.riverflow.admin.modules.workflow.loop.LoopTaskHelper;
 import com.riverflow.admin.modules.workflow.node.NodeExecutor;
 import com.riverflow.admin.modules.workflow.node.NodeExecutorFactory;
 import com.riverflow.admin.service.FlowInstanceService;
@@ -16,6 +17,7 @@ import com.riverflow.api.entity.FlowTask;
 import com.riverflow.api.enums.FlowInstanceStatusEnum;
 import com.riverflow.api.enums.FlowNodeTypeEnum;
 import com.riverflow.api.enums.FlowTaskStatusEnum;
+import com.riverflow.api.enums.FlowTaskTypeEnum;
 import com.riverflow.common.util.SpelUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +49,52 @@ public class TransitionEngine {
     public void transition(FlowInstance instance, FlowNode currentNode,
                            List<FlowEdge> edges, List<FlowNode> nodes,
                            FlowContext context, NodeExecuteResult result) {
+
+        // ==================== 循环节点跳转处理 ====================
+        if (result != null && result.getNextEntryNodeId() != null && !result.getNextEntryNodeId().isEmpty()) {
+            String entryNodeId = result.getNextEntryNodeId();
+            FlowNode entryNode = nodes.stream()
+                    .filter(n -> n.getNodeId().equals(entryNodeId))
+                    .findFirst().orElse(null);
+            if (entryNode == null) {
+                log.error("[流程实例:{}] 循环跳转目标节点不存在: {}", instance.getId(), entryNodeId);
+                instance.setStatus(FlowInstanceStatusEnum.SUSPENDED.getCode());
+                flowInstanceService.updateById(instance);
+                return;
+            }
+
+            log.info("[流程实例:{}] 循环回跳: 从 [{}] 到 [{}]",
+                    instance.getId(), currentNode.getNodeName(), entryNode.getNodeName());
+
+            instance.setCurrentNodeId(entryNodeId);
+            instance.setUpdateTime(LocalDateTime.now());
+            flowInstanceService.updateById(instance);
+
+            // 循环体入口创建 pending 任务
+            FlowTask newTask = new FlowTask();
+            newTask.setInstanceId(instance.getId());
+            newTask.setNodeId(entryNode.getNodeId());
+            newTask.setNodeName(entryNode.getNodeName());
+            newTask.setNodeType(entryNode.getNodeType());
+            newTask.setStatus(FlowTaskStatusEnum.PENDING.getCode());
+            newTask.setTaskType(FlowTaskTypeEnum.NODE.getCode());
+            newTask.setCreateTime(LocalDateTime.now());
+            // 循环控制结果中携带了循环维度信息
+            if (result != null && result.isLoopControl()) {
+                newTask.setIsLoopInternal(1);
+                if (result.getLoopNodeId() != null) {
+                    newTask.setLoopNodeId(result.getLoopNodeId());
+                }
+                if (result.getIterationIndex() != null) {
+                    newTask.setIterationIndex(result.getIterationIndex());
+                }
+            }
+            flowTaskService.save(newTask);
+
+            saveLog(instance.getId(), newTask.getId(), entryNodeId, "transition",
+                    String.format("循环回跳到 [%s]", entryNode.getNodeName()));
+            return;
+        }
 
         String currentNodeId = currentNode.getNodeId();
 
@@ -118,7 +166,9 @@ public class TransitionEngine {
         newTask.setNodeName(targetNode.getNodeName());
         newTask.setNodeType(targetNode.getNodeType());
         newTask.setStatus(FlowTaskStatusEnum.PENDING.getCode());
+        newTask.setTaskType(FlowTaskTypeEnum.NODE.getCode());
         newTask.setCreateTime(LocalDateTime.now());
+        LoopTaskHelper.fillLoopFields(newTask, context);
         flowTaskService.save(newTask);
 
         // 记录流转日志

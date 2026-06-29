@@ -37,6 +37,8 @@
         <dynamic-datasource.version>3.6.1</dynamic-datasource.version>
         <druid.version>1.2.21</druid.version>
         <mysql-connector.version>8.0.33</mysql-connector.version>
+        <oracle-jdbc.version>23.5.0.24.07</oracle-jdbc.version>
+        <postgresql.version>42.7.4</postgresql.version>
 
         <!-- 工具库 -->
         <hutool.version>5.8.25</hutool.version>
@@ -96,6 +98,20 @@
                 <groupId>mysql</groupId>
                 <artifactId>mysql-connector-java</artifactId>
                 <version>${mysql-connector.version}</version>
+            </dependency>
+
+            <!-- Oracle -->
+            <dependency>
+                <groupId>com.oracle.database.jdbc</groupId>
+                <artifactId>ojdbc8</artifactId>
+                <version>${oracle-jdbc.version}</version>
+            </dependency>
+
+            <!-- PostgreSQL -->
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
             </dependency>
 
             <!-- Hutool -->

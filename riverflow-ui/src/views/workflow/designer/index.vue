@@ -111,7 +111,12 @@
       </div>
 
       <!-- 右侧浮动属性面板 -->
-      <div class="property-panel" :class="{ active: selectedNode || selectedEdge }">
+      <div
+        class="property-panel"
+        :class="{ active: selectedNode || selectedEdge, resizing: isResizingPropertyPanel }"
+        :style="{ width: propertyPanelWidth + 'px' }"
+      >
+        <div class="resize-handle" @mousedown="startResizePropertyPanel"></div>
         <div class="panel-header">
           <div class="panel-icon">
             <el-icon><Tools /></el-icon>
@@ -231,6 +236,75 @@
                 </el-form-item>
                 <el-form-item v-else label="指定时间">
                   <el-date-picker v-model="selectedNode.properties.fixedTime" type="datetime" placeholder="选择日期时间" style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" @change="updateNodeProperties" />
+                </el-form-item>
+              </el-form>
+            </template>
+
+            <!-- foreach 循环节点配置 -->
+            <template v-if="selectedNode.type === 'foreach'">
+              <div class="section-title">循环配置</div>
+              <el-form label-position="top" size="default">
+                <el-form-item label="循环源表达式">
+                  <el-input v-model="selectedNode.properties.sourceExpr" type="textarea" :rows="2" placeholder="如 context.orderList" @change="updateNodeProperties" />
+                </el-form-item>
+                <el-form-item label="循环变量">
+                  <el-input v-model="selectedNode.properties.itemVar" placeholder="默认 item" @change="updateNodeProperties" />
+                </el-form-item>
+                <el-form-item label="下标变量">
+                  <el-input v-model="selectedNode.properties.indexVar" placeholder="默认 index" @change="updateNodeProperties" />
+                </el-form-item>
+                <el-form-item label="结果变量">
+                  <el-input v-model="selectedNode.properties.resultVar" :placeholder="'loopResult_' + selectedNode.id" @change="updateNodeProperties" />
+                </el-form-item>
+                <el-form-item label="最大迭代数">
+                  <el-input-number v-model="selectedNode.properties.maxIterations" :min="1" :max="10000" style="width: 100%" @change="updateNodeProperties" />
+                </el-form-item>
+                <el-form-item label="超时时间(ms)">
+                  <el-input-number v-model="selectedNode.properties.timeout" :min="1000" :max="600000" :step="1000" style="width: 100%" @change="updateNodeProperties" />
+                </el-form-item>
+                <el-form-item label="中断条件">
+                  <el-input v-model="selectedNode.properties.breakExpr" type="textarea" :rows="2" placeholder="如 context.item.status == 'STOP'" @change="updateNodeProperties" />
+                </el-form-item>
+                <el-form-item label="空集合行为">
+                  <el-radio-group v-model="selectedNode.properties.emptyAction" @change="updateNodeProperties">
+                    <el-radio-button label="skip">跳过</el-radio-button>
+                    <el-radio-button label="fail">报错</el-radio-button>
+                  </el-radio-group>
+                </el-form-item>
+                <el-form-item label="并行执行">
+                  <el-switch v-model="selectedNode.properties.parallel" @change="updateNodeProperties" />
+                </el-form-item>
+                <el-form-item v-if="selectedNode.properties.parallel" label="并行度">
+                  <el-input-number v-model="selectedNode.properties.parallelLimit" :min="2" :max="50" style="width: 100%" @change="updateNodeProperties" />
+                </el-form-item>
+              </el-form>
+            </template>
+
+            <!-- while 条件循环节点配置 -->
+            <template v-if="selectedNode.type === 'while'">
+              <div class="section-title">条件循环配置</div>
+              <el-form label-position="top" size="default">
+                <el-form-item label="条件表达式">
+                  <el-input v-model="selectedNode.properties.conditionExpr" type="textarea" :rows="2" placeholder="如 context.hasNextPage == true" @change="updateNodeProperties" />
+                </el-form-item>
+                <el-form-item label="最大迭代数">
+                  <el-input-number v-model="selectedNode.properties.maxIterations" :min="1" :max="10000" style="width: 100%" @change="updateNodeProperties" />
+                </el-form-item>
+                <el-form-item label="超时时间(ms)">
+                  <el-input-number v-model="selectedNode.properties.timeout" :min="1000" :max="600000" :step="1000" style="width: 100%" @change="updateNodeProperties" />
+                </el-form-item>
+              </el-form>
+            </template>
+
+            <!-- end_foreach / end_while 循环结束节点配置 -->
+            <template v-if="selectedNode.type === 'end_foreach' || selectedNode.type === 'end_while'">
+              <div class="section-title">循环结束配置</div>
+              <el-form label-position="top" size="default">
+                <el-form-item label="关联循环">
+                  <el-input v-model="selectedNode.properties.loopNodeId" placeholder="关联的循环节点ID" disabled />
+                </el-form-item>
+                <el-form-item label="聚合表达式">
+                  <el-input v-model="selectedNode.properties.aggregateExpr" type="textarea" :rows="2" placeholder="默认 context.item" @change="updateNodeProperties" />
                 </el-form-item>
               </el-form>
             </template>
@@ -616,7 +690,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import LogicFlow, {
@@ -630,7 +704,7 @@ import {
 } from '@logicflow/extension'
 import '@logicflow/core/dist/style/index.css'
 import '@logicflow/extension/lib/style/index.css'
-import { saveFlowDefinition, saveFlowGraph, getFlowDefinitionDetail, publishFlowDefinition, startFlowInstance, copyFlowDefinition } from '@/api/workflow'
+import { saveFlowDefinition, saveFlowGraph, getFlowDefinitionDetail, publishFlowDefinition, validateFlowDefinition, startFlowInstance, copyFlowDefinition } from '@/api/workflow'
 import { getDatasourceList } from '@/api/datasource'
 import { getApiCatalogList, getApiParams } from '@/api/apiMgr'
 import request from '@/utils/request'
@@ -640,6 +714,10 @@ const route = useRoute()
 const router = useRouter()
 const canvasRef = ref(null)
 let lf = null
+// 已注册的 LogicFlow 节点类型（防止兜底注册覆盖内置/插件节点）
+const registeredNodeTypes = new Set()
+// 批量删除循环体标志，防止 node:delete 递归级联
+let isBatchDeletingLoop = false
 
 const flowId = ref(route.query.id ? String(route.query.id) : null)
 const flowName = ref('未命名流程')
@@ -649,8 +727,35 @@ const version = ref(1)
 const flowInputParams = ref([])
 const flowOutputParams = ref([])
 
+// 属性面板宽度（可拖动调整）
+const propertyPanelWidth = ref(340)
+const MIN_PROPERTY_PANEL_WIDTH = 280
+const MAX_PROPERTY_PANEL_WIDTH = 600
+const isResizingPropertyPanel = ref(false)
+
+// 画布脏标记：用于已发布流程创建新版本前提示
+const isDirty = ref(false)
+// 加载流程时的原始 graphJson，用于可靠判断是否有修改
+const originalGraphJson = ref('')
+
 const filteredFlowOutputParams = computed(() => {
   return flowOutputParams.value.filter(p => p.type !== 'object')
+})
+
+// 已发布流程一旦被修改，立即提示用户需要先创建新版本；取消则还原改动
+watch(isDirty, (newVal, oldVal) => {
+  if (newVal && !oldVal && flowStatus.value === 1) {
+    ElMessageBox.confirm(
+      '当前流程已发布，修改前需要创建新版本。是否立即创建新版本？',
+      '提示',
+      { confirmButtonText: '创建新版本', cancelButtonText: '取消', type: 'warning' }
+    ).then(() => {
+      handleCopyAndEdit()
+    }).catch(async () => {
+      await loadFlowData()
+      ElMessage.info('已还原至上一次保存状态')
+    })
+  }
 })
 
 function flattenInputParams(obj, prefix = 'context', level = 0) {
@@ -684,6 +789,92 @@ function parseScriptContextVars(script) {
     vars.add(match[1])
   }
   return Array.from(vars)
+}
+
+// 从 SQL 语句中提取 SELECT 字段名（用于变量选择器字段推断）
+function extractSqlSelectColumns(sql) {
+  const columns = []
+  if (!sql || typeof sql !== 'string') return columns
+  const cleaned = sql
+    .replace(/--.*$/gm, ' ')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const match = cleaned.match(/SELECT\s+(.*?)\s+FROM\s/i)
+  if (!match) return columns
+  const parts = match[1].split(',')
+  for (let part of parts) {
+    part = part.trim()
+    if (!part || part === '*') continue
+    let alias = part
+    const asMatch = part.match(/\s+AS\s+(\w+)$/i)
+    if (asMatch) {
+      alias = asMatch[1]
+    } else {
+      const dotParts = part.split('.')
+      alias = dotParts[dotParts.length - 1]
+      alias = alias.replace(/[()]/g, '').trim()
+    }
+    if (alias) columns.push(alias)
+  }
+  return columns
+}
+
+// 从 context.xxx 或裸变量名中提取根变量名
+function extractContextVarName(expr) {
+  if (!expr || typeof expr !== 'string') return ''
+  const trimmed = expr.trim()
+  if (trimmed.startsWith('context.')) {
+    return trimmed.substring(8).split(/[.\[]/)[0]
+  }
+  return trimmed.split(/[.\[]/)[0]
+}
+
+// 找到产生指定上下文变量的上游节点
+function findSourceNodeForVariable(varName, graphData, upstreamIds) {
+  if (!varName || !graphData?.nodes) return null
+  for (const node of graphData.nodes) {
+    if (!upstreamIds.has(node.id)) continue
+    if (node.type === 'db' && node.properties?.resultVarName === varName) {
+      return node
+    }
+    if (node.type === 'script' && node.properties?.scriptContent) {
+      const vars = parseScriptContextVars(node.properties.scriptContent)
+      if (vars.includes(varName)) return node
+    }
+    if (node.type === 'api' && node.properties?.apiCode) {
+      try {
+        const outputMapping = node.outputMapping || node.properties?.outputMapping
+        if (outputMapping) {
+          const mappings = JSON.parse(outputMapping)
+          if (mappings.some(m => m.target === `context.${varName}` || m.target === varName)) {
+            return node
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+  }
+  return null
+}
+
+// 推断 foreach 循环项的字段列表
+function inferLoopItemFields(foreachNode, graphData, upstreamIds) {
+  const sourceExpr = foreachNode.properties?.sourceExpr
+  const varName = extractContextVarName(sourceExpr)
+  if (!varName) return []
+  const sourceNode = findSourceNodeForVariable(varName, graphData, upstreamIds)
+  if (!sourceNode) return []
+  if (sourceNode.type === 'db' && sourceNode.properties?.sql) {
+    return extractSqlSelectColumns(sourceNode.properties.sql)
+  }
+  if (sourceNode.type === 'api' && sourceNode.properties?.apiCode) {
+    const api = apiCatalogOptions.value.find(a => a.apiCode === sourceNode.properties.apiCode)
+    if (api?.id) {
+      const params = allApiParams.value.filter(p => p.apiId == api.id && p.paramType === 'response')
+      return params.map(p => p.paramKey)
+    }
+  }
+  return []
 }
 const isValid = ref(false)
 const testRunVisible = ref(false)
@@ -747,7 +938,11 @@ const baseNodeGroups = [
     name: '控制流',
     nodes: [
       { type: 'condition', label: '条件判断', desc: '分支条件', icon: 'Share', color: '#f59e0b' },
-      { type: 'timer', label: '定时等待', desc: '延迟或定时', icon: 'Timer', color: '#06b6d4' }
+      { type: 'timer', label: '定时等待', desc: '延迟或定时', icon: 'Timer', color: '#06b6d4' },
+      { type: 'foreach', label: '循环', desc: '遍历集合并执行循环体', icon: 'Refresh', color: '#8b5cf6' },
+      // { type: 'end_foreach', label: '循环结束', desc: '结束循环体并聚合结果', icon: 'CircleClose', color: '#a78bfa' },
+      { type: 'while', label: '条件循环', desc: '按条件重复执行循环体', icon: 'RefreshRight', color: '#06b6d4' }
+      // { type: 'end_while', label: '条件循环结束', desc: '结束条件循环并聚合结果', icon: 'CircleClose', color: '#22d3ee' }
     ]
   }
 ]
@@ -999,14 +1194,41 @@ function initLogicFlow() {
     allApiParams.value = []
   })
 
-  lf.on('node:delete', () => {
+  lf.on('node:delete', (eventData) => {
+    isDirty.value = true
     selectedNode.value = null
     selectedEdge.value = null
     parsedColumns.value = []
     currentResponseParams.value = []
+
+    if (isBatchDeletingLoop) return
+    const node = eventData?.data
+    if (!node) return
+    const type = node.type
+    if (['foreach', 'while', 'end_foreach', 'end_while'].includes(type)) {
+      const graphData = lf.getGraphData()
+      let startId
+      let endId
+      if (type === 'foreach' || type === 'while') {
+        startId = node.id
+        const expectedEndType = type === 'foreach' ? 'end_foreach' : 'end_while'
+        const endNode = graphData.nodes.find(n =>
+          n.type === expectedEndType && n.properties?.loopNodeId === startId
+        )
+        endId = endNode?.id
+      } else {
+        endId = node.id
+        startId = node.properties?.loopNodeId
+      }
+      if (startId && endId) {
+        // 删除循环边界节点时，级联删除整个循环体
+        deleteLoopContainer(startId)
+      }
+    }
   })
 
   lf.on('edge:delete', () => {
+    isDirty.value = true
     selectedNode.value = null
     selectedEdge.value = null
     parsedColumns.value = []
@@ -1015,6 +1237,56 @@ function initLogicFlow() {
 
   lf.on('connection:not-allowed', (data) => {
     ElMessage.warning(data.msg || '不允许的连线')
+  })
+
+  // 自定义右键菜单：循环边界节点不显示“删除”项，防止误删半个循环
+  const defaultNodeMenu = [
+    { text: '删除', className: 'lf-menu-delete-item', callback: (node) => lf.deleteNode(node.id) },
+    { text: '编辑文本', callback: (node) => lf.graphModel.editText(node.id) },
+    { text: '复制', callback: (node) => lf.cloneNode(node.id) }
+  ]
+  const loopBoundaryNodeMenu = [
+    { text: '编辑文本', callback: (node) => lf.graphModel.editText(node.id) },
+    { text: '复制', callback: (node) => lf.cloneNode(node.id) }
+  ]
+  const loopBoundaryTypes = ['foreach', 'while', 'end_foreach', 'end_while']
+
+  function updateMenuByNodeType(nodeType) {
+    const isLoopBoundary = loopBoundaryTypes.includes(nodeType)
+    lf.setMenuConfig({ nodeMenu: isLoopBoundary ? loopBoundaryNodeMenu : defaultNodeMenu })
+  }
+
+  function setMenuClassByNodeType(nodeType) {
+    const isLoopBoundary = loopBoundaryTypes.includes(nodeType)
+    requestAnimationFrame(() => {
+      const menu = document.querySelector('.lf-menu')
+      if (!menu) return
+      if (isLoopBoundary) menu.classList.add('loop-boundary-node')
+      else menu.classList.remove('loop-boundary-node')
+    })
+  }
+
+  lf.on('node:mousedown', (data) => updateMenuByNodeType(data?.data?.type))
+  lf.on('node:contextmenu', (data) => {
+    updateMenuByNodeType(data?.data?.type)
+    setMenuClassByNodeType(data?.data?.type)
+  })
+  lf.on('blank:mousedown', () => updateMenuByNodeType(null))
+  lf.on('blank:contextmenu', () => {
+    updateMenuByNodeType(null)
+    setMenuClassByNodeType(null)
+  })
+
+  // 监听画布变化，重新渲染循环容器框
+  const loopContainerEvents = ['node:add', 'node:delete', 'node:drag', 'node:drop', 'node:mousemove', 'edge:add', 'edge:delete', 'graph:transform']
+  const dirtyEvents = ['node:add', 'node:delete', 'node:drag', 'node:drop', 'edge:add', 'edge:delete']
+  loopContainerEvents.forEach(eventName => {
+    lf.on(eventName, () => {
+      if (dirtyEvents.includes(eventName)) {
+        isDirty.value = true
+      }
+      requestAnimationFrame(renderLoopContainers)
+    })
   })
 
   loadPluginNodes().then(() => {
@@ -1042,7 +1314,11 @@ function registerCustomNodes() {
     db:     { color: '#8b5cf6', label: '数据库', w: 148, h: 56 },
     script: { color: '#ec4899', label: '脚本',  w: 148, h: 56 },
     condition: { color: '#f59e0b', label: '条件', w: 148, h: 56 },
-    timer:  { color: '#06b6d4', label: '定时',  w: 148, h: 56 }
+    timer:  { color: '#06b6d4', label: '定时',  w: 148, h: 56 },
+    foreach: { color: '#8b5cf6', label: '循环', w: 148, h: 56 },
+    end_foreach: { color: '#a78bfa', label: '循环结束', w: 148, h: 56 },
+    while: { color: '#06b6d4', label: '条件循环', w: 148, h: 56 },
+    end_while: { color: '#22d3ee', label: '条件循环结束', w: 148, h: 56 }
   }
 
   Object.entries(nodeConfig).forEach(([type, cfg]) => {
@@ -1250,6 +1526,13 @@ function handleDrop(e) {
     const ty = transform?.translateY || 0
     const x = e.clientX - rect.left + tx
     const y = e.clientY - rect.top + ty
+
+    // 循环节点成对插入
+    if (data.type === 'foreach' || data.type === 'while') {
+      addLoopNodePair(data.type, x, y, data.text)
+      return
+    }
+
     console.log('[Designer] addNode', { type: data.type, x, y, rect: { left: rect.left, top: rect.top }, client: { x: e.clientX, y: e.clientY }, transform: { tx, ty } })
     lf.addNode({
       type: data.type,
@@ -1258,13 +1541,433 @@ function handleDrop(e) {
       text: data.text,
       properties: data.properties
     })
+    isDirty.value = true
     console.log('[Designer] addNode success')
   } catch (err) {
     console.error('[Designer] 添加节点失败', err)
   }
 }
 
+/**
+ * 成对插入循环节点
+ */
+function addLoopNodePair(loopType, x, y, text) {
+  const startId = `${loopType}_${Date.now()}`
+  const endId = `end_${loopType}_${Date.now()}`
+  const endType = loopType === 'foreach' ? 'end_foreach' : 'end_while'
+  const endText = loopType === 'foreach' ? '循环结束' : '条件循环结束'
+
+  const startProperties = {
+    name: text,
+    code: startId,
+    loopType: loopType,
+    sourceExpr: loopType === 'foreach' ? '' : undefined,
+    conditionExpr: loopType === 'while' ? '' : undefined,
+    itemVar: 'item',
+    indexVar: 'index',
+    resultVar: `loopResult_${startId}`,
+    maxIterations: 100,
+    timeout: 30000,
+    parallel: false,
+    parallelLimit: 5,
+    continueOnFail: false,
+    emptyAction: 'skip'
+  }
+
+  const endProperties = {
+    name: endText,
+    code: endId,
+    loopNodeId: startId,
+    aggregateExpr: 'context.item',
+    outputMapping: '[]'
+  }
+
+  lf.addNode({
+    id: startId,
+    type: loopType,
+    x: x - 120,
+    y,
+    text,
+    properties: startProperties
+  })
+
+  lf.addNode({
+    id: endId,
+    type: endType,
+    x: x + 120,
+    y,
+    text: endText,
+    properties: endProperties
+  })
+
+  lf.addEdge({
+    type: 'bezier',
+    sourceNodeId: startId,
+    targetNodeId: endId,
+    properties: {
+      conditionType: 'default',
+      isHidden: 1
+    }
+  })
+
+  isDirty.value = true
+  console.log('[Designer] addLoopNodePair success', { startId, endId })
+}
+
+/**
+ * 渲染循环容器视觉框
+ * 将容器组挂到 LogicFlow 的 graph 变换组下，使虚线框随滚轮缩放/平移自动跟随节点。
+ */
+function renderLoopContainers() {
+  if (!lf) return
+  try {
+    const graphData = lf.getGraphData()
+    const svg = lf.container?.querySelector('svg')
+    if (!svg) return
+
+    // 容器组挂在 LogicFlow 的 graph 变换组下，随画布自动缩放/平移
+    let graphGroup = svg.querySelector('g.lf-graph') || svg.querySelector('g[transform]')
+    let containerGroup = svg.querySelector('#loop-containers')
+    if (!containerGroup) {
+      containerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+      containerGroup.setAttribute('id', 'loop-containers')
+    }
+
+    containerGroup.innerHTML = ''
+
+    // 确保容器组位于 graph 变换组内（且在最前面，作为背景层）
+    const parent = graphGroup || svg
+    if (containerGroup.parentNode !== parent) {
+      if (graphGroup && graphGroup.firstChild) {
+        graphGroup.insertBefore(containerGroup, graphGroup.firstChild)
+      } else if (svg.firstChild) {
+        svg.insertBefore(containerGroup, svg.firstChild)
+      } else {
+        svg.appendChild(containerGroup)
+      }
+    }
+
+    const pairs = findLoopPairs(graphData)
+    const nodeMap = {}
+    if (graphData?.nodes) {
+      for (const node of graphData.nodes) {
+        nodeMap[node.id] = node
+      }
+    }
+
+    // 计算嵌套层级
+    const levels = computeLoopLevels(pairs, graphData)
+
+    for (const pair of pairs) {
+      const [startId, endId] = pair
+      const startNode = nodeMap[startId]
+      if (!startNode) continue
+
+      const bounds = computeLoopBounds(startId, endId, graphData)
+      if (!bounds) continue
+
+      // 使用逻辑坐标，由父级 graph 变换组统一缩放/平移
+      const loopX = bounds.x
+      const loopY = bounds.y
+      const loopW = bounds.width
+      const loopH = bounds.height
+
+      const level = levels.get(startId) || 0
+      const isForeach = startNode.type === 'foreach'
+      const baseColor = isForeach ? '139, 92, 246' : '6, 182, 212'
+      const labelText = isForeach ? '↻ foreach' : '⟳ while'
+      const fillOpacity = Math.max(0.02, 0.06 - level * 0.015)
+
+      const group = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+      group.setAttribute('class', 'loop-container')
+      group.setAttribute('data-loop-node-id', startId)
+
+      // 容器背景矩形
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+      rect.setAttribute('x', loopX)
+      rect.setAttribute('y', loopY)
+      rect.setAttribute('width', loopW)
+      rect.setAttribute('height', loopH)
+      rect.setAttribute('rx', 16)
+      rect.setAttribute('fill', `rgba(${baseColor}, ${fillOpacity})`)
+      rect.setAttribute('stroke', `rgba(${baseColor}, 0.35)`)
+      rect.setAttribute('stroke-width', 1.5)
+      rect.setAttribute('stroke-dasharray', '4 4')
+      group.appendChild(rect)
+
+      // 左上角标签背景
+      const name = startNode.text?.value || startNode.properties?.name || '循环'
+      const labelContent = `${labelText} · ${name}`
+      const textPaddingX = 10
+      const textPaddingY = 5
+      const fontSize = 12
+      const approxWidth = labelContent.length * fontSize * 0.6 + textPaddingX * 2
+      const labelHeight = fontSize + textPaddingY * 2
+
+      const labelRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+      labelRect.setAttribute('x', loopX + 12)
+      labelRect.setAttribute('y', loopY + 8)
+      labelRect.setAttribute('width', approxWidth)
+      labelRect.setAttribute('height', labelHeight)
+      labelRect.setAttribute('rx', 6)
+      labelRect.setAttribute('fill', `rgba(${baseColor}, 0.12)`)
+      labelRect.setAttribute('stroke', `rgba(${baseColor}, 0.25)`)
+      labelRect.setAttribute('stroke-width', 1)
+      group.appendChild(labelRect)
+
+      // 标签文字
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+      text.setAttribute('x', loopX + 12 + textPaddingX)
+      text.setAttribute('y', loopY + 8 + labelHeight - textPaddingY - 1)
+      text.setAttribute('fill', `rgba(${baseColor}, 0.9)`)
+      text.setAttribute('font-size', fontSize)
+      text.setAttribute('font-weight', 600)
+      text.textContent = labelContent
+      group.appendChild(text)
+
+      // 右上角删除按钮：点击删除整个循环体
+      const btnSize = 16
+      const btnX = loopX + loopW - btnSize - 10
+      const btnY = loopY + 8
+      const btnGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+      btnGroup.setAttribute('class', 'loop-delete-btn')
+      btnGroup.style.cursor = 'pointer'
+      btnGroup.addEventListener('click', (e) => {
+        e.stopPropagation()
+        deleteLoopContainer(startId)
+      })
+
+      const btnCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+      btnCircle.setAttribute('cx', btnX + btnSize / 2)
+      btnCircle.setAttribute('cy', btnY + btnSize / 2)
+      btnCircle.setAttribute('r', btnSize / 2)
+      btnCircle.setAttribute('fill', `rgba(${baseColor}, 0.12)`)
+      btnCircle.setAttribute('stroke', `rgba(${baseColor}, 0.35)`)
+      btnCircle.setAttribute('stroke-width', 1)
+      btnGroup.appendChild(btnCircle)
+
+      // 垃圾桶图标（16x16 viewBox，描边风格，中间带两条镂空纹理）
+      const trashColor = `rgba(${baseColor}, 0.9)`
+      const iconScale = btnSize / 16
+      const trashGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+      trashGroup.setAttribute('transform', `translate(${btnX}, ${btnY}) scale(${iconScale})`)
+      trashGroup.setAttribute('fill', 'none')
+      trashGroup.setAttribute('stroke', trashColor)
+      trashGroup.setAttribute('stroke-width', '1.2')
+      trashGroup.setAttribute('stroke-linecap', 'round')
+      trashGroup.setAttribute('stroke-linejoin', 'round')
+
+      function addTrashLine(x1, y1, x2, y2, width = 1) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+        line.setAttribute('x1', x1)
+        line.setAttribute('y1', y1)
+        line.setAttribute('x2', x2)
+        line.setAttribute('y2', y2)
+        line.setAttribute('stroke-width', width)
+        trashGroup.appendChild(line)
+      }
+      function addTrashRect(x, y, w, h, rx = 0) {
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+        rect.setAttribute('x', x)
+        rect.setAttribute('y', y)
+        rect.setAttribute('width', w)
+        rect.setAttribute('height', h)
+        rect.setAttribute('rx', rx)
+        trashGroup.appendChild(rect)
+      }
+
+      addTrashRect(6, 2, 4, 2, 0.5)      // 提手
+      addTrashLine(2.5, 5.5, 13.5, 5.5, 1.2) // 桶盖
+      addTrashRect(4, 6.5, 8, 8, 1)      // 桶身外框
+      addTrashLine(6.5, 9, 6.5, 12)      // 左纹理
+      addTrashLine(9.5, 9, 9.5, 12)      // 右纹理
+
+      btnGroup.appendChild(trashGroup)
+      group.appendChild(btnGroup)
+
+      containerGroup.appendChild(group)
+    }
+  } catch (e) {
+    console.warn('渲染循环容器失败', e)
+  }
+}
+
+function findLoopPairs(graphData) {
+  const pairs = []
+  if (!graphData?.nodes) return pairs
+  const nodes = graphData.nodes
+  for (const node of nodes) {
+    if (node.type === 'foreach' || node.type === 'while') {
+      const expectedEndType = node.type === 'foreach' ? 'end_foreach' : 'end_while'
+      const endNode = nodes.find(n =>
+        n.type === expectedEndType && n.properties?.loopNodeId === node.id
+      )
+      if (endNode) {
+        pairs.push([node.id, endNode.id])
+      }
+    }
+  }
+  return pairs
+}
+
+function computeLoopBounds(startId, endId, graphData) {
+  const nodes = graphData?.nodes || []
+  const edges = graphData?.edges || []
+  const nodeMap = {}
+  for (const node of nodes) {
+    nodeMap[node.id] = node
+  }
+
+  // BFS 查找循环体节点
+  const bodyIds = new Set()
+  const queue = [startId]
+  const visited = new Set([startId])
+  while (queue.length > 0) {
+    const current = queue.shift()
+    for (const edge of edges) {
+      if (edge.sourceNodeId === current) {
+        const target = edge.targetNodeId
+        if (target === endId) continue
+        if (!visited.has(target)) {
+          visited.add(target)
+          bodyIds.add(target)
+          queue.push(target)
+        }
+      }
+    }
+  }
+  bodyIds.add(startId)
+  bodyIds.add(endId)
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  for (const nodeId of bodyIds) {
+    const node = nodeMap[nodeId]
+    if (!node || node.x == null || node.y == null) continue
+    const w = node.width || 148
+    const h = node.height || 56
+    minX = Math.min(minX, node.x - w / 2)
+    minY = Math.min(minY, node.y - h / 2)
+    maxX = Math.max(maxX, node.x + w / 2)
+    maxY = Math.max(maxY, node.y + h / 2)
+  }
+
+  if (!isFinite(minX)) return null
+
+  const padding = 24
+  // 顶部多预留空间，避免左上角标签与循环开始节点重叠
+  const topPadding = 44
+  let width = maxX - minX + padding * 2
+  let height = maxY - minY + topPadding + padding
+  let x = minX - padding
+  let y = minY - topPadding
+
+  // 最小尺寸保护
+  const minWidth = 220
+  const minHeight = 100
+  if (width < minWidth) {
+    x -= (minWidth - width) / 2
+    width = minWidth
+  }
+  if (height < minHeight) {
+    y -= (minHeight - height) / 2
+    height = minHeight
+  }
+
+  return { x, y, width, height }
+}
+
+/**
+ * 计算每个循环的嵌套层级
+ */
+function computeLoopLevels(pairs, graphData) {
+  const levels = new Map()
+  const nodeMap = {}
+  if (graphData?.nodes) {
+    for (const node of graphData.nodes) {
+      nodeMap[node.id] = node
+    }
+  }
+  for (let i = 0; i < pairs.length; i++) {
+    const [startId, endId] = pairs[i]
+    const bounds = computeLoopBounds(startId, endId, graphData)
+    if (!bounds) {
+      levels.set(startId, 0)
+      continue
+    }
+    let level = 0
+    for (let j = 0; j < pairs.length; j++) {
+      if (i === j) continue
+      const [otherStartId, otherEndId] = pairs[j]
+      const otherStart = nodeMap[otherStartId]
+      const otherEnd = nodeMap[otherEndId]
+      if (otherStart && otherEnd
+          && otherStart.x >= bounds.x && otherStart.x <= bounds.x + bounds.width
+          && otherStart.y >= bounds.y && otherStart.y <= bounds.y + bounds.height
+          && otherEnd.x >= bounds.x && otherEnd.x <= bounds.x + bounds.width
+          && otherEnd.y >= bounds.y && otherEnd.y <= bounds.y + bounds.height) {
+        level++
+      }
+    }
+    levels.set(startId, level)
+  }
+  return levels
+}
+
+/**
+ * 查找循环体内部节点（从 start 到 end 的路径上的节点，不含 start/end）
+ */
+function findLoopBodyNodeIds(startId, endId, graphData) {
+  const edges = graphData?.edges || []
+  const bodyIds = new Set()
+  const queue = [startId]
+  const visited = new Set([startId])
+  while (queue.length > 0) {
+    const current = queue.shift()
+    for (const edge of edges) {
+      if (edge.sourceNodeId === current) {
+        const target = edge.targetNodeId
+        if (target === endId) continue
+        if (!visited.has(target)) {
+          visited.add(target)
+          bodyIds.add(target)
+          queue.push(target)
+        }
+      }
+    }
+  }
+  return bodyIds
+}
+
+/**
+ * 删除整个循环体（开始节点、结束节点、循环体内部节点）
+ */
+function deleteLoopContainer(startId) {
+  if (!lf || isBatchDeletingLoop) return
+  const graphData = lf.getGraphData()
+  const pairs = findLoopPairs(graphData)
+  const pair = pairs.find(p => p[0] === startId)
+  if (!pair) return
+  const endId = pair[1]
+  const bodyIds = findLoopBodyNodeIds(startId, endId, graphData)
+  const idsToDelete = new Set([startId, endId, ...bodyIds])
+
+  isBatchDeletingLoop = true
+  try {
+    idsToDelete.forEach(id => {
+      try {
+        lf.deleteNode(id)
+      } catch (e) {
+        // 节点可能已被删除，忽略
+      }
+    })
+  } finally {
+    isBatchDeletingLoop = false
+    requestAnimationFrame(renderLoopContainers)
+  }
+}
+
 function updateNodeProperties() {
+  isDirty.value = true
   if (selectedNode.value && lf) {
     // 将输入/输出映射同步回 properties（后端以JSON字符串存储）
     selectedNode.value.properties.inputMapping = JSON.stringify(inputMappings.value)
@@ -1281,6 +1984,7 @@ function updateNodeProperties() {
 }
 
 function updateEdgeProperties() {
+  isDirty.value = true
   if (selectedEdge.value && lf) {
     lf.setProperties(selectedEdge.value.id, selectedEdge.value.properties)
   }
@@ -1624,6 +2328,54 @@ const availableVariables = computed(() => {
       { label: '_currentTime', value: 'context._currentTime', level: 0, type: '' }
     ]
   })
+  // 循环变量
+  if (lf && selectedNode.value) {
+    try {
+      const graphData = lf.getGraphData()
+      const currentId = selectedNode.value.id
+      const upstreamIds = getUpstreamNodeIds(currentId, graphData)
+      const loopItems = []
+      for (const node of graphData.nodes) {
+        if (node.id === currentId) continue
+        if (!upstreamIds.has(node.id)) continue
+        // 上游 foreach/while 节点：暴露 item / index
+        if (node.type === 'foreach' || node.type === 'while') {
+          const itemVar = node.properties?.itemVar || 'item'
+          const indexVar = node.properties?.indexVar || 'index'
+          if (node.type === 'foreach') {
+            const sourceExpr = node.properties?.sourceExpr || ''
+            const collectionName = extractContextVarName(sourceExpr) || itemVar
+            const elementLabel = `${collectionName}[${indexVar}]`
+            // 当前元素整体
+            loopItems.push({ label: elementLabel, value: `context.${itemVar}`, level: 0, type: 'object' })
+            // 自动展开集合元素字段：orderList[index].id
+            const fields = inferLoopItemFields(node, graphData, upstreamIds)
+            fields.forEach(field => {
+              loopItems.push({
+                label: `${elementLabel}.${field}`,
+                value: `context.${itemVar}.${field}`,
+                level: 1,
+                type: ''
+              })
+            })
+          } else {
+            loopItems.push({ label: itemVar, value: `context.${itemVar}`, level: 0, type: 'object' })
+          }
+          loopItems.push({ label: indexVar, value: `context.${indexVar}`, level: 0, type: 'int' })
+        }
+        // 上游 end_foreach/end_while 节点：暴露聚合结果
+        if (node.type === 'end_foreach' || node.type === 'end_while') {
+          const loopNodeId = node.properties?.loopNodeId
+          const loopNode = graphData.nodes.find(n => n.id === loopNodeId)
+          const resultVar = loopNode?.properties?.resultVar || `loopResult_${loopNodeId}`
+          loopItems.push({ label: resultVar, value: `context.${resultVar}`, level: 0, type: '' })
+        }
+      }
+      if (loopItems.length > 0) {
+        groups.push({ name: '循环变量', items: loopItems })
+      }
+    } catch (e) { /* ignore */ }
+  }
   // 上游节点变量
   if (lf && selectedNode.value) {
     try {
@@ -1750,13 +2502,90 @@ function handleZoomIn() { lf?.zoom(true) }
 function handleZoomOut() { lf?.zoom(false) }
 function handleFitView() { lf?.resetZoom() }
 
-function handleValidate() {
+// 属性面板宽度拖动调整
+let resizeStartX = 0
+let resizeStartWidth = 0
+function startResizePropertyPanel(e) {
+  e.preventDefault()
+  e.stopPropagation()
+  isResizingPropertyPanel.value = true
+  resizeStartX = Number(e.clientX) || 0
+  resizeStartWidth = Number(propertyPanelWidth.value) || 340
+  document.addEventListener('mousemove', onPropertyPanelResize)
+  document.addEventListener('mouseup', stopResizePropertyPanel)
+}
+function onPropertyPanelResize(e) {
+  if (!isResizingPropertyPanel.value) return
+  const clientX = Number(e.clientX) || resizeStartX
+  const deltaX = resizeStartX - clientX
+  const startWidth = Number.isFinite(resizeStartWidth) ? resizeStartWidth : 340
+  const newWidth = Math.max(MIN_PROPERTY_PANEL_WIDTH, Math.min(MAX_PROPERTY_PANEL_WIDTH, startWidth + deltaX))
+  propertyPanelWidth.value = Number.isFinite(newWidth) ? newWidth : 340
+}
+function stopResizePropertyPanel() {
+  isResizingPropertyPanel.value = false
+  document.removeEventListener('mousemove', onPropertyPanelResize)
+  document.removeEventListener('mouseup', stopResizePropertyPanel)
+}
+
+async function handleValidate() {
   if (!lf) return
   const data = lf.getGraphData()
   const hasStart = data.nodes.some(n => n.type === 'start')
   const hasEnd = data.nodes.some(n => n.type === 'end')
   if (!hasStart) { ElMessage.error('流程必须包含开始节点'); isValid.value = false; return }
   if (!hasEnd) { ElMessage.error('流程必须包含结束节点'); isValid.value = false; return }
+
+  // 循环节点基础校验
+  const loopStartTypes = ['foreach', 'while']
+  const loopEndTypes = ['end_foreach', 'end_while']
+  const startLoopNodes = data.nodes.filter(n => loopStartTypes.includes(n.type))
+  const endLoopNodes = data.nodes.filter(n => loopEndTypes.includes(n.type))
+  for (const endNode of endLoopNodes) {
+    if (!endNode.properties?.loopNodeId) {
+      ElMessage.error(`循环结束节点 [${endNode.text?.value || endNode.id}] 未关联循环开始节点`)
+      isValid.value = false
+      return
+    }
+    const startNode = data.nodes.find(n => n.id === endNode.properties.loopNodeId)
+    if (!startNode || !loopStartTypes.includes(startNode.type)) {
+      ElMessage.error(`循环结束节点 [${endNode.text?.value || endNode.id}] 关联的循环开始节点不存在`)
+      isValid.value = false
+      return
+    }
+  }
+  if (startLoopNodes.length !== endLoopNodes.length) {
+    ElMessage.error('循环开始节点与结束节点数量不匹配')
+    isValid.value = false
+    return
+  }
+
+  // DB 节点 SQL 占位符必须在输入映射中配置（基于当前画布数据校验）
+  const sqlPlaceholderPattern = /#\{([^}]+)}/g
+  for (const node of data.nodes) {
+    if (node.type !== 'db') continue
+    const sql = node.properties?.sql || ''
+    const rawInput = node.properties?.inputMapping
+    let nodeInputMappings = []
+    try {
+      nodeInputMappings = rawInput ? (typeof rawInput === 'string' ? JSON.parse(rawInput) : rawInput) : []
+    } catch (e) { nodeInputMappings = [] }
+    const mappedTargets = new Set(nodeInputMappings.map(m => m.target).filter(Boolean))
+    const placeholders = new Set()
+    let match
+    while ((match = sqlPlaceholderPattern.exec(sql)) !== null) {
+      placeholders.add(match[1].trim())
+    }
+    sqlPlaceholderPattern.lastIndex = 0
+    for (const placeholder of placeholders) {
+      if (!mappedTargets.has(placeholder)) {
+        ElMessage.error(`数据库节点 [${node.properties?.name || node.text?.value || node.id}] SQL占位符 [#{${placeholder}}] 未在输入映射中配置`)
+        isValid.value = false
+        return
+      }
+    }
+  }
+
   ElMessage.success('流程验证通过')
   isValid.value = true
 }
@@ -1791,6 +2620,7 @@ async function handleSave() {
     }
 
     ElMessage.success('流程草稿已保存')
+    isDirty.value = false
   } catch (e) {
     ElMessage.error('保存失败: ' + e.message)
   }
@@ -1802,6 +2632,8 @@ async function handlePublish() {
     return
   }
   try {
+    // 发布前先进行后端校验
+    await validateFlowDefinition(flowId.value)
     const newId = await publishFlowDefinition(flowId.value)
     flowStatus.value = 1
     // 如果返回了新的ID，说明创建了新版，更新当前ID
@@ -1811,6 +2643,7 @@ async function handlePublish() {
       router.replace({ path: '/workflow/designer', query: { id: newId } })
     }
     ElMessage.success('流程发布成功')
+    isDirty.value = false
   } catch (e) {
     ElMessage.error('发布失败: ' + e.message)
   }
@@ -1818,6 +2651,20 @@ async function handlePublish() {
 
 async function handleCopyAndEdit() {
   if (!flowId.value) return
+  // 已发布流程若存在未保存的修改，创建新版本会丢失这些修改，需提示用户
+  const currentGraphData = lf ? JSON.stringify(lf.getGraphData()) : ''
+  const hasUnsavedChanges = isDirty.value || (currentGraphData !== originalGraphJson.value)
+  if (hasUnsavedChanges) {
+    try {
+      await ElMessageBox.confirm(
+        '当前流程存在未保存的修改，创建新版本会丢失这些修改，是否继续？',
+        '创建新版本',
+        { confirmButtonText: '继续创建新版本', cancelButtonText: '取消', type: 'warning' }
+      )
+    } catch (e) {
+      return
+    }
+  }
   try {
     const newId = await copyFlowDefinition(flowId.value)
     ElMessage.success('已创建新版本，正在跳转...')
@@ -1866,6 +2713,7 @@ function handleImport() {
       }
       lf.clearData()
       lf.render(data)
+      isDirty.value = true
       ElMessage.success('导入成功')
     } catch (err) {
       ElMessage.error('导入失败: ' + err.message)
@@ -1894,6 +2742,7 @@ async function loadFlowData() {
       flowStatus.value = def.status || 0
       flowExecutionMode.value = def.executionMode || 'ASYNC'
       version.value = def.version || 1
+      isDirty.value = false
       if (def.inputParams) {
         try {
           const obj = JSON.parse(def.inputParams)
@@ -1918,9 +2767,19 @@ async function loadFlowData() {
       if (def.graphJson) {
         const graphData = JSON.parse(def.graphJson)
         lf.render(graphData)
+        requestAnimationFrame(renderLoopContainers)
       } else {
         lf.render({ nodes: [], edges: [] })
       }
+      // 记录当前画布原始数据，用于判断后续是否有修改
+      originalGraphJson.value = JSON.stringify(lf.getGraphData())
+      // 清空选中状态，避免属性面板显示旧数据
+      selectedNode.value = null
+      selectedEdge.value = null
+      parsedColumns.value = []
+      currentApiParams.value = []
+      currentResponseParams.value = []
+      allApiParams.value = []
     }
   } catch (e) {
     console.error('加载流程数据失败', e)
@@ -2443,6 +3302,29 @@ $text-muted: #94a3b8;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   transition: transform 0.3s var(--ease-out-expo), opacity 0.3s;
+  position: relative;
+
+  &.resizing {
+    transition: none;
+    user-select: none;
+  }
+
+  .resize-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: col-resize;
+    z-index: 10;
+    background: transparent;
+    transition: background 0.2s;
+
+    &:hover,
+    &:active {
+      background: rgba(59, 130, 246, 0.15);
+    }
+  }
 
   .panel-header {
     height: 48px;
@@ -3105,5 +3987,12 @@ $text-muted: #94a3b8;
   :deep(.el-dialog__body) {
     padding: 16px 20px;
   }
+}
+</style>
+
+<style>
+/* LogicFlow 右键菜单：循环边界节点隐藏“删除”项 */
+.lf-menu.loop-boundary-node .lf-menu-delete-item {
+  display: none !important;
 }
 </style>

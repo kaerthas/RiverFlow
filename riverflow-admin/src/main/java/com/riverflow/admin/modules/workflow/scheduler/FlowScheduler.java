@@ -11,6 +11,7 @@ import com.riverflow.api.entity.FlowInstance;
 import com.riverflow.api.entity.FlowNode;
 import com.riverflow.api.entity.FlowTask;
 import com.riverflow.api.enums.FlowInstanceStatusEnum;
+import com.riverflow.api.enums.FlowTaskTypeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -62,7 +63,9 @@ public class FlowScheduler {
             Set<Long> submittedInstances = ConcurrentHashMap.newKeySet();
 
             for (FlowTask task : pendingTasks) {
-                if (!submittedInstances.add(task.getInstanceId())) {
+                // LOOP_ITERATION 任务允许同实例多任务并发调度（执行时由实例级锁串行）
+                boolean isLoopIteration = FlowTaskTypeEnum.LOOP_ITERATION.getCode().equals(task.getTaskType());
+                if (!isLoopIteration && !submittedInstances.add(task.getInstanceId())) {
                     continue;
                 }
 
@@ -93,14 +96,21 @@ public class FlowScheduler {
                             return;
                         }
 
-                        // 一致性校验：任务节点应与实例当前节点一致
-                        if (!task.getNodeId().equals(instance.getCurrentNodeId())) {
-                            log.warn("任务节点 {} 与实例当前节点 {} 不一致，跳过执行: instanceId={}",
-                                    task.getNodeId(), instance.getCurrentNodeId(), instance.getId());
-                            return;
+                        // 分发循环子任务/汇聚任务
+                        String taskType = task.getTaskType();
+                        if (FlowTaskTypeEnum.LOOP_ITERATION.getCode().equals(taskType)) {
+                            flowEngine.executeLoopIterationTask(instance, task, nodes, edges);
+                        } else if (FlowTaskTypeEnum.LOOP_AGGREGATE.getCode().equals(taskType)) {
+                            flowEngine.executeLoopAggregateTask(instance, task, nodes, edges);
+                        } else {
+                            // 普通节点任务：一致性校验
+                            if (!task.getNodeId().equals(instance.getCurrentNodeId())) {
+                                log.warn("任务节点 {} 与实例当前节点 {} 不一致，跳过执行: instanceId={}",
+                                        task.getNodeId(), instance.getCurrentNodeId(), instance.getId());
+                                return;
+                            }
+                            flowEngine.executeNode(instance, currentNode, edges, nodes);
                         }
-
-                        flowEngine.executeNode(instance, currentNode, edges, nodes);
 
                     } catch (Exception e) {
                         log.error("异步调度执行任务失败: taskId={}", task.getId(), e);

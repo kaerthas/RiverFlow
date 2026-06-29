@@ -7,3 +7,11 @@ riverflow-admin/target/
 riverflow-ui/package-lock.json
 /.idea/
 /.vscode/
+docs-site/node_modules/
+docs-site/docs/
+river-qrcode-plugin
+river-minio
+river-ixa-gateway
+river-hw-auth
+logs/
+river-apisix-auth

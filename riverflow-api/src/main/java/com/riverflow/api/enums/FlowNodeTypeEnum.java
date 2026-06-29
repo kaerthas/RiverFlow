@@ -14,7 +14,11 @@ public enum FlowNodeTypeEnum {
     DB("db", "数据库操作", "database"),
     SCRIPT("script", "脚本处理", "code"),
     CONDITION("condition", "条件判断", "diamond"),
-    TIMER("timer", "定时等待", "clock");
+    TIMER("timer", "定时等待", "clock"),
+    FOREACH("foreach", "循环", "refresh"),
+    END_FOREACH("end_foreach", "循环结束", "circle-close"),
+    WHILE("while", "条件循环", "refresh-right"),
+    END_WHILE("end_while", "条件循环结束", "circle-close");
 
     private final String code;
     private final String desc;

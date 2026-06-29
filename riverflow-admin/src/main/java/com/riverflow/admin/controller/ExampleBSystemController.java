@@ -1,9 +1,13 @@
 package com.riverflow.admin.controller;
 
 import com.riverflow.common.result.R;
+import com.riverflow.common.result.ResultCode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,6 +24,9 @@ public class ExampleBSystemController {
 
     // 记录每个HTBH的完税查询次数，模拟异步处理效果
     private static final Map<String, Integer> WS_QUERY_COUNTER = new ConcurrentHashMap<>();
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     /**
      * B系统提交接口
@@ -47,6 +54,44 @@ public class ExampleBSystemController {
         data.put("createTime", LocalDateTime.now().toString());
 
         log.info("[B系统模拟] 返回结果: orderId={}", orderId);
+        return R.ok(data);
+    }
+
+    /**
+     * B系统订单单条同步写入接口（模拟写入B库）
+     * 入参: { "orderNo": "...", "userName": "...", "amount": "...", "sourceId": 1 }
+     * 出参: { "code": 200, "data": { "orderNo": "...", "userName": "...", "amount": "...", "sourceId": 1 } }
+     */
+    @PostMapping("/insertOrder")
+    public R<Map<String, Object>> insertOrder(@RequestBody(required = false) Map<String, Object> params) {
+        log.info("[B系统模拟] 收到订单同步请求, params={}", params);
+        if (params == null || params.isEmpty()) {
+            log.warn("[B系统模拟] 订单同步请求体为空");
+            return R.fail(ResultCode.PARAM_ERROR.getCode(), "请求体不能为空");
+        }
+        String orderNo = String.valueOf(params.getOrDefault("orderNo", ""));
+        String userName = String.valueOf(params.getOrDefault("userName", ""));
+        Object amountObj = params.get("amount");
+        String amount = amountObj != null ? amountObj.toString() : "0.00";
+        Object sourceIdObj = params.get("sourceId");
+        Long sourceId = sourceIdObj != null ? Long.valueOf(sourceIdObj.toString()) : null;
+
+        log.info("[B系统模拟] 订单同步解析: orderNo={}, userName={}, amount={}, sourceId={}",
+                orderNo, userName, amount, sourceId);
+
+        // 使用 INSERT IGNORE 实现幂等写入，避免重复同步时唯一键冲突
+        int affected = jdbcTemplate.update(
+                "INSERT IGNORE INTO example_order_target (order_no, user_name, amount, source_id, sync_time) VALUES (?, ?, ?, ?, NOW())",
+                orderNo, userName, new BigDecimal(amount), sourceId);
+        if (affected == 0) {
+            log.warn("[B系统模拟] 订单已存在，忽略重复写入: orderNo={}", orderNo);
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("orderNo", orderNo);
+        data.put("userName", userName);
+        data.put("amount", amount);
+        data.put("sourceId", sourceId);
         return R.ok(data);
     }
 
