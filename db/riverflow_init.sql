@@ -1215,3 +1215,14 @@ ALTER TABLE `wf_api_catalog` ADD COLUMN IF NOT EXISTS `allowed_ips` varchar(500)
 -- 动态数据源新增驱动 JAR 包路径字段
 ALTER TABLE `wf_datasource`
     ADD COLUMN IF NOT EXISTS `driver_jar_path` VARCHAR(500) NULL COMMENT '驱动JAR包路径（自定义驱动时使用）' AFTER `driver_class`;
+
+-- 循环节点相关字段
+ALTER TABLE `wf_flow_task`
+    ADD COLUMN IF NOT EXISTS `loop_node_id` varchar(50) NULL DEFAULT NULL COMMENT '所属循环节点ID' AFTER `node_name`,
+    ADD COLUMN IF NOT EXISTS `iteration_index` int(11) NULL DEFAULT NULL COMMENT '循环迭代下标' AFTER `loop_node_id`,
+    ADD COLUMN IF NOT EXISTS `is_loop_internal` tinyint(4) NULL DEFAULT 0 COMMENT '是否循环体内部任务：0-否 1-是' AFTER `iteration_index`,
+    ADD COLUMN IF NOT EXISTS `task_type` varchar(30) NULL DEFAULT 'NODE' COMMENT '任务类型：NODE/LOOP_ITERATION/LOOP_AGGREGATE' AFTER `is_loop_internal`,
+    ADD COLUMN IF NOT EXISTS `batch_no` varchar(64) NULL DEFAULT NULL COMMENT '并行循环批次号' AFTER `task_type`;
+
+ALTER TABLE `wf_flow_edge`
+    ADD COLUMN IF NOT EXISTS `is_hidden` tinyint(4) NULL DEFAULT 0 COMMENT '画布上是否隐藏（如循环回跳边）：0-显示 1-隐藏' AFTER `priority`;
