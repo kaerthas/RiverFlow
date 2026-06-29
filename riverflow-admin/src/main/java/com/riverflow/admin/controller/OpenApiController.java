@@ -30,7 +30,7 @@ import com.riverflow.api.enums.FlowNodeTypeEnum;
 import com.riverflow.api.enums.FlowTaskStatusEnum;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
-import jakarta.annotation.PostConstruct;
+import javax.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
