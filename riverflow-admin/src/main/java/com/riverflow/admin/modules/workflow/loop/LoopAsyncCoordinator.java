@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.riverflow.admin.modules.workflow.loop.LoopUtils.evaluateExpression;
 import static com.riverflow.admin.modules.workflow.loop.LoopUtils.findNode;
@@ -329,10 +330,10 @@ public class LoopAsyncCoordinator {
         }
         List<FlowTask> iterations = allBatchTasks.stream()
                 .filter(t -> FlowTaskTypeEnum.LOOP_ITERATION.getCode().equals(t.getTaskType()))
-                .toList();
+                .collect(Collectors.toList());
         List<FlowTask> aggregates = allBatchTasks.stream()
                 .filter(t -> FlowTaskTypeEnum.LOOP_AGGREGATE.getCode().equals(t.getTaskType()))
-                .toList();
+                .collect(Collectors.toList());
 
         if (iterations.isEmpty()) {
             return;
