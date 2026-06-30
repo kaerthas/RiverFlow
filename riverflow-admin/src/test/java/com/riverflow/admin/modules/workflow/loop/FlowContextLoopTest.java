@@ -3,6 +3,7 @@ package com.riverflow.admin.modules.workflow.loop;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -50,9 +51,9 @@ class FlowContextLoopTest {
     @Test
     void testGlobalVariable() {
         FlowContext context = new FlowContext();
-        context.setGlobal("loopResult", List.of("a", "b"));
+        context.setGlobal("loopResult", Arrays.asList("a", "b"));
         context.pushScope();
-        assertEquals(List.of("a", "b"), context.get("loopResult"));
+        assertEquals(Arrays.asList("a", "b"), context.get("loopResult"));
         context.popScope();
     }
 
@@ -61,7 +62,7 @@ class FlowContextLoopTest {
         LoopState state = new LoopState();
         state.setLoopNodeId("foreach_001");
         state.setBodyEntryNodeId("api_001");
-        state.setItems(List.of("a", "b", "c"));
+        state.setItems(Arrays.asList("a", "b", "c"));
         state.setTotal(3);
         state.setIndex(1);
         state.setResultVar("loopResult_foreach_001");
@@ -121,12 +122,12 @@ class FlowContextLoopTest {
     @Test
     void testForkContext() {
         FlowContext context = new FlowContext();
-        context.setGlobal("shared", List.of("x"));
+        context.setGlobal("shared", Arrays.asList("x"));
 
         FlowContext forked = context.fork();
-        forked.setGlobal("shared", List.of("y"));
+        forked.setGlobal("shared", Arrays.asList("y"));
 
-        assertEquals(List.of("x"), context.get("shared"));
-        assertEquals(List.of("y"), forked.get("shared"));
+        assertEquals(Arrays.asList("x"), context.get("shared"));
+        assertEquals(Arrays.asList("y"), forked.get("shared"));
     }
 }

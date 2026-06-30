@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -83,7 +84,7 @@ class LoopUtilsTest {
         List<FlowEdge> edges = new ArrayList<>();
         edges.add(edge("foreach", "end_foreach"));
 
-        var pairs = LoopUtils.findLoopPairs(nodes, edges);
+        Map<String, String> pairs = LoopUtils.findLoopPairs(nodes, edges);
         assertEquals(1, pairs.size());
         assertEquals("end_foreach", pairs.get("foreach"));
     }

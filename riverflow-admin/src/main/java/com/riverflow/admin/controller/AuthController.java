@@ -9,6 +9,8 @@ import com.riverflow.api.entity.SysUser;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -197,12 +199,61 @@ public class AuthController {
      */
     @GetMapping("/user/info")
     public R<Map<String, Object>> getUserInfo() {
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            return R.fail("未登录");
+        }
+        SysUser sysUser = sysUserService.getById(userId);
+        if (sysUser == null) {
+            return R.fail("用户不存在");
+        }
         Map<String, Object> user = new HashMap<>();
-        user.put("username", "admin");
-        user.put("realName", "系统管理员");
-        user.put("avatar", "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png");
+        user.put("username", sysUser.getUsername());
+        user.put("realName", sysUser.getRealName());
+        user.put("avatar", sysUser.getAvatar());
         user.put("roles", new String[]{"admin"});
         return R.ok(user);
+    }
+
+    /**
+     * 修改当前用户密码
+     */
+    @PostMapping("/user/change-password")
+    public R<Void> changePassword(@RequestBody ChangePasswordRequest request) {
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            return R.fail("未登录");
+        }
+        if (request == null || request.getOldPassword() == null || request.getOldPassword().isEmpty()) {
+            return R.fail("原密码不能为空");
+        }
+        if (request.getNewPassword() == null || request.getNewPassword().isEmpty()) {
+            return R.fail("新密码不能为空");
+        }
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            return R.fail("两次输入的新密码不一致");
+        }
+        try {
+            sysUserService.changePassword(userId, request.getOldPassword(), request.getNewPassword());
+            return R.ok();
+        } catch (RuntimeException e) {
+            return R.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * 从 SecurityContext 获取当前登录用户ID
+     */
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getDetails() == null) {
+            return null;
+        }
+        Object details = authentication.getDetails();
+        if (details instanceof Long) {
+            return (Long) details;
+        }
+        return null;
     }
 
     /**
@@ -213,5 +264,15 @@ public class AuthController {
         private String username;
         private String password;
         private String captchaToken;
+    }
+
+    /**
+     * 修改密码请求
+     */
+    @lombok.Data
+    public static class ChangePasswordRequest {
+        private String oldPassword;
+        private String newPassword;
+        private String confirmPassword;
     }
 }

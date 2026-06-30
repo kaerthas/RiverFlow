@@ -109,7 +109,7 @@ const captchaVisible = ref(false)
 
 const form = reactive({
   username: 'admin',
-  password: 'admin123'
+  password: ''
 })
 
 const rules = {
