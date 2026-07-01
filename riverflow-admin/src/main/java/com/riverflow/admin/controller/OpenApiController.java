@@ -40,9 +40,12 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -88,6 +91,18 @@ public class OpenApiController {
     private DynamicRoutingDataSource dynamicRoutingDataSource;
 
     private JdbcTemplate dynamicJdbcTemplate;
+
+    /**
+     * 传统同步流程接口的固定字段（body 内）
+     */
+    private static final Set<String> SYNC_FIXED_KEYS = new HashSet<>(
+            Arrays.asList("flowCode", "businessKey", "variables", "timeoutMs"));
+
+    /**
+     * 自定义同步流程接口保留字段（body 内不参与业务变量）
+     */
+    private static final Set<String> SYNC_RESERVED_KEYS = new HashSet<>(
+            Arrays.asList("businessKey", "timeoutMs"));
 
     @PostConstruct
     public void init() {
@@ -182,9 +197,10 @@ public class OpenApiController {
     }
 
     /**
-     * 同步执行流程
-     * 在当前线程内串行驱动节点执行，直到流程结束或异常，立即返回最终结果
-     * 适用场景：短链路 API 编排（A→B→C），第三方同步集成
+     * 同步执行流程（传统格式）
+     * 支持两种入参方式：
+     * 1. { flowCode: "xxx", variables: { a: 1 } }
+     * 2. { flowCode: "xxx", a: 1 }
      *
      * @param params flowCode-流程编码（必填）, businessKey-业务主键（可选）,
      *               variables-初始上下文变量（可选）, timeoutMs-超时毫秒（可选，默认30000）
@@ -197,10 +213,58 @@ public class OpenApiController {
 
         String flowCode = (String) params.get("flowCode");
         String businessKey = (String) params.get("businessKey");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> variables = (Map<String, Object>) params.get("variables");
         Object timeoutObj = params.get("timeoutMs");
 
+        // 兼容 variables 和扁平两种格式
+        Map<String, Object> variables = new HashMap<>();
+        Object varObj = params.get("variables");
+        if (varObj instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> varMap = (Map<String, Object>) varObj;
+            variables.putAll(varMap);
+        }
+        params.forEach((k, v) -> {
+            if (!SYNC_FIXED_KEYS.contains(k)) {
+                variables.put(k, v);
+            }
+        });
+
+        return doExecuteSync(flowCode, businessKey, variables, timeoutObj);
+    }
+
+    /**
+     * 同步执行流程（自定义 body 格式）
+     * flowCode 通过 URL 路径传递，body 完全由业务方自定义
+     * 例如：POST /open/flow/executeSync/FLOW_XXX
+     * body: { "applicant": {...}, "baseInfo": {...} }
+     */
+    @PostMapping("/flow/executeSync/{flowCode}")
+    public R<Map<String, Object>> executeSyncCustom(
+            @PathVariable String flowCode,
+            @RequestBody(required = false) Map<String, Object> params) {
+        if (params == null) {
+            params = new HashMap<>();
+        }
+
+        String businessKey = (String) params.get("businessKey");
+        Object timeoutObj = params.get("timeoutMs");
+
+        // body 中除保留字段外，全部作为业务变量注入上下文
+        Map<String, Object> variables = new HashMap<>();
+        params.forEach((k, v) -> {
+            if (!SYNC_RESERVED_KEYS.contains(k)) {
+                variables.put(k, v);
+            }
+        });
+
+        return doExecuteSync(flowCode, businessKey, variables, timeoutObj);
+    }
+
+    /**
+     * 同步执行流程公共逻辑
+     */
+    private R<Map<String, Object>> doExecuteSync(String flowCode, String businessKey,
+                                                 Map<String, Object> variables, Object timeoutObj) {
         if (flowCode == null || flowCode.isEmpty()) {
             return R.fail("flowCode不能为空");
         }

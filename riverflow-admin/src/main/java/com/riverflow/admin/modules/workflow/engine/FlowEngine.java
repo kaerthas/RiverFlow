@@ -3,6 +3,7 @@ package com.riverflow.admin.modules.workflow.engine;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
 import com.riverflow.admin.modules.workflow.loop.LoopAsyncCoordinator;
 import com.riverflow.admin.modules.workflow.loop.LoopState;
@@ -27,6 +28,7 @@ import com.riverflow.api.enums.FlowTaskTypeEnum;
 import com.riverflow.common.constant.CommonConstant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -90,6 +92,18 @@ public class FlowEngine {
     private static final int MAX_CHAIN_LENGTH = 1000;
 
     /**
+     * 同步流程是否持久化流程实例（insert/update wf_flow_instance）
+     */
+    @Value("${riverflow.sync.persist-instance:true}")
+    private boolean syncPersistInstance;
+
+    /**
+     * 同步流程是否保存日志（wf_flow_log）
+     */
+    @Value("${riverflow.sync.save-log:true}")
+    private boolean syncSaveLog;
+
+    /**
      * 启动流程实例（优化：只保存一次）
      */
     public FlowInstance startInstance(Long flowId, String flowCode, Integer version, String businessKey, String itemCode) {
@@ -119,6 +133,49 @@ public class FlowEngine {
         context.set("_instanceId", instance.getId());
 
         saveLog(instance.getId(), null, null, "start", "流程实例启动成功, version=" + version);
+        return instance;
+    }
+
+    /**
+     * 启动同步流程实例
+     * 根据 syncPersistInstance 配置决定是否持久化到数据库
+     */
+    public FlowInstance startSyncInstance(Long flowId, String flowCode, Integer version,
+                                          String businessKey, String itemCode) {
+        log.info("启动同步流程实例: flowCode={}, version={}, businessKey={}, persist={}",
+                flowCode, version, businessKey, syncPersistInstance);
+
+        FlowInstance instance = new FlowInstance();
+        instance.setFlowId(flowId);
+        instance.setFlowCode(flowCode);
+        instance.setVersion(version);
+        instance.setBusinessKey(businessKey);
+        instance.setStatus(FlowInstanceStatusEnum.RUNNING.getCode());
+        instance.setStartTime(LocalDateTime.now());
+        instance.setCreateTime(LocalDateTime.now());
+        instance.setUpdateTime(LocalDateTime.now());
+
+        FlowContext context = new FlowContext();
+        context.set("_businessKey", businessKey);
+        context.set("_flowCode", flowCode);
+        if (itemCode != null) {
+            context.set("itemCode", itemCode);
+        }
+        instance.setContextJson(context.toJsonString());
+        instance.setCurrentNodeId("");
+
+        Long instanceId;
+        if (syncPersistInstance) {
+            flowInstanceService.save(instance);
+            instanceId = instance.getId();
+        } else {
+            instanceId = IdWorker.getId();
+            instance.setId(instanceId);
+            log.debug("同步流程实例跳过持久化, 使用临时instanceId={}", instanceId);
+        }
+        context.set("_instanceId", instanceId);
+
+        saveSyncLog(instanceId, null, null, "start", "流程实例启动成功, version=" + version);
         return instance;
     }
 
@@ -616,7 +673,7 @@ public class FlowEngine {
         long t0 = System.currentTimeMillis();
         long t1, t2, t3, t4;
 
-        FlowInstance instance = startInstance(flowId, flowCode, version, businessKey, itemCode);
+        FlowInstance instance = startSyncInstance(flowId, flowCode, version, businessKey, itemCode);
         t1 = System.currentTimeMillis();
         log.info("[同步流程实例:{}] 启动同步执行, flowCode={}, timeoutMs={}, startInstance耗时={}ms",
                 instance.getId(), flowCode, timeoutMs, t1 - t0);
@@ -657,7 +714,7 @@ public class FlowEngine {
             throw new com.riverflow.common.exception.BusinessException("流程定义缺少开始节点");
         }
 
-        saveLog(instance.getId(), null, startNode.getNodeId(), "start",
+        saveSyncLog(instance.getId(), null, startNode.getNodeId(), "start",
                 "同步流程启动成功, version=" + version);
 
         FlowNode currentNode = findNextNode(instance, startNode, edges, nodes, context,
@@ -766,15 +823,17 @@ public class FlowEngine {
         long persistStart = System.currentTimeMillis();
         instance.setContextJson(context.toJsonString());
         instance.setUpdateTime(LocalDateTime.now());
-        flowInstanceService.updateById(instance);
+        if (syncPersistInstance) {
+            flowInstanceService.updateById(instance);
+        }
         if (!syncLogs.isEmpty()) {
             asyncLogService.saveBatchAsync(syncLogs);
         }
         long totalCost = System.currentTimeMillis() - t0;
         long persistCost = System.currentTimeMillis() - persistStart;
         long nodeExecCost = persistStart - t4;
-        log.info("[同步流程实例:{}] 流程执行完成, 总耗时={}ms [启动={}ms, 变量注入={}ms, 加载节点={}ms, 节点执行={}ms, 持久化={}ms]",
-                instance.getId(), totalCost, t1 - t0, t2 - t1, t3 - t2, nodeExecCost, persistCost);
+        log.info("[同步流程实例:{}] 流程执行完成, 总耗时={}ms [启动={}ms, 变量注入={}ms, 加载节点={}ms, 节点执行={}ms, 持久化={}ms], persist={}",
+                instance.getId(), totalCost, t1 - t0, t2 - t1, t3 - t2, nodeExecCost, persistCost, syncPersistInstance);
 
         return buildSyncOutput(currentNode, context);
     }
@@ -896,6 +955,9 @@ public class FlowEngine {
     }
 
     private void addSyncLog(List<FlowLog> syncLogs, Long instanceId, Long taskId, String nodeId, String logType, String content) {
+        if (!syncSaveLog) {
+            return;
+        }
         FlowLog log = new FlowLog();
         log.setInstanceId(instanceId);
         log.setTaskId(taskId);
@@ -919,5 +981,15 @@ public class FlowEngine {
         } catch (Exception e) {
             log.error("保存流程日志失败", e);
         }
+    }
+
+    /**
+     * 同步流程专用日志保存
+     */
+    private void saveSyncLog(Long instanceId, Long taskId, String nodeId, String logType, String content) {
+        if (!syncSaveLog) {
+            return;
+        }
+        saveLog(instanceId, taskId, nodeId, logType, content);
     }
 }

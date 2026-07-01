@@ -138,6 +138,10 @@ logging:
     com.riverflow: debug
     org.springframework.security: warn
 riverflow:
+  # 同步流程下是否保存实例和审计日志，不保存可以提升整个同步流程效率
+  sync:
+    persist-instance: false
+    save-log: true
   datasource:
     driver:
       # 自定义 JDBC 驱动 JAR 包存储目录
@@ -160,7 +164,7 @@ riverflow:
     # nonce 防重放缓存时间（秒）
     nonce-expire: 600
     # /open/flow/** 固定流程接口是否强制签名认证
-    flow-auth-enabled: true
+    flow-auth-enabled: false
     # 接口 auth_type 为空时的默认策略：none / sign
     default-auth-type: none
     # 可信代理 IP/CIDR，只有来自这些地址的请求才读取 X-Forwarded-For 等代理 Header
