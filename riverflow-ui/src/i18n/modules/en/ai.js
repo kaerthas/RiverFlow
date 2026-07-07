@@ -9,4 +9,8 @@ export default {
   流程生成_2: 'Flow Generation',
   脚本生成_4: 'Script Generation',
   调用统计_7: 'Usage Statistics',
+  模型选择_10: 'Model Selection',
+  选择_provider_11: 'Select Provider',
+  自定义模型_12: 'Custom Model',
+  加载模型列表失败_13: 'Failed to load model list',
 }

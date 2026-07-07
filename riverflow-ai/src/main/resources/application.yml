@@ -1,0 +1,72 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: riverflow-ai
+
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/riverflow?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: java
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+riverflow:
+  ai:
+    enabled: true
+    audit-enabled: true
+    sensitive-mask-enabled: true
+    default-provider: kimi
+    timeout: 30000
+    retry: 1
+    providers:
+      # 本地 Ollama（原生 API）
+      - name: ollama
+        type: ollama
+        base-url: http://localhost:11434
+        default-model: qwen2.5:14b
+        temperature: 0.2
+
+      # OpenAI 兼容接口（OpenAI / OneAPI / 自建代理）
+      # - name: openai
+      #   type: openai
+      #   base-url: https://api.openai.com/v1
+      #   api-key: ${OPENAI_API_KEY}
+      #   default-model: gpt-4o-mini
+      #   temperature: 0.2
+      #   max-tokens: 4096
+
+      # 智谱 GLM（OpenAI 兼容端点）
+      # - name: zhipu
+      #   type: zhipu
+      #   base-url: https://open.bigmodel.cn/api/paas/v4
+      #   api-key: ${ZHIPU_API_KEY}
+      #   default-model: glm-4-flash
+      #   temperature: 0.2
+
+      # 通义千问（OpenAI 兼容端点）
+      # - name: qwen
+      #   type: qwen
+      #   base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      #   api-key: ${DASHSCOPE_API_KEY}
+      #   default-model: qwen-turbo
+      #   temperature: 0.2
+
+      # Kimi / Moonshot（OpenAI 兼容端点）
+      - name: kimi
+        type: openai
+        base-url: https://api.moonshot.cn/v1
+        api-key: ${KIMI_API_KEY}
+        default-model: moonshot-v1-8k
+        temperature: 0.2
+        max-tokens: 4096
+
+logging:
+  level:
+    com.riverflow.ai: debug

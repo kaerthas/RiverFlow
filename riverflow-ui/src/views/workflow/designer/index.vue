@@ -1281,7 +1281,10 @@ function initLogicFlow() {
 
   loadPluginNodes().then(() => {
     console.log('[Designer] init complete', { flowId: flowId.value })
-    if (flowId.value) {
+    const aiFlowData = route.query.aiFlow
+    if (aiFlowData) {
+      loadAiFlowData(aiFlowData)
+    } else if (flowId.value) {
       loadFlowData()
     } else {
       console.log('[Designer] render default nodes')
@@ -2795,6 +2798,158 @@ function handleExport() {
   a.download = `${flowName.value || 'flow'}.json`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+function loadAiFlowData(aiFlowData) {
+  try {
+    const data = JSON.parse(decodeURIComponent(aiFlowData))
+    flowName.value = data.flowName || t('designer.未命名流程_7e7b43eb')
+    flowExecutionMode.value = data.executionMode || 'ASYNC'
+    if (data.graphJson) {
+      const graphData = data.graphJson
+      normalizeAiGraphData(graphData)
+      ensureNodesRegistered(graphData)
+      lf.render(graphData)
+      requestAnimationFrame(renderLoopContainers)
+      originalGraphJson.value = JSON.stringify(lf.getGraphData())
+      isDirty.value = true
+    } else {
+      lf.render({ nodes: [], edges: [] })
+    }
+  } catch (e) {
+    console.error('[Designer] 加载 AI 生成流程失败', e)
+    ElMessage.error('加载 AI 生成流程失败: ' + e.message)
+  }
+}
+
+function normalizeAiGraphData(graphData) {
+  if (!graphData || !Array.isArray(graphData.nodes)) return
+  graphData.nodes.forEach(node => {
+    if (!node.properties) node.properties = {}
+    if (!node.properties.code && node.id) {
+      node.properties.code = node.id
+    }
+    if (!node.text && node.properties?.name) {
+      node.text = node.properties.name
+    }
+  })
+
+  if (!Array.isArray(graphData.edges)) graphData.edges = []
+  const edges = graphData.edges
+  const nodeMap = {}
+  graphData.nodes.forEach(n => { nodeMap[n.id] = n })
+
+  // AI 生成的循环节点坐标/边经常错乱，导入时自动规范化布局
+  const loopStartTypes = ['foreach', 'while']
+  graphData.nodes.forEach(startNode => {
+    if (!loopStartTypes.includes(startNode.type)) return
+    const expectedEndType = startNode.type === 'foreach' ? 'end_foreach' : 'end_while'
+    let endNode = findLoopEndNode(startNode, graphData.nodes, expectedEndType)
+    if (!endNode) return
+
+    if (!endNode.properties) endNode.properties = {}
+    endNode.properties.loopNodeId = startNode.id
+    endNode.properties._normalized = true
+
+    // 计算循环体节点：从 start 出发不经过 end 能到达的节点
+    const bodyIds = new Set()
+    const queue = [startNode.id]
+    const visited = new Set([startNode.id])
+    while (queue.length > 0) {
+      const cur = queue.shift()
+      for (const edge of edges) {
+        if (edge.sourceNodeId === cur && edge.targetNodeId !== endNode.id && !visited.has(edge.targetNodeId)) {
+          visited.add(edge.targetNodeId)
+          bodyIds.add(edge.targetNodeId)
+          queue.push(edge.targetNodeId)
+        }
+      }
+    }
+
+    // 移除循环体回指 while 的边和 while 直接到 end_while 的边
+    for (let i = edges.length - 1; i >= 0; i--) {
+      const e = edges[i]
+      const isBackToStart = bodyIds.has(e.sourceNodeId) && e.targetNodeId === startNode.id
+      const isStartToEnd = e.sourceNodeId === startNode.id && e.targetNodeId === endNode.id
+      if (isBackToStart || isStartToEnd) {
+        edges.splice(i, 1)
+      }
+    }
+
+    const bodyNodes = Array.from(bodyIds).map(id => nodeMap[id]).filter(Boolean)
+    if (bodyNodes.length > 0) {
+      // 按原始 x 排序，保持内部顺序
+      bodyNodes.sort((a, b) => a.x - b.x)
+      // 多个循环体节点时水平排列在 while 下方
+      if (bodyNodes.length === 1) {
+        bodyNodes[0].x = startNode.x
+        bodyNodes[0].y = startNode.y + 120
+      } else {
+        const totalWidth = (bodyNodes.length - 1) * 220
+        const firstX = startNode.x - totalWidth / 2
+        bodyNodes.forEach((n, idx) => {
+          n.x = firstX + idx * 220
+          n.y = startNode.y + 120
+        })
+      }
+
+      const firstBody = bodyNodes[0]
+      const lastBody = bodyNodes[bodyNodes.length - 1]
+
+      // while -> 第一个循环体
+      if (!edges.some(e => e.sourceNodeId === startNode.id && e.targetNodeId === firstBody.id)) {
+        edges.push({ id: `e_${startNode.id}_${firstBody.id}`, type: 'bezier', sourceNodeId: startNode.id, targetNodeId: firstBody.id, properties: { conditionType: 'default' } })
+      }
+
+      // 最后一个循环体 -> end_while
+      if (!edges.some(e => e.sourceNodeId === lastBody.id && e.targetNodeId === endNode.id)) {
+        edges.push({ id: `e_${lastBody.id}_${endNode.id}`, type: 'bezier', sourceNodeId: lastBody.id, targetNodeId: endNode.id, properties: { conditionType: 'default' } })
+      }
+
+      // end_while 放在最后一个循环体正下方
+      endNode.x = lastBody.x
+      endNode.y = lastBody.y + 120
+    } else {
+      // 没有循环体时，end_while 放在 while 正下方
+      endNode.x = startNode.x
+      endNode.y = startNode.y + 120
+    }
+  })
+
+  graphData.nodes.forEach(n => {
+    if (n.properties?._normalized) delete n.properties._normalized
+  })
+
+  // 统一把 polyline 边改成 bezier
+  edges.forEach(edge => {
+    if (edge.type === 'polyline') edge.type = 'bezier'
+  })
+}
+
+function findLoopEndNode(startNode, nodes, expectedEndType) {
+  let endNode = nodes.find(n => n.type === expectedEndType && n.properties?.loopNodeId === startNode.id)
+  if (endNode) return endNode
+  endNode = nodes.find(n => n.type === expectedEndType && (n.id === `end_${startNode.id}` || n.id === `end_${startNode.type}_${startNode.id}`))
+  if (endNode) return endNode
+  // AI 可能把结束循环节点当成普通节点，按名称兜底转换
+  const endLabels = ['结束循环', '循环结束', '条件循环结束']
+  endNode = nodes.find(n => {
+    const name = n.properties?.name || n.text?.value || n.text
+    return n.type !== 'end' && endLabels.includes(name) && !n.properties?._normalized
+  })
+  if (endNode) {
+    endNode.type = expectedEndType
+    if (!endNode.properties) endNode.properties = {}
+    endNode.properties.name = endNode.properties.name || endNode.text?.value || endNode.text || '结束循环'
+    return endNode
+  }
+  const startIdx = nodes.indexOf(startNode)
+  for (let i = startIdx + 1; i < nodes.length; i++) {
+    if (nodes[i].type === expectedEndType && !nodes[i].properties?._normalized) {
+      return nodes[i]
+    }
+  }
+  return null
 }
 
 async function loadFlowData() {

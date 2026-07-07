@@ -27,4 +27,5 @@ export default {
   通用问题咨询流程_1: 'General Q&A',
   通过自然语言生成_4: 'Generate through natural language',
   重新生成_25: 'Regenerate',
+  调用失败_26: 'Call failed',
 }

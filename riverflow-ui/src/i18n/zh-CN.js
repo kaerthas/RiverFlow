@@ -1,5 +1,6 @@
 import ai from './modules/ai'
 import aiApiParser from './modules/aiApiParser'
+import aiModel from './modules/aiModel'
 import aiAuditLogPanel from './modules/aiAuditLogPanel'
 import aiChatPanel from './modules/aiChatPanel'
 import aiFlowHelper from './modules/aiFlowHelper'
@@ -28,6 +29,7 @@ import utilRequest from './modules/utilRequest'
 export default {
   ai,
   aiApiParser,
+  aiModel,
   aiAuditLogPanel,
   aiChatPanel,
   aiFlowHelper,

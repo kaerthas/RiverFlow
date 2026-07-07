@@ -25,6 +25,10 @@ spring:
       max-request-size: 100MB
       location: ${java.io.tmpdir}/riverflow-upload
 
+  mvc:
+    async:
+      request-timeout: 600000
+
   # 数据源配置（dynamic-datasource 格式）
   datasource:
     dynamic:

@@ -82,6 +82,12 @@ const routes = [
         meta: { title: t('routeRouter.AI助手_1306956f'), icon: 'MagicStick' }
       },
       {
+        path: 'ai-model',
+        name: 'AiModel',
+        component: () => import('@/views/ai/model/index.vue'),
+        meta: { title: t('routeRouter.AI模型管理_a1b2c3d4'), icon: 'Cpu' }
+      },
+      {
         path: 'monitor',
         name: 'Monitor',
         component: () => import('@/views/monitor/index.vue'),

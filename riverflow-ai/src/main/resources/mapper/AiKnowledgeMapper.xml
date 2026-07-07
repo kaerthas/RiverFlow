@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.riverflow.ai.knowledge.mapper.AiKnowledgeMapper">
+
+    <select id="searchApis" resultType="com.riverflow.ai.knowledge.entity.ApiCatalog">
+        SELECT id, api_code, api_name, api_type, method, url, content_type, status
+        FROM wf_api_catalog
+        WHERE del_flag = 0 AND status = 1
+        <if test="keywords != null and keywords.size() > 0">
+            AND (
+            <foreach collection="keywords" item="kw" separator="OR">
+                api_code LIKE CONCAT('%', #{kw}, '%')
+                OR api_name LIKE CONCAT('%', #{kw}, '%')
+                OR url LIKE CONCAT('%', #{kw}, '%')
+            </foreach>
+            )
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="searchFlows" resultType="com.riverflow.ai.knowledge.entity.FlowDefinition">
+        SELECT id, flow_code, flow_name, trigger_type, trigger_config, execution_mode, graph_json, status
+        FROM wf_flow_definition
+        WHERE del_flag = 0 AND status = 1
+        <if test="keywords != null and keywords.size() > 0">
+            AND (
+            <foreach collection="keywords" item="kw" separator="OR">
+                flow_code LIKE CONCAT('%', #{kw}, '%')
+                OR flow_name LIKE CONCAT('%', #{kw}, '%')
+            </foreach>
+            )
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="searchDatasources" resultType="com.riverflow.ai.knowledge.entity.Datasource">
+        SELECT id, ds_code, ds_name, db_type, status
+        FROM wf_datasource
+        WHERE del_flag = 0 AND status = 1
+        <if test="keywords != null and keywords.size() > 0">
+            AND (
+            <foreach collection="keywords" item="kw" separator="OR">
+                ds_code LIKE CONCAT('%', #{kw}, '%')
+                OR ds_name LIKE CONCAT('%', #{kw}, '%')
+            </foreach>
+            )
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

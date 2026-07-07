@@ -1,5 +1,6 @@
 export default {
   AI助手_1306956f: 'AI Assistant',
+  AI模型管理_a1b2c3d4: 'AI Model Management',
   事项管理_b3d49744: 'Task Management',
   动态表设计_b33c7316: 'Dynamic Table',
   实例监控_a92a32fa: 'Instance Monitor',
