@@ -181,9 +181,16 @@ public class ApiNodeExecutor implements NodeExecutor {
                 for (ApiParam param : responseParams) {
                     String paramKey = param.getParamKey();
                     if (paramKey == null || paramKey.isEmpty()) continue;
-                    Object value = responseBody.getByPath(paramKey);
+                    Object value = null;
+                    try {
+                        value = responseBody.getByPath(paramKey);
+                    } catch (Exception e) {
+                        // getByPath 不支持含横线的 key（如 gw-serial-id），回退到直接 get
+                        value = responseBody.get(paramKey);
+                    }
                     if (value != null) {
                         context.set(paramKey, value);
+                        log.info("[流程实例:{}] 写入上下文 key={}, value={}", context.getInstanceId(), paramKey, value);
                     }
                 }
             }
