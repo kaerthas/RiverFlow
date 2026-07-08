@@ -13,6 +13,7 @@ import com.riverflow.admin.infra.openapi.SqlSafetyChecker;
 import com.riverflow.admin.infra.plugin.ApiPluginLoader;
 import com.riverflow.admin.modules.workflow.engine.FlowEngine;
 import com.riverflow.admin.service.ApiCatalogService;
+import com.riverflow.admin.service.ApiParamService;
 import com.riverflow.admin.service.ApiScriptService;
 import com.riverflow.admin.service.DatasourceService;
 import com.riverflow.admin.service.FlowDefinitionService;
@@ -20,6 +21,7 @@ import com.riverflow.admin.service.FlowInstanceService;
 import com.riverflow.admin.service.FlowNodeService;
 import com.riverflow.admin.service.FlowTaskService;
 import com.riverflow.api.entity.ApiCatalog;
+import com.riverflow.api.entity.ApiParam;
 import com.riverflow.api.entity.ApiScript;
 import com.riverflow.api.entity.Datasource;
 import com.riverflow.api.entity.FlowDefinition;
@@ -61,6 +63,8 @@ public class OpenApiController {
 
     @Autowired
     private ApiCatalogService apiCatalogService;
+    @Autowired
+    private ApiParamService apiParamService;
     @Autowired
     private JdbcTemplate jdbcTemplate;
     @Autowired
@@ -501,25 +505,57 @@ public class OpenApiController {
      */
     private R<Object> executeProxy(ApiCatalog api, Map<String, Object> params) {
         Map<String, String> headers = new HashMap<>();
+        Map<String, String> queryParams = new HashMap<>();
         Object body = null;
+
+        List<ApiParam> apiParams = apiParamService.list(
+                new QueryWrapper<ApiParam>()
+                        .eq("api_id", api.getId())
+                        .eq("del_flag", 0)
+                        .orderByAsc("sort_no")
+        );
+
+        for (ApiParam p : apiParams) {
+            if (p.getParamKey() == null || p.getParamKey().isEmpty()) continue;
+            if (p.getDefaultValue() == null || p.getDefaultValue().isEmpty()) continue;
+            if ("header".equals(p.getParamType())) {
+                headers.put(p.getParamKey(), p.getDefaultValue());
+            } else if ("query".equals(p.getParamType())) {
+                queryParams.put(p.getParamKey(), p.getDefaultValue());
+            } else if ("body".equals(p.getParamType())) {
+                if (body == null) body = new JSONObject();
+                ((JSONObject) body).put(p.getParamKey(), p.getDefaultValue());
+            }
+        }
 
         if (params != null && !params.isEmpty()) {
             for (Map.Entry<String, Object> entry : params.entrySet()) {
                 String key = entry.getKey();
                 if (key.startsWith("header.")) {
                     headers.put(key.substring(7), String.valueOf(entry.getValue()));
+                } else if (key.startsWith("query.")) {
+                    queryParams.put(key.substring(6), String.valueOf(entry.getValue()));
                 } else if (key.startsWith("body.")) {
                     if (body == null) body = new JSONObject();
                     ((JSONObject) body).put(key.substring(5), entry.getValue());
                 }
             }
-            if (body == null) {
-                body = new JSONObject(params);
+            boolean hasPrefixed = params.keySet().stream().anyMatch(k ->
+                    k.startsWith("header.") || k.startsWith("query.") || k.startsWith("body."));
+            if (!hasPrefixed) {
+                if (body == null) {
+                    body = new JSONObject(params);
+                } else {
+                    JSONObject bodyJson = (JSONObject) body;
+                    for (Map.Entry<String, Object> entry : params.entrySet()) {
+                        bodyJson.put(entry.getKey(), entry.getValue());
+                    }
+                }
             }
         }
 
         try {
-            JSONObject result = httpRequestService.execute(api, headers, body);
+            JSONObject result = httpRequestService.execute(api, headers, body, queryParams);
             return R.ok(result);
         } catch (Exception e) {
             log.error("接口调用失败: apiCode={}", api.getApiCode(), e);
@@ -648,7 +684,7 @@ public class OpenApiController {
 
             // 创建开始节点的 pending 任务，让 FlowScheduler 能扫描并自动推进
             List<FlowNode> nodes = flowNodeService.list(
-                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<FlowNode>()
+                    new QueryWrapper<FlowNode>()
                             .eq("flow_id", def.getId())
                             .eq("del_flag", 0)
             );
