@@ -129,9 +129,31 @@ const activeMenu = computed(() => route.path)
 const userName = computed(() => userStore.userInfo?.realName || userStore.userInfo?.username || t('layoutMainLayout.管理员_b1dae9bc'))
 
 const menuRoutes = computed(() => {
+  // 优先使用后端返回的权限菜单，实现动态菜单渲染
+  const menus = userStore.menus
+  if (menus && menus.length > 0) {
+    return menus.map(transformMenu).filter(m => m.path !== '/login')
+  }
+  // 无权限菜单时回退到静态路由
   const layoutRoute = router.getRoutes().find(r => r.path === '/')
   return layoutRoute?.children?.filter(r => !r.meta?.hidden) || []
 })
+
+function transformMenu(menu) {
+  const routeLike = {
+    path: menu.path || '',
+    meta: {
+      title: menu.menuName,
+      icon: menu.icon
+    },
+    children: (menu.children || []).map(transformMenu)
+  }
+  // 目录类型且只有一个子菜单时，可直接展开子菜单
+  if (routeLike.children.length === 1 && !routeLike.path) {
+    return routeLike.children[0]
+  }
+  return routeLike
+}
 
 function toggleCollapse() {
   isCollapse.value = !isCollapse.value

@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.autoconfigure.MybatisPlusProperties;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.riverflow.admin.infra.security.PermissionService;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.riverflow.admin.infra.datascope.DataScopeInnerInterceptor;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +37,8 @@ public class MyBatisPlusConfig {
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        // 数据权限插件（需在分页之前执行）
+        interceptor.addInnerInterceptor(new DataScopeInnerInterceptor());
         // 分页插件
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
         // 乐观锁插件
@@ -46,18 +50,31 @@ public class MyBatisPlusConfig {
      * 自动填充处理器
      */
     @Bean
-    public MetaObjectHandler metaObjectHandler() {
+    public MetaObjectHandler metaObjectHandler(PermissionService permissionService) {
         return new MetaObjectHandler() {
             @Override
             public void insertFill(MetaObject metaObject) {
                 this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
                 this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
                 this.strictInsertFill(metaObject, "delFlag", Integer.class, 0);
+                // 自动填充创建人/部门
+                String username = permissionService.getUsername();
+                Long deptId = permissionService.getDeptId();
+                if (username != null) {
+                    this.strictInsertFill(metaObject, "createBy", String.class, username);
+                }
+                if (deptId != null && metaObject.findProperty("deptId", false) != null) {
+                    this.strictInsertFill(metaObject, "deptId", Long.class, deptId);
+                }
             }
 
             @Override
             public void updateFill(MetaObject metaObject) {
                 this.strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
+                String username = permissionService.getUsername();
+                if (username != null) {
+                    this.strictUpdateFill(metaObject, "updateBy", String.class, username);
+                }
             }
         };
     }

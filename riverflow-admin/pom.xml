@@ -67,6 +67,13 @@
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
         </dependency>
 
+        <!-- JSqlParser：数据权限 SQL 解析依赖，固定版本避免传递依赖漂移 -->
+        <dependency>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+            <version>4.9</version>
+        </dependency>
+
         <!-- 动态数据源 -->
         <dependency>
             <groupId>com.baomidou</groupId>

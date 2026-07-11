@@ -2,6 +2,7 @@ import i18n from '@/i18n'
 const { t } = i18n.global
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
+import { getUserInfo } from '@/api/auth'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 
@@ -13,6 +14,12 @@ const routes = [
     name: 'Login',
     component: () => import('@/views/login/index.vue'),
     meta: { title: t('routeRouter.登录_402d19e5'), hidden: true }
+  },
+  {
+    path: '/403',
+    name: 'Forbidden',
+    component: () => import('@/views/error/403.vue'),
+    meta: { title: '无权限访问', hidden: true }
   },
   {
     path: '/',
@@ -104,6 +111,38 @@ const routes = [
         name: 'ScriptMgr',
         component: () => import('@/views/scriptMgr/index.vue'),
         meta: { title: t('routeRouter.脚本管理_a1fb7f16'), icon: 'DocumentCopy' }
+      },
+      {
+        path: 'system',
+        name: 'System',
+        redirect: '/system/user',
+        meta: { title: '系统管理', icon: 'Setting' },
+        children: [
+          {
+            path: '/system/user',
+            name: 'SystemUser',
+            component: () => import('@/views/system/user/index.vue'),
+            meta: { title: '用户管理' }
+          },
+          {
+            path: '/system/role',
+            name: 'SystemRole',
+            component: () => import('@/views/system/role/index.vue'),
+            meta: { title: '角色管理' }
+          },
+          {
+            path: '/system/menu',
+            name: 'SystemMenu',
+            component: () => import('@/views/system/menu/index.vue'),
+            meta: { title: '菜单管理' }
+          },
+          {
+            path: '/system/dept',
+            name: 'SystemDept',
+            component: () => import('@/views/system/dept/index.vue'),
+            meta: { title: '部门管理' }
+          }
+        ]
       }
     ]
   }
@@ -118,19 +157,79 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   NProgress.start()
   document.title = to.meta.title ? `${to.meta.title} - RiverFlow` : t('routeRouter.河狸流程编排_a118db9e')
 
   const userStore = useUserStore()
+
+  // 登录页直接放行
   if (to.path === '/login') {
     next()
-  } else if (!userStore.token) {
+    return
+  }
+
+  // 未登录则跳登录页
+  if (!userStore.token) {
     next('/login')
-  } else {
+    return
+  }
+
+  // 已登录但用户信息未加载，主动获取（处理刷新页面场景）
+  if (!userStore.userInfo) {
+    try {
+      const userInfo = await getUserInfo()
+      userStore.setUserInfo(userInfo)
+    } catch (e) {
+      userStore.clearToken()
+      next('/login')
+      return
+    }
+  }
+
+  // 超级管理员或菜单为空时放行（回退到静态路由）
+  if (userStore.isAdmin || !userStore.menus || userStore.menus.length === 0) {
     next()
+    return
+  }
+
+  // 公共页面直接放行
+  const publicPaths = ['/', '/dashboard', '/403', '/404']
+  if (publicPaths.includes(to.path)) {
+    next()
+    return
+  }
+
+  // 校验当前路由是否在用户权限菜单内
+  const menuPaths = collectMenuPaths(userStore.menus)
+  const hasPermission = menuPaths.some(path => {
+    if (!path) return false
+    return to.path === path || to.path.startsWith(path + '/')
+  })
+
+  if (hasPermission) {
+    next()
+  } else {
+    console.warn(`无权限访问路由: ${to.path}`)
+    next('/403')
   }
 })
+
+/**
+ * 收集菜单树中所有 path
+ */
+function collectMenuPaths(menus, result = []) {
+  if (!menus) return result
+  menus.forEach(menu => {
+    if (menu.path) {
+      result.push(menu.path)
+    }
+    if (menu.children && menu.children.length > 0) {
+      collectMenuPaths(menu.children, result)
+    }
+  })
+  return result
+}
 
 router.afterEach(() => {
   NProgress.done()

@@ -66,6 +66,11 @@ public class Item extends BaseEntity {
     private String flowCode;
 
     /**
+     * 部门ID（数据权限）
+     */
+    private Long deptId;
+
+    /**
      * 状态：0-停用，1-启用
      */
     private Integer status;

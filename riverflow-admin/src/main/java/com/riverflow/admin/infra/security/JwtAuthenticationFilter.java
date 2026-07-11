@@ -7,8 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -18,7 +16,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Collections;
 
 /**
  * JWT 认证过滤器
@@ -31,6 +28,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private UserDetailsServiceImpl userDetailsService;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
@@ -42,18 +42,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Long userId = jwtUtil.getUserIdFromToken(token);
 
                 if (StringUtils.hasText(username) && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    UserDetails userDetails = User.builder()
-                            .username(username)
-                            .password("")
-                            .authorities("ROLE_USER")
-                            .build();
+                    try {
+                        LoginUser loginUser = (LoginUser) userDetailsService.loadUserByUsername(username);
 
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(userDetails, userId, userDetails.getAuthorities());
-                    authentication.setDetails(userId);
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                        UsernamePasswordAuthenticationToken authentication =
+                                new UsernamePasswordAuthenticationToken(loginUser, userId, loginUser.getAuthorities());
+                        authentication.setDetails(userId);
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                    log.debug("JWT 认证成功: user={}, uri={}", username, request.getRequestURI());
+                        log.debug("JWT 认证成功: user={}, uri={}", username, request.getRequestURI());
+                    } catch (Exception e) {
+                        log.warn("JWT 用户加载失败: user={}, error={}", username, e.getMessage());
+                        response.setContentType("application/json;charset=UTF-8");
+                        response.setStatus(401);
+                        response.getWriter().write(com.alibaba.fastjson2.JSON.toJSONString(
+                                R.fail(ResultCode.UNAUTHORIZED.getCode(), "用户认证信息无效")));
+                        return;
+                    }
                 }
             } else {
                 // Token 存在但无效（过期或格式错误），直接返回 401，不要继续走认证链触发 302 重定向

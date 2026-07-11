@@ -36,6 +36,11 @@ public class FlowDefinition extends BaseEntity {
     private String itemCode;
 
     /**
+     * 部门ID（数据权限）
+     */
+    private Long deptId;
+
+    /**
      * 触发方式：cron-定时 event-事件 manual-手动
      */
     private String triggerType;

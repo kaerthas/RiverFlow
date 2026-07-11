@@ -81,6 +81,12 @@ public class ApiCatalog extends BaseEntity {
     private Long dsId;
 
     /**
+     * 部门ID（数据权限）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long deptId;
+
+    /**
      * 脚本类型时绑定的脚本ID
      */
     @JsonSerialize(using = ToStringSerializer.class)

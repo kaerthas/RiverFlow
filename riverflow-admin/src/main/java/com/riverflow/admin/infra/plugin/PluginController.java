@@ -10,6 +10,7 @@ import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,6 +50,7 @@ public class PluginController {
     private String pluginDir;
 
     @PostMapping("/upload")
+    @PreAuthorize("@ss.hasPerm('plugin:upload')")
     public R<String> uploadPlugin(@RequestParam("file") MultipartFile file) {
         R<String> validateResult = pluginFileValidator.validate(file);
         if (validateResult != null) {
@@ -167,6 +169,7 @@ public class PluginController {
     }
 
     @GetMapping("/list")
+    @PreAuthorize("@ss.hasPerm('plugin:list')")
     public R<Page<SysPlugin>> listPlugins(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
@@ -192,6 +195,7 @@ public class PluginController {
     }
 
     @GetMapping("/detail/{id}")
+    @PreAuthorize("@ss.hasPerm('plugin:list')")
     public R<SysPlugin> getPluginDetail(@PathVariable Long id) {
         SysPlugin plugin = sysPluginService.getById(id);
         if (plugin == null) {
@@ -262,6 +266,7 @@ public class PluginController {
     }
 
     @PostMapping("/enable/{id}")
+    @PreAuthorize("@ss.hasPerm('plugin:upload')")
     public R<String> enablePlugin(@PathVariable Long id) {
         SysPlugin plugin = sysPluginService.getById(id);
         if (plugin == null) {
@@ -292,6 +297,7 @@ public class PluginController {
     }
 
     @PostMapping("/disable/{id}")
+    @PreAuthorize("@ss.hasPerm('plugin:upload')")
     public R<String> disablePlugin(@PathVariable Long id) {
         SysPlugin plugin = sysPluginService.getById(id);
         if (plugin == null) {
@@ -314,6 +320,7 @@ public class PluginController {
     }
 
     @DeleteMapping("/delete/{id}")
+    @PreAuthorize("@ss.hasPerm('plugin:delete')")
     public R<String> deletePlugin(@PathVariable Long id) {
         SysPlugin plugin = sysPluginService.getById(id);
         if (plugin == null) {
@@ -336,6 +343,7 @@ public class PluginController {
     }
 
     @PostMapping("/reload/{id}")
+    @PreAuthorize("@ss.hasPerm('plugin:upload')")
     public R<String> reloadPlugin(@PathVariable Long id) {
         SysPlugin plugin = sysPluginService.getById(id);
         if (plugin == null) {

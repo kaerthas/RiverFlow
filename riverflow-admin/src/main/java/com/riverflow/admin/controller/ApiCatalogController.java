@@ -3,6 +3,7 @@ package com.riverflow.admin.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.riverflow.admin.infra.datascope.DataScope;
 import com.riverflow.admin.infra.openapi.SqlCheckResult;
 import com.riverflow.admin.infra.openapi.SqlSafetyChecker;
 import com.riverflow.admin.mapper.ApiParamMapper;
@@ -15,6 +16,7 @@ import com.riverflow.api.entity.FlowDefinition;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,6 +39,8 @@ public class ApiCatalogController {
     private ApiParamMapper apiParamMapper;
 
     @GetMapping("/list")
+    @PreAuthorize("@ss.hasPerm('api:catalog:list')")
+    @DataScope(deptColumn = "dept_id", userColumn = "create_by")
     public R<Page<ApiCatalog>> list(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
@@ -75,6 +79,7 @@ public class ApiCatalogController {
     }
 
     @PostMapping
+    @PreAuthorize("@ss.hasPerm('api:catalog:add')")
     public R<String> save(@RequestBody ApiCatalog apiCatalog) {
         R<String> validateResult = validateSqlApi(apiCatalog);
         if (validateResult != null) {
@@ -86,6 +91,7 @@ public class ApiCatalogController {
     }
 
     @PutMapping
+    @PreAuthorize("@ss.hasPerm('api:catalog:edit')")
     public R<String> update(@RequestBody ApiCatalog apiCatalog) {
         R<String> validateResult = validateSqlApi(apiCatalog);
         if (validateResult != null) {
@@ -117,6 +123,7 @@ public class ApiCatalogController {
     }
 
     @PostMapping("/{id}/params")
+    @PreAuthorize("@ss.hasPerm('api:catalog:edit')")
     @Transactional(rollbackFor = Exception.class)
     public R<Void> saveParams(@PathVariable Long id, @RequestBody List<ApiParam> params) {
         // 物理删除该接口下的所有旧参数
@@ -170,6 +177,7 @@ public class ApiCatalogController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@ss.hasPerm('api:catalog:delete')")
     public R<Void> delete(@PathVariable Long id) {
         apiCatalogService.removeById(id);
         apiParamService.remove(new QueryWrapper<ApiParam>().eq("api_id", id));

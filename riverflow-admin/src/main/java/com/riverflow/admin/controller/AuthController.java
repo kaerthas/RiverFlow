@@ -3,8 +3,13 @@ package com.riverflow.admin.controller;
 import cloud.tianai.captcha.application.ImageCaptchaApplication;
 import cloud.tianai.captcha.spring.plugins.secondary.SecondaryVerificationApplication;
 import com.riverflow.admin.infra.security.JwtUtil;
+import com.riverflow.admin.infra.security.LoginUser;
+import com.riverflow.admin.infra.security.PermissionService;
+import com.riverflow.admin.infra.security.UserDetailsServiceImpl;
 import com.riverflow.admin.service.LoginLockService;
+import com.riverflow.admin.service.SysMenuService;
 import com.riverflow.admin.service.SysUserService;
+import com.riverflow.api.entity.SysMenu;
 import com.riverflow.api.entity.SysUser;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
@@ -12,9 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * 认证 Controller
@@ -37,6 +42,15 @@ public class AuthController {
 
     @Autowired
     private LoginLockService loginLockService;
+
+    @Autowired
+    private UserDetailsServiceImpl userDetailsService;
+
+    @Autowired
+    private SysMenuService sysMenuService;
+
+    @Autowired
+    private PermissionService permissionService;
 
     /**
      * 初始化默认管理员账户（仅开发测试用）
@@ -194,15 +208,61 @@ public class AuthController {
 
     /**
      * 获取当前用户信息
+     * 包含用户基本信息、角色、权限、菜单树
      */
     @GetMapping("/user/info")
     public R<Map<String, Object>> getUserInfo() {
+        LoginUser loginUser = permissionService.getLoginUser();
+        if (loginUser == null) {
+            return R.fail("未登录");
+        }
+
         Map<String, Object> user = new HashMap<>();
-        user.put("username", "admin");
-        user.put("realName", "系统管理员");
-        user.put("avatar", "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png");
-        user.put("roles", new String[]{"admin"});
+        user.put("userId", loginUser.getUserId());
+        user.put("username", loginUser.getUsername());
+        user.put("realName", loginUser.getRealName());
+        user.put("avatar", loginUser.getAvatar());
+        user.put("deptId", loginUser.getDeptId());
+        user.put("deptName", loginUser.getDeptName());
+        user.put("roles", loginUser.getRoles());
+        user.put("permissions", loginUser.getPermissions());
+        user.put("admin", loginUser.isAdmin());
+
+        // 查询菜单树（仅目录和菜单，不含按钮权限）
+        List<SysMenu> menus = sysMenuService.getMenusByUserId(loginUser.getUserId());
+        List<SysMenu> menuTree = buildMenuTree(menus);
+        user.put("menus", menuTree);
+
         return R.ok(user);
+    }
+
+    /**
+     * 构建菜单树
+     */
+    private List<SysMenu> buildMenuTree(List<SysMenu> menus) {
+        if (menus == null || menus.isEmpty()) {
+            return new ArrayList<>();
+        }
+        // 过滤出目录和菜单类型，按排序号排序
+        List<SysMenu> visibleMenus = menus.stream()
+                .filter(m -> m.getMenuType() != null && m.getMenuType() <= 1)
+                .sorted(Comparator.comparing(SysMenu::getSortNo, Comparator.nullsLast(Integer::compareTo))
+                        .thenComparing(SysMenu::getId))
+                .collect(Collectors.toList());
+
+        Map<Long, SysMenu> menuMap = visibleMenus.stream().collect(Collectors.toMap(SysMenu::getId, m -> m));
+        List<SysMenu> tree = new ArrayList<>();
+        for (SysMenu menu : visibleMenus) {
+            if (menu.getParentId() == null || menu.getParentId() == 0L) {
+                tree.add(menu);
+            } else {
+                SysMenu parent = menuMap.get(menu.getParentId());
+                if (parent != null) {
+                    parent.getChildren().add(menu);
+                }
+            }
+        }
+        return tree;
     }
 
     /**

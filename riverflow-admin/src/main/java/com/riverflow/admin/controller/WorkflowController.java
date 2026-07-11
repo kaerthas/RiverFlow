@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
+import com.riverflow.admin.infra.datascope.DataScope;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
 import com.riverflow.admin.modules.workflow.engine.FlowEngine;
 import com.riverflow.admin.modules.workflow.loop.LoopState;
@@ -16,6 +17,7 @@ import com.riverflow.api.enums.FlowTaskTypeEnum;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -60,6 +62,8 @@ public class WorkflowController {
     // ==================== 流程定义 ====================
 
     @GetMapping("/definition/list")
+    @PreAuthorize("@ss.hasPerm('workflow:list')")
+    @DataScope(deptColumn = "dept_id", userColumn = "create_by")
     public R<Page<FlowDefinition>> listDefinitions(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
@@ -111,6 +115,7 @@ public class WorkflowController {
      * 查询某流程编码的所有历史版本
      */
     @GetMapping("/definition/versions")
+    @PreAuthorize("@ss.hasPerm('workflow:list')")
     public R<List<FlowDefinition>> listVersions(@RequestParam String flowCode) {
         QueryWrapper<FlowDefinition> qw = new QueryWrapper<>();
         qw.eq("flow_code", flowCode).eq("del_flag", 0).orderByDesc("version");
@@ -118,6 +123,7 @@ public class WorkflowController {
     }
 
     @GetMapping("/definition/{id}")
+    @PreAuthorize("@ss.hasPerm('workflow:list')")
     public R<FlowDefinition> getDefinition(@PathVariable Long id) {
         FlowDefinition def = flowDefinitionService.getById(id);
         if (def == null) return R.fail("流程定义不存在");
@@ -125,6 +131,7 @@ public class WorkflowController {
     }
 
     @PostMapping("/definition")
+    @PreAuthorize("@ss.hasPerm('workflow:add')")
     public R<String> saveDefinition(@RequestBody FlowDefinition definition) {
         if (definition.getId() != null) {
             FlowDefinition exist = flowDefinitionService.getById(definition.getId());
@@ -169,6 +176,7 @@ public class WorkflowController {
     }
 
     @PostMapping("/definition/{id}/validate")
+    @PreAuthorize("@ss.hasPerm('workflow:add')")
     public R<Void> validateDefinition(@PathVariable Long id) {
         FlowDefinition def = flowDefinitionService.getById(id);
         if (def == null) return R.fail("流程定义不存在");
@@ -181,6 +189,7 @@ public class WorkflowController {
     }
 
     @PutMapping("/definition/{id}/publish")
+    @PreAuthorize("@ss.hasPerm('workflow:publish')")
     @Transactional(rollbackFor = Exception.class)
     public R<String> publishDefinition(@PathVariable Long id) {
         FlowDefinition def = flowDefinitionService.getById(id);
@@ -235,6 +244,7 @@ public class WorkflowController {
     }
 
     @PutMapping("/definition/{id}/offline")
+    @PreAuthorize("@ss.hasPerm('workflow:publish')")
     public R<Void> offlineDefinition(@PathVariable Long id) {
         FlowDefinition def = flowDefinitionService.getById(id);
         if (def == null) return R.fail("流程定义不存在");
@@ -258,6 +268,7 @@ public class WorkflowController {
     }
 
     @DeleteMapping("/definition/{id}")
+    @PreAuthorize("@ss.hasPerm('workflow:delete')")
     public R<Void> deleteDefinition(@PathVariable Long id) {
         FlowDefinition def = flowDefinitionService.getById(id);
         if (def == null) return R.fail("流程定义不存在");
@@ -274,6 +285,7 @@ public class WorkflowController {
      * 复制指定版本为新草稿
      */
     @PostMapping("/definition/{id}/copy")
+    @PreAuthorize("@ss.hasPerm('workflow:add')")
     public R<String> copyAsNewVersion(@PathVariable Long id) {
         Long newId = flowDefinitionService.copyAsNewVersion(id);
         return R.ok(String.valueOf(newId));
@@ -292,6 +304,7 @@ public class WorkflowController {
     }
 
     @PostMapping("/definition/{flowId}/save-graph")
+    @PreAuthorize("@ss.hasPerm('workflow:edit')")
     @Transactional(rollbackFor = Exception.class)
     public R<Void> saveGraph(@PathVariable Long flowId, @RequestBody com.alibaba.fastjson2.JSONObject request) {
         FlowDefinition def = flowDefinitionService.getById(flowId);
@@ -424,6 +437,7 @@ public class WorkflowController {
     // ==================== 流程实例 ====================
 
     @GetMapping("/instance/list")
+    @PreAuthorize("@ss.hasPerm('workflow:instance:list')")
     public R<Page<FlowInstance>> listInstances(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
@@ -443,6 +457,7 @@ public class WorkflowController {
     }
 
     @PostMapping("/instance/{flowId}/start")
+    @PreAuthorize("@ss.hasPerm('workflow:instance:execute')")
     public R<String> startInstance(@PathVariable Long flowId,
                                   @RequestParam(required = false) String businessKey,
                                   @RequestParam(required = false) String itemCode) {
@@ -497,6 +512,7 @@ public class WorkflowController {
     }
 
     @PutMapping("/instance/{id}/terminate")
+    @PreAuthorize("@ss.hasPerm('workflow:instance:execute')")
     public R<Void> terminateInstance(@PathVariable Long id) {
         FlowInstance instance = flowInstanceService.getById(id);
         if (instance == null) return R.fail("实例不存在");
@@ -507,6 +523,7 @@ public class WorkflowController {
     }
 
     @PutMapping("/instance/{id}/suspend")
+    @PreAuthorize("@ss.hasPerm('workflow:instance:execute')")
     public R<Void> suspendInstance(@PathVariable Long id) {
         FlowInstance instance = flowInstanceService.getById(id);
         if (instance == null) return R.fail("实例不存在");
@@ -520,6 +537,7 @@ public class WorkflowController {
     }
 
     @PostMapping("/instance/{instanceId}/resume")
+    @PreAuthorize("@ss.hasPerm('workflow:instance:execute')")
     public R<String> resumeInstance(@PathVariable Long instanceId) {
         FlowInstance instance = flowInstanceService.getById(instanceId);
         if (instance == null) return R.fail("实例不存在");
@@ -530,6 +548,7 @@ public class WorkflowController {
     }
 
     @PostMapping("/instance/{instanceId}/retry")
+    @PreAuthorize("@ss.hasPerm('workflow:instance:execute')")
     public R<String> retryInstance(@PathVariable Long instanceId) {
         FlowInstance instance = flowInstanceService.getById(instanceId);
         if (instance == null) return R.fail("实例不存在");
@@ -578,6 +597,7 @@ public class WorkflowController {
     // ==================== 流程执行（手动推进）====================
 
     @PostMapping("/instance/{instanceId}/execute")
+    @PreAuthorize("@ss.hasPerm('workflow:instance:execute')")
     public R<String> executeInstance(@PathVariable Long instanceId) {
         FlowInstance instance = flowInstanceService.getById(instanceId);
         if (instance == null) return R.fail("实例不存在");

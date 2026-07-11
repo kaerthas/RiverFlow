@@ -2,6 +2,7 @@ package com.riverflow.admin.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.riverflow.admin.infra.datascope.DataScope;
 import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
 import com.riverflow.admin.infra.dynamicds.JdbcDriverJarLoader;
 import com.riverflow.admin.infra.dynamicds.JdbcDriverJarValidator;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jasypt.encryption.StringEncryptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -47,6 +49,8 @@ public class DatasourceController {
     private static final String ENC_SUFFIX = ")";
 
     @GetMapping("/list")
+    @PreAuthorize("@ss.hasPerm('datasource:list')")
+    @DataScope(deptColumn = "dept_id", userColumn = "create_by")
     public R<Page<Datasource>> list(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size) {
@@ -61,6 +65,7 @@ public class DatasourceController {
     }
 
     @PostMapping
+    @PreAuthorize("@ss.hasPerm('datasource:add')")
     public R<Long> save(@RequestBody Datasource datasource) {
         R<Long> validateResult = validateCustomDriver(datasource);
         if (validateResult != null) {
@@ -74,6 +79,7 @@ public class DatasourceController {
     }
 
     @PutMapping
+    @PreAuthorize("@ss.hasPerm('datasource:edit')")
     public R<Long> update(@RequestBody Datasource datasource) {
         Long id = datasource.getId();
         if (id == null) {
@@ -107,6 +113,7 @@ public class DatasourceController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@ss.hasPerm('datasource:delete')")
     public R<Void> delete(@PathVariable Long id) {
         Datasource ds = datasourceService.getById(id);
         if (ds != null) {
@@ -126,6 +133,7 @@ public class DatasourceController {
     }
 
     @PostMapping("/{id}/reload")
+    @PreAuthorize("@ss.hasPerm('datasource:edit')")
     public R<Void> reload(@PathVariable Long id) {
         Datasource ds = datasourceService.getById(id);
         if (ds == null) return R.fail("数据源不存在");
@@ -143,6 +151,7 @@ public class DatasourceController {
      * @return 保存后的相对路径
      */
     @PostMapping("/uploadDriverJar")
+    @PreAuthorize("@ss.hasPerm('datasource:add')")
     public R<String> uploadDriverJar(
             @RequestParam("dsCode") String dsCode,
             @RequestParam("driverClass") String driverClass,

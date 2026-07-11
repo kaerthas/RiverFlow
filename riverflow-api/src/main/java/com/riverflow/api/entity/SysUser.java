@@ -32,6 +32,16 @@ public class SysUser implements Serializable {
 
     private String phone;
 
+    /**
+     * 部门ID
+     */
+    private Long deptId;
+
+    /**
+     * 部门名称
+     */
+    private String deptName;
+
     private Integer status;
 
     private LocalDateTime createTime;

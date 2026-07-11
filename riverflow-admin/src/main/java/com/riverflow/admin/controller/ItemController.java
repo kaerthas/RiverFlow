@@ -2,11 +2,13 @@ package com.riverflow.admin.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.riverflow.admin.infra.datascope.DataScope;
 import com.riverflow.admin.service.ItemService;
 import com.riverflow.api.entity.Item;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -21,6 +23,8 @@ public class ItemController {
     private ItemService itemService;
 
     @GetMapping("/list")
+    @PreAuthorize("@ss.hasPerm('item:list')")
+    @DataScope(deptColumn = "dept_id", userColumn = "create_by")
     public R<Page<Item>> list(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
@@ -43,18 +47,21 @@ public class ItemController {
     }
 
     @PostMapping
+    @PreAuthorize("@ss.hasPerm('item:add')")
     public R<Long> save(@RequestBody Item item) {
         itemService.saveOrUpdate(item);
         return R.ok(item.getId());
     }
 
     @PutMapping
+    @PreAuthorize("@ss.hasPerm('item:edit')")
     public R<Long> update(@RequestBody Item item) {
         itemService.updateById(item);
         return R.ok(item.getId());
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@ss.hasPerm('item:delete')")
     public R<Void> delete(@PathVariable Long id) {
         itemService.removeById(id);
         return R.ok();
