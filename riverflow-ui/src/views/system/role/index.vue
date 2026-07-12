@@ -113,7 +113,6 @@
         node-key="id"
         show-checkbox
         default-expand-all
-        :default-checked-keys="checkedMenuIds"
       />
       <template #footer>
         <el-button @click="menuDialogVisible = false">取消</el-button>
@@ -255,9 +254,28 @@ async function handleAssignMenu(row) {
   currentRoleId.value = row.id
   try {
     const [menuRes, roleMenuRes] = await Promise.all([getAllMenus(), getRoleMenus(row.id)])
-    menuTreeData.value = buildMenuTree(menuRes || [])
-    checkedMenuIds.value = roleMenuRes || []
+    // 统一将 id/parentId 转为字符串，与后端 Long 序列化保持一致
+    const normalizedMenus = (menuRes || []).map(m => ({
+      ...m,
+      id: String(m.id),
+      parentId: m.parentId == null || String(m.parentId) === '0' ? null : String(m.parentId)
+    }))
+    menuTreeData.value = buildMenuTree(normalizedMenus)
+    checkedMenuIds.value = (roleMenuRes || []).map(id => String(id))
     menuDialogVisible.value = true
+    // 弹窗渲染完成后手动设置选中状态，避免 default-checked-keys 类型/时序问题
+    // 注意：父子联动模式下，setCheckedKeys 设置父节点会自动勾选所有子节点，
+    // 因此只传入叶子节点，父节点会根据子节点状态自动半选/全选
+    nextTick(() => {
+      if (menuTreeRef.value) {
+        const allNodes = flattenTree(menuTreeData.value)
+        const leafIds = checkedMenuIds.value.filter(id => {
+          const node = allNodes.find(n => String(n.id) === String(id))
+          return node && (!node.children || node.children.length === 0)
+        })
+        menuTreeRef.value.setCheckedKeys(leafIds, false)
+      }
+    })
   } catch (e) {
     console.error('加载菜单失败', e)
   }
@@ -265,9 +283,27 @@ async function handleAssignMenu(row) {
 
 async function handleSubmitMenus() {
   if (!menuTreeRef.value) return
-  const checkedKeys = menuTreeRef.value.getCheckedKeys()
-  const halfCheckedKeys = menuTreeRef.value.getHalfCheckedKeys()
-  const menuIds = [...checkedKeys, ...halfCheckedKeys]
+  // 只取叶子节点，避免父节点半选/全选状态干扰
+  const leafKeys = menuTreeRef.value.getCheckedKeys(true) || []
+  if (!leafKeys.length) {
+    ElMessage.warning('请至少选择一个权限')
+    return
+  }
+  // 自动补齐祖先节点，保证左侧菜单树能正常渲染
+  const menuIdSet = new Set(leafKeys.map(id => String(id)))
+  const allNodes = flattenTree(menuTreeData.value)
+  leafKeys.forEach(leafId => {
+    const node = allNodes.find(n => String(n.id) === String(leafId))
+    if (node) {
+      let parentId = node.parentId
+      while (parentId) {
+        menuIdSet.add(String(parentId))
+        const parent = allNodes.find(n => String(n.id) === String(parentId))
+        parentId = parent ? parent.parentId : null
+      }
+    }
+  })
+  const menuIds = Array.from(menuIdSet)
   try {
     await assignRoleMenus(currentRoleId.value, menuIds)
     ElMessage.success('权限分配成功')
@@ -280,24 +316,38 @@ async function handleSubmitMenus() {
       console.error('刷新当前用户权限失败', e)
     }
   } catch (e) {
+    ElMessage.error('权限分配失败')
     console.error('分配权限失败', e)
   }
 }
 
 function buildMenuTree(menus) {
+  if (!menus || menus.length === 0) return []
   const menuMap = {}
-  menus.forEach(m => {
-    m.children = []
+  // 深拷贝避免修改原始数组，同时统一初始化 children
+  const list = menus.map(m => ({ ...m, children: [] }))
+  list.forEach(m => {
     menuMap[m.id] = m
   })
   const tree = []
-  menus.forEach(m => {
-    if (m.parentId && m.parentId !== 0 && menuMap[m.parentId]) {
-      menuMap[m.parentId].children.push(m)
+  list.forEach(m => {
+    const parentId = m.parentId
+    if (parentId && parentId !== '0' && menuMap[parentId]) {
+      menuMap[parentId].children.push(m)
     } else {
       tree.push(m)
     }
   })
   return tree.sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
+}
+
+function flattenTree(nodes, result = []) {
+  nodes.forEach(node => {
+    result.push(node)
+    if (node.children && node.children.length) {
+      flattenTree(node.children, result)
+    }
+  })
+  return result
 }
 </script>
