@@ -1,6 +1,7 @@
 package com.riverflow.admin.config;
 
 import com.riverflow.common.spring.SpringContextHolder;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -39,8 +40,9 @@ public class FlowExecutorConfig {
      */
     @Bean(name = "flowExecutor", destroyMethod = "shutdown")
     public ExecutorService flowExecutor(
-            @Value("${riverflow.virtual-thread.flow-executor-max-concurrency:30}") int maxConcurrency) {
+            @Value("${riverflow.virtual-thread.flow-executor-max-concurrency:30}") int maxConcurrency,
+            MeterRegistry meterRegistry) {
         log.info("初始化流程任务虚拟线程执行器，最大并发数: {}", maxConcurrency);
-        return new SemaphoreExecutorService(maxConcurrency);
+        return new SemaphoreExecutorService(maxConcurrency, meterRegistry);
     }
 }

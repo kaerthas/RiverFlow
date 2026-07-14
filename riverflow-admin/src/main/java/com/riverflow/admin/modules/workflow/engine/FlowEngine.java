@@ -25,6 +25,8 @@ import com.riverflow.api.enums.FlowNodeTypeEnum;
 import com.riverflow.api.enums.FlowTaskStatusEnum;
 import com.riverflow.api.enums.FlowTaskTypeEnum;
 import com.riverflow.common.constant.CommonConstant;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -74,6 +76,31 @@ public class FlowEngine {
     @Autowired
     private LoopAsyncCoordinator loopAsyncCoordinator;
 
+    @Autowired
+    private org.redisson.api.RedissonClient redissonClient;
+
+    @org.springframework.beans.factory.annotation.Value("${riverflow.distributed.redisson-lock-enabled:true}")
+    private boolean redissonLockEnabled;
+
+    @org.springframework.beans.factory.annotation.Value("${riverflow.distributed.lock-wait-time-seconds:5}")
+    private long lockWaitTimeSeconds;
+
+    @Autowired
+    private MeterRegistry meterRegistry;
+
+    private Counter lockSuccessCounter;
+    private Counter lockFailCounter;
+
+    @Autowired
+    public void initLockMetrics() {
+        this.lockSuccessCounter = Counter.builder("flow_lock_success_total")
+                .description("流程实例锁获取成功次数")
+                .register(meterRegistry);
+        this.lockFailCounter = Counter.builder("flow_lock_fail_total")
+                .description("流程实例锁获取失败次数")
+                .register(meterRegistry);
+    }
+
     /**
      * 当前线程已持有的流程实例锁（用于循环链递归执行时避免死锁）
      */
@@ -88,6 +115,82 @@ public class FlowEngine {
      * 单次执行链中最多连续执行的节点数，防止栈溢出/长事务
      */
     private static final int MAX_CHAIN_LENGTH = 1000;
+
+    /**
+     * 使用 Redisson 可重入锁执行任务，支持看门狗自动续期。
+     * 若配置关闭 redisson-lock-enabled，则回退到原生 Redis SETNX 锁。
+     */
+    private void executeWithInstanceLock(FlowInstance instance, Runnable action) {
+        if (!redissonLockEnabled) {
+            executeWithLegacyLock(instance, action);
+            return;
+        }
+        String lockKey = CommonConstant.FLOW_LOCK_PREFIX + instance.getId();
+        org.redisson.api.RLock lock = redissonClient.getLock(lockKey);
+        Set<Long> heldLocks = holdingInstanceLocks.get();
+        boolean lockAcquired = false;
+
+        if (!heldLocks.contains(instance.getId())) {
+            try {
+                boolean locked = lock.tryLock(lockWaitTimeSeconds, -1, TimeUnit.SECONDS);
+                if (!locked) {
+                    lockFailCounter.increment();
+                    log.warn("[流程实例:{}] 获取 Redisson 分布式锁失败，跳过本次执行", instance.getId());
+                    return;
+                }
+                lockSuccessCounter.increment();
+                heldLocks.add(instance.getId());
+                lockAcquired = true;
+                log.debug("[流程实例:{}] 成功获取 Redisson 分布式锁", instance.getId());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("[流程实例:{}] 获取 Redisson 锁被中断", instance.getId());
+                return;
+            }
+        }
+
+        try {
+            action.run();
+        } finally {
+            if (lockAcquired && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+                heldLocks.remove(instance.getId());
+                log.debug("[流程实例:{}] 释放 Redisson 分布式锁", instance.getId());
+            }
+        }
+    }
+
+    /**
+     * 原生 Redis SETNX 锁（降级方案）
+     */
+    private void executeWithLegacyLock(FlowInstance instance, Runnable action) {
+        String lockKey = CommonConstant.FLOW_LOCK_PREFIX + instance.getId();
+        Set<Long> heldLocks = holdingInstanceLocks.get();
+        boolean lockAcquired = false;
+
+        if (!heldLocks.contains(instance.getId())) {
+            int nodeTimeout = 30000;
+            int lockSeconds = Math.max(30, nodeTimeout / 1000 + 10);
+            Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", lockSeconds, TimeUnit.SECONDS);
+            if (!Boolean.TRUE.equals(locked)) {
+                lockFailCounter.increment();
+                log.warn("[流程实例:{}] 获取原生 Redis 分布式锁失败，跳过本次执行", instance.getId());
+                return;
+            }
+            lockSuccessCounter.increment();
+            heldLocks.add(instance.getId());
+            lockAcquired = true;
+        }
+
+        try {
+            action.run();
+        } finally {
+            if (lockAcquired) {
+                redisTemplate.delete(lockKey);
+                heldLocks.remove(instance.getId());
+            }
+        }
+    }
 
     /**
      * 启动流程实例（优化：只保存一次）
@@ -176,52 +279,33 @@ public class FlowEngine {
             return;
         }
         currentTaskHolder.set(task);
-        String lockKey = CommonConstant.FLOW_LOCK_PREFIX + instance.getId();
-        Set<Long> heldLocks = holdingInstanceLocks.get();
-        boolean lockAcquired = false;
-
-        // 同线程锁重入：已在执行链中则不再重复获取
-        if (!heldLocks.contains(instance.getId())) {
-            int nodeTimeout = node.getTimeout() != null ? node.getTimeout() : 30000;
-            int lockSeconds = Math.max(30, nodeTimeout / 1000 + 10);
-            Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", lockSeconds, TimeUnit.SECONDS);
-            if (!Boolean.TRUE.equals(locked)) {
-                log.warn("[流程实例:{}] 获取分布式锁失败，跳过本次执行", instance.getId());
-                return;
-            }
-            heldLocks.add(instance.getId());
-            lockAcquired = true;
-        }
-
         try {
-            // 入口校验：实例状态
-            FlowInstance freshInstance = flowInstanceService.getById(instance.getId());
-            if (freshInstance == null || !FlowInstanceStatusEnum.RUNNING.getCode().equals(freshInstance.getStatus())) {
-                log.warn("[流程实例:{}] 实例状态不是运行中，跳过执行", instance.getId());
-                return;
-            }
-            instance.setStatus(freshInstance.getStatus());
-            instance.setCurrentNodeId(freshInstance.getCurrentNodeId());
-            instance.setContextJson(freshInstance.getContextJson());
+            executeWithInstanceLock(instance, () -> {
+                // 入口校验：实例状态
+                FlowInstance freshInstance = flowInstanceService.getById(instance.getId());
+                if (freshInstance == null || !FlowInstanceStatusEnum.RUNNING.getCode().equals(freshInstance.getStatus())) {
+                    log.warn("[流程实例:{}] 实例状态不是运行中，跳过执行", instance.getId());
+                    return;
+                }
+                instance.setStatus(freshInstance.getStatus());
+                instance.setCurrentNodeId(freshInstance.getCurrentNodeId());
+                instance.setContextJson(freshInstance.getContextJson());
 
-            // 幂等校验：按具体任务状态
-            if (!FlowTaskStatusEnum.PENDING.getCode().equals(task.getStatus())
-                    && !FlowTaskStatusEnum.WAITING.getCode().equals(task.getStatus())) {
-                log.warn("[流程实例:{}] 任务已被其他线程执行（taskId={}, status={}），跳过",
-                        instance.getId(), task.getId(), task.getStatus());
-                return;
-            }
+                // 幂等校验：按具体任务状态
+                if (!FlowTaskStatusEnum.PENDING.getCode().equals(task.getStatus())
+                        && !FlowTaskStatusEnum.WAITING.getCode().equals(task.getStatus())) {
+                    log.warn("[流程实例:{}] 任务已被其他线程执行（taskId={}, status={}），跳过",
+                            instance.getId(), task.getId(), task.getStatus());
+                    return;
+                }
 
-            doExecuteNode(instance, node, edges, nodes);
+                doExecuteNode(instance, node, edges, nodes);
+            });
         } catch (Exception e) {
             log.error("[流程实例:{}] 节点执行异常: {}", instance.getId(), node.getNodeName(), e);
             handleException(instance, node, task, e);
         } finally {
             currentTaskHolder.remove();
-            if (lockAcquired) {
-                redisTemplate.delete(lockKey);
-                heldLocks.remove(instance.getId());
-            }
         }
     }
 
@@ -581,30 +665,14 @@ public class FlowEngine {
     @Transactional(rollbackFor = Exception.class)
     public void executeLoopAggregateTask(FlowInstance instance, FlowTask task,
                                          List<FlowNode> nodes, List<FlowEdge> edges) {
-        String lockKey = CommonConstant.FLOW_LOCK_PREFIX + instance.getId();
-        Set<Long> heldLocks = holdingInstanceLocks.get();
-        boolean lockAcquired = false;
-        if (!heldLocks.contains(instance.getId())) {
-            Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", 30, TimeUnit.SECONDS);
-            if (!Boolean.TRUE.equals(locked)) {
-                log.warn("[流程实例:{}] LOOP_AGGREGATE 获取分布式锁失败，跳过: taskId={}",
-                        instance.getId(), task.getId());
-                return;
+        executeWithInstanceLock(instance, () -> {
+            try {
+                loopAsyncCoordinator.executeAggregateTask(instance, task, nodes, edges);
+            } catch (Exception e) {
+                log.error("[流程实例:{}] LOOP_AGGREGATE 执行异常: taskId={}",
+                        instance.getId(), task.getId(), e);
             }
-            heldLocks.add(instance.getId());
-            lockAcquired = true;
-        }
-        try {
-            loopAsyncCoordinator.executeAggregateTask(instance, task, nodes, edges);
-        } catch (Exception e) {
-            log.error("[流程实例:{}] LOOP_AGGREGATE 执行异常: taskId={}",
-                    instance.getId(), task.getId(), e);
-        } finally {
-            if (lockAcquired) {
-                redisTemplate.delete(lockKey);
-                heldLocks.remove(instance.getId());
-            }
-        }
+        });
     }
 
     /**

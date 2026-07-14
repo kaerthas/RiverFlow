@@ -18,6 +18,16 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
     }
 
     @Override
+    public List<FlowTask> getPendingTasks(LocalDateTime now, int limit) {
+        return baseMapper.selectPendingTasksWithLimit(now, limit);
+    }
+
+    @Override
+    public boolean claimTask(Long id, Integer version, String executeNode) {
+        return baseMapper.claimTask(id, version, executeNode) > 0;
+    }
+
+    @Override
     public List<FlowTask> listByInstanceIdAndBatchNo(Long instanceId, String batchNo) {
         return baseMapper.selectByInstanceIdAndBatchNo(instanceId, batchNo);
     }

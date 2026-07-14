@@ -68,6 +68,7 @@ public class SecurityConfig {
             .requestMatchers("/open/**").permitAll()  // 由 OpenApiAuthFilter 做应用级认证
             .requestMatchers("/example/**").permitAll()  // 示例/调试接口临时放开
             .requestMatchers("/plugin/**").authenticated()  // 插件管理需要登录
+            .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()  // 监控指标端点放行
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             // 其他请求需要认证
             .anyRequest().authenticated()

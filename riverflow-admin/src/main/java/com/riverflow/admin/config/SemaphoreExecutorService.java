@@ -8,6 +8,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Counter;
+
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -33,17 +37,46 @@ public class SemaphoreExecutorService implements ExecutorService {
 
     private final ExecutorService delegate;
     private final Semaphore semaphore;
+    private final int maxPermits;
+    private final Counter submittedCounter;
+    private final Counter rejectedCounter;
 
     public SemaphoreExecutorService(int permits) {
+        this(permits, null);
+    }
+
+    public SemaphoreExecutorService(int permits, MeterRegistry meterRegistry) {
         if (permits <= 0) {
             throw new IllegalArgumentException("permits must be positive");
         }
+        this.maxPermits = permits;
         this.delegate = Executors.newVirtualThreadPerTaskExecutor();
         this.semaphore = new Semaphore(permits);
+
+        if (meterRegistry != null) {
+            Gauge.builder("flow_executor_available_permits", semaphore, Semaphore::availablePermits)
+                    .description("流程执行器可用信号量")
+                    .register(meterRegistry);
+            Gauge.builder("flow_executor_active_tasks", this, s -> (double) (maxPermits - semaphore.availablePermits()))
+                    .description("流程执行器当前执行任务数")
+                    .register(meterRegistry);
+            this.submittedCounter = Counter.builder("flow_executor_submitted_total")
+                    .description("流程执行器提交任务总数")
+                    .register(meterRegistry);
+            this.rejectedCounter = Counter.builder("flow_executor_rejected_total")
+                    .description("流程执行器拒绝任务总数")
+                    .register(meterRegistry);
+        } else {
+            this.submittedCounter = null;
+            this.rejectedCounter = null;
+        }
     }
 
     @Override
     public void execute(Runnable command) {
+        if (submittedCounter != null) {
+            submittedCounter.increment();
+        }
         Runnable wrapped = wrapRunnable(command);
         delegate.execute(wrapped);
     }

@@ -43,6 +43,21 @@ public class FlowTask extends BaseEntity {
     private String status;
 
     /**
+     * 乐观锁版本号（分布式调度认领任务时使用）
+     */
+    private Integer version;
+
+    /**
+     * 实际执行该任务的节点标识（IP/主机名）
+     */
+    private String executeNode;
+
+    /**
+     * 任务被认领/开始执行的时间
+     */
+    private LocalDateTime executeTime;
+
+    /**
      * 执行前上下文快照
      */
     private String inputContext;

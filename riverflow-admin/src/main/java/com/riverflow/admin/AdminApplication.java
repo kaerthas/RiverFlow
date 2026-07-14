@@ -3,6 +3,7 @@ package com.riverflow.admin;
 import com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure;
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration;
 import org.mybatis.spring.annotation.MapperScan;
+import org.redisson.spring.starter.RedissonAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
@@ -16,7 +17,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication(scanBasePackages = {"com.riverflow"}, exclude = {
         DataSourceAutoConfiguration.class,
         DruidDataSourceAutoConfigure.class,
-        MybatisPlusAutoConfiguration.class
+        MybatisPlusAutoConfiguration.class,
+        RedissonAutoConfiguration.class
 })
 public class AdminApplication {
 

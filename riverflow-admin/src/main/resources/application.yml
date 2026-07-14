@@ -58,18 +58,20 @@ spring:
           login-password: admin
 
   # Redis配置
-  redis:
-    host: 127.0.0.1
-    port: 6379
-    password:
-    database: 0
-    timeout: 10s
-    lettuce:
-      pool:
-        min-idle: 0
-        max-idle: 8
-        max-active: 8
-        max-wait: -1ms
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password:
+      database: 0
+      timeout: 10s
+      lettuce:
+        pool:
+          min-idle: 0
+          max-idle: 8
+          max-active: 8
+          max-wait: -1ms
+    # Redisson 配置由 RedissonConfig.java 编程式提供，避免 YAML 中 password 为空时发送 AUTH 命令
 
   # Jackson配置
   jackson:
@@ -142,6 +144,18 @@ jwt:
   header: Authorization
   token-prefix: "Bearer "
 
+# Actuator 与 Prometheus 指标
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+
 # 日志配置（具体格式与滚动策略由 logback-spring.xml 控制）
 logging:
   file:
@@ -169,6 +183,24 @@ riverflow:
     flow-executor-max-concurrency: 30
     # 异步日志执行器：日志写入主要为 DB 操作，默认 10
     log-executor-max-concurrency: 10
+
+  # 分布式调度与并发控制开关
+  distributed:
+    # 是否启用 Redisson 分布式锁（false 回退到原生 Redis SETNX）
+    redisson-lock-enabled: true
+    # 调度器扫描间隔（毫秒）
+    scheduler-fixed-rate: 10000
+    # 调度器分布式锁最长持有时间（秒）
+    # > 0 表示固定租约模式，锁最多持有该秒数后自动释放
+    # <= 0 表示看门狗模式，锁会自动续期直到业务主动释放
+    scheduler-lock-at-most-seconds: -1
+    # Redisson 锁等待获取时间（秒），-1 表示立即返回
+    lock-wait-time-seconds: 5
+
+  # Redisson 连接池配置
+  redisson:
+    connection-pool-size: 24
+    connection-minimum-idle-size: 8
 
   # AI 服务配置（独立微服务 riverflow-ai）
   ai-service:
