@@ -14,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -628,4 +630,24 @@ public class GroovyUtils {
         }
         return builder.toString();
     }
+    /**
+     * 仅根据 clientSecret、date、nonce 计算 SHA-1 token。
+     */
+    public static String computeToken(String clientSecret, String date, String nonce) {
+        try {
+            String tokenStr = clientSecret + date + nonce;
+            MessageDigest md = MessageDigest.getInstance("SHA-1");
+            byte[] digest = md.digest(tokenStr.getBytes("UTF-8"));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException | java.io.UnsupportedEncodingException e) {
+            throw new RuntimeException("Token generation failed", e);
+        }
+    }
+
+
+
 }
