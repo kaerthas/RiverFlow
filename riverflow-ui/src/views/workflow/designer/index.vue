@@ -739,7 +739,7 @@ const isDirty = ref(false)
 const originalGraphJson = ref('')
 
 const filteredFlowOutputParams = computed(() => {
-  return flowOutputParams.value.filter(p => p.type !== 'object')
+  return flowOutputParams.value
 })
 
 // 已发布流程一旦被修改，立即提示用户需要先创建新版本；取消则还原改动

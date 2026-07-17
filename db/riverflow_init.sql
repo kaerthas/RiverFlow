@@ -214,6 +214,7 @@ CREATE TABLE `wf_api_catalog`  (
   `trigger_flow_id` bigint(20) NULL DEFAULT NULL COMMENT '执行成功后触发的流程定义ID',
   `trigger_flow_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '触发流程编码（绑定编码，自动取最新发布版本）',
   `trigger_biz_key_field` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '从请求参数中提取业务主键的字段名',
+  `success_code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '200' COMMENT '业务成功状态码，多个用逗号分隔，如 200,0,1',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_api_code`(`api_code`) USING BTREE,
   INDEX `idx_status`(`status`) USING BTREE
@@ -1155,6 +1156,11 @@ WHERE open_path IS NULL;
 -- 4. 增加唯一约束，防止路径和方式冲突
 ALTER TABLE wf_api_catalog
     ADD UNIQUE KEY uk_open_path_method (open_path, open_method);
+
+-- 为 wf_api_catalog 表增加业务成功状态码字段
+-- 支持按接口配置成功业务码，多个用逗号分隔，默认 200
+ALTER TABLE wf_api_catalog
+    ADD COLUMN success_code VARCHAR(100) DEFAULT '200' COMMENT '业务成功状态码，多个用逗号分隔，如 200,0,1' AFTER trigger_biz_key_field;
 
 
 -- ----------------------------

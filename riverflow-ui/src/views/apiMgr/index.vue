@@ -349,6 +349,13 @@
                 </el-form-item>
               </el-col>
             </el-row>
+            <el-row :gutter="16">
+              <el-col :span="12">
+                <el-form-item label="业务成功码">
+                  <el-input v-model="form.successCode" placeholder="默认 200，多个用逗号分隔，如 200,0,1" />
+                </el-form-item>
+              </el-col>
+            </el-row>
 
             <!-- 脚本类型配置 -->
             <template v-if="form.apiType === 'script'">
@@ -702,6 +709,7 @@ const form = reactive({
   pluginType: '',
   timeout: 30000,
   retryTimes: 0,
+  successCode: '200',
   proxyEnabled: 0,
   proxyHost: '',
   proxyPort: null,
@@ -883,6 +891,7 @@ function handleAdd() {
     pluginType: '',
     timeout: 30000,
     retryTimes: 0,
+    successCode: '200',
     proxyEnabled: 0,
     proxyHost: '',
     proxyPort: null,

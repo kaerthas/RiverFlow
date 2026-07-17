@@ -249,7 +249,7 @@ public class FlowContext implements Serializable {
                 try {
                     JSONObject itemObject = JSON.parseObject(JSON.toJSONString(item));
                     String subPath = trimmed.substring(4); // 去掉 "item"
-                    Object result = JSONPath.eval(itemObject, "$" + subPath);
+                    Object result = JSONPath.eval(itemObject, toJsonPath(subPath));
                     if (result != null) {
                         return result;
                     }
@@ -264,11 +264,54 @@ public class FlowContext implements Serializable {
             // 先序列化再反序列化，确保 Map 中的 Java Bean（如循环体 item）被转成 JSONObject，
             // 否则 JSONPath 无法读取 Java Bean 的字段属性。
             JSONObject jsonObject = JSON.parseObject(JSON.toJSONString(toMap()));
-            return JSONPath.eval(jsonObject, "$" + (trimmed.startsWith(".") ? trimmed : "." + trimmed));
+            return JSONPath.eval(jsonObject, toJsonPath(trimmed));
         } catch (Exception e) {
             log.warn("JSONPath解析失败: path={}", path, e);
             return null;
         }
+    }
+
+    /**
+     * 将自定义点分路径转换为 fastjson2 支持的 JSONPath。
+     * 对包含 '-'、空格、中文等非标识符字符的字段名使用 bracket notation，
+     * 例如：X-HW-ID -> $['X-HW-ID']，apiResult.data[0].user-name -> $['apiResult']['data'][0]['user-name']
+     */
+    private String toJsonPath(String path) {
+        if (path == null || path.isEmpty()) {
+            return "$";
+        }
+        StringBuilder sb = new StringBuilder("$");
+        int i = 0;
+        int len = path.length();
+        while (i < len) {
+            char c = path.charAt(i);
+            if (c == '.') {
+                i++;
+                continue;
+            }
+            if (c == '[') {
+                int end = path.indexOf(']', i);
+                if (end == -1) {
+                    end = len - 1;
+                }
+                sb.append(path, i, end + 1);
+                i = end + 1;
+            } else {
+                int dot = path.indexOf('.', i);
+                int bracket = path.indexOf('[', i);
+                int end = len;
+                if (dot != -1 && bracket != -1) {
+                    end = Math.min(dot, bracket);
+                } else if (dot != -1) {
+                    end = dot;
+                } else if (bracket != -1) {
+                    end = bracket;
+                }
+                sb.append("['").append(path, i, end).append("']");
+                i = end;
+            }
+        }
+        return sb.toString();
     }
 
     /**

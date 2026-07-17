@@ -141,4 +141,10 @@ public class ApiCatalog extends BaseEntity {
      * 状态：0-草稿，1-已发布，2-下线
      */
     private Integer status;
+
+    /**
+     * 业务成功状态码，多个用逗号分隔，如 200,0,1
+     * 默认 200
+     */
+    private String successCode;
 }

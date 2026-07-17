@@ -139,23 +139,6 @@ public class ApiNodeExecutor implements NodeExecutor {
                 }
             }
 
-            // 检查业务响应码（如果响应体是统一包装格式 R<T>）
-            String bodyStr = result.getString("body");
-            if (bodyStr != null && !bodyStr.isEmpty()) {
-                try {
-                    JSONObject bodyJson = JSON.parseObject(bodyStr);
-                    if (bodyJson.containsKey("code")) {
-                        int bizCode = bodyJson.getIntValue("code");
-                        if (bizCode != 200) {
-                            String bizMsg = bodyJson.getString("msg");
-                            return NodeExecuteResult.fail("接口调用失败, 业务码: " + bizCode + ", 错误: " + bizMsg);
-                        }
-                    }
-                } catch (Exception e) {
-                    // body 不是 JSON，忽略业务码检查
-                }
-            }
-
             // 查询接口定义的返回参数（只取最上层，parent_id = 0）
             List<ApiParam> responseParams = apiParamService.list(
                     new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ApiParam>()
@@ -166,13 +149,29 @@ public class ApiNodeExecutor implements NodeExecutor {
                             .orderByAsc("sort_no")
             );
 
+            // 解析自定义输出映射
+            String outputMapping = node.getOutputMapping();
+            boolean hasOutputMapping = hasMapping(outputMapping);
+
             // 解析响应体为 JSON（如果可能）
+            String bodyStr = result.getString("body");
             JSONObject responseBody = null;
             if (bodyStr != null && !bodyStr.isEmpty()) {
                 try {
                     responseBody = JSON.parseObject(bodyStr);
                 } catch (Exception e) {
                     // body 不是 JSON，忽略自动映射
+                }
+            }
+
+            // 只有在需要解析响应体时（配置了返回参数或输出映射），才检查业务响应码 R<T>
+            // 否则视为外部透传接口，只判断 HTTP 状态码，不做业务码校验
+            boolean needParseBody = (responseParams != null && !responseParams.isEmpty()) || hasOutputMapping;
+            if (needParseBody && responseBody != null && responseBody.containsKey("code")) {
+                String bizCode = responseBody.getString("code");
+                if (!isSuccessCode(apiCatalog, bizCode)) {
+                    String bizMsg = responseBody.getString("msg");
+                    return NodeExecuteResult.fail("接口调用失败, 业务码: " + bizCode + ", 错误: " + bizMsg);
                 }
             }
 
@@ -196,8 +195,7 @@ public class ApiNodeExecutor implements NodeExecutor {
             }
 
             // 解析自定义输出映射，将结果写回上下文（作为补充和覆盖）
-            String outputMapping = node.getOutputMapping();
-            if (outputMapping != null && !outputMapping.isEmpty()) {
+            if (hasOutputMapping) {
                 JSONArray mappings = JSON.parseArray(outputMapping);
                 for (int i = 0; i < mappings.size(); i++) {
                     JSONObject map = mappings.getJSONObject(i);
@@ -215,6 +213,42 @@ public class ApiNodeExecutor implements NodeExecutor {
             log.error("[流程实例:{}] 接口调用失败: {}", context.getInstanceId(), apiCode, e);
             return NodeExecuteResult.fail("接口调用失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 判断映射配置是否有效（非空且解析后数组非空）
+     * 兼容数据库中保存的 "[]" 空数组
+     */
+    private boolean hasMapping(String mapping) {
+        if (mapping == null || mapping.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            JSONArray array = JSON.parseArray(mapping);
+            return array != null && !array.isEmpty();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * 判断业务码是否为成功码。
+     * 优先读取接口配置 success_code，多个成功码用逗号分隔；未配置时默认 200。
+     */
+    boolean isSuccessCode(ApiCatalog apiCatalog, String bizCode) {
+        if (bizCode == null) {
+            return false;
+        }
+        String successCode = apiCatalog.getSuccessCode();
+        if (successCode == null || successCode.trim().isEmpty()) {
+            return "200".equals(bizCode);
+        }
+        for (String code : successCode.split(",")) {
+            if (bizCode.equals(code.trim())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

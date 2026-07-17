@@ -843,7 +843,17 @@ public class FlowEngine {
         if (endNode == null) return result;
 
         String inputMapping = endNode.getInputMapping();
-        if (inputMapping == null || inputMapping.isEmpty()) return result;
+        if (!hasMapping(inputMapping)) {
+            // 未配置输出映射时，默认透传上下文变量（排除系统内部变量，以下划线开头）
+            Map<String, Object> contextMap = context.toMap();
+            for (Map.Entry<String, Object> entry : contextMap.entrySet()) {
+                String key = entry.getKey();
+                if (key != null && !key.startsWith("_")) {
+                    result.put(key, entry.getValue());
+                }
+            }
+            return result;
+        }
 
         try {
             JSONArray mappings = JSON.parseArray(inputMapping);
@@ -875,6 +885,22 @@ public class FlowEngine {
             current = (Map<String, Object>) current.get(key);
         }
         current.put(keys[keys.length - 1], value);
+    }
+
+    /**
+     * 判断映射配置是否有效（非空且解析后数组非空）
+     * 兼容数据库中保存的 "[]" 空数组
+     */
+    private boolean hasMapping(String mapping) {
+        if (mapping == null || mapping.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            JSONArray array = JSON.parseArray(mapping);
+            return array != null && !array.isEmpty();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private FlowNode findNextNode(FlowInstance instance, FlowNode currentNode,

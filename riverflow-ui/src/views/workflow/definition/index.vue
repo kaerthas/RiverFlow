@@ -238,17 +238,18 @@
                     <el-option label="double" value="double" />
                     <el-option label="boolean" value="boolean" />
                     <el-option label="object" value="object" />
+                    <el-option label="array" value="array" />
                   </el-select>
                 </template>
               </el-table-column>
               <el-table-column label="默认值" min-width="120">
                 <template #default="{ row }">
-                  <el-input v-model="row.defaultValue" size="small" placeholder="默认值" :disabled="row.dataType === 'object'" />
+                  <el-input v-model="row.defaultValue" size="small" placeholder="默认值" :disabled="row.dataType === 'object' || row.dataType === 'array'" />
                 </template>
               </el-table-column>
               <el-table-column label="操作" width="120" align="center">
                 <template #default="{ row, $index }">
-                  <el-button v-if="row.dataType === 'object'" link type="primary" size="small" @click="addChildFlowParam($index)">+子项</el-button>
+                  <el-button v-if="row.dataType === 'object' || row.dataType === 'array'" link type="primary" size="small" @click="addChildFlowParam($index)">+子项</el-button>
                   <el-button link type="danger" size="small" @click="removeFlowParam($index)">删除</el-button>
                 </template>
               </el-table-column>
@@ -286,17 +287,18 @@
                     <el-option label="double" value="double" />
                     <el-option label="boolean" value="boolean" />
                     <el-option label="object" value="object" />
+                    <el-option label="array" value="array" />
                   </el-select>
                 </template>
               </el-table-column>
               <el-table-column label="默认值" min-width="120">
                 <template #default="{ row }">
-                  <el-input v-model="row.defaultValue" size="small" placeholder="默认值" :disabled="row.dataType === 'object'" />
+                  <el-input v-model="row.defaultValue" size="small" placeholder="默认值" :disabled="row.dataType === 'object' || row.dataType === 'array'" />
                 </template>
               </el-table-column>
               <el-table-column label="操作" width="120" align="center">
                 <template #default="{ row, $index }">
-                  <el-button v-if="row.dataType === 'object'" link type="primary" size="small" @click="addChildFlowOutputParam($index)">+子项</el-button>
+                  <el-button v-if="row.dataType === 'object' || row.dataType === 'array'" link type="primary" size="small" @click="addChildFlowOutputParam($index)">+子项</el-button>
                   <el-button link type="danger" size="small" @click="removeFlowOutputParam($index)">删除</el-button>
                 </template>
               </el-table-column>
@@ -575,21 +577,24 @@ function convertParamValue(val, type) {
   if (type === 'double') return parseFloat(val) || 0
   if (type === 'boolean') return val === 'true' || val === '1' || val === true
   if (type === 'object') return {}
+  if (type === 'array') return []
   return val
 }
 
 function buildObjectValue(params, parentIdx) {
-  const obj = {}
+  const parent = params[parentIdx]
+  const isArray = parent && parent.dataType === 'array'
+  const item = {}
   params.forEach((p, idx) => {
     if (p.parentIndex !== parentIdx) return
     if (!p.paramKey || !p.paramKey.trim()) return
-    if (p.dataType === 'object') {
-      obj[p.paramKey] = buildObjectValue(params, idx)
+    if (p.dataType === 'object' || p.dataType === 'array') {
+      item[p.paramKey] = buildObjectValue(params, idx)
     } else {
-      obj[p.paramKey] = convertParamValue(p.defaultValue, p.dataType)
+      item[p.paramKey] = convertParamValue(p.defaultValue, p.dataType)
     }
   })
-  return obj
+  return isArray ? (Object.keys(item).length > 0 ? [item] : []) : item
 }
 
 function unflattenParams(params) {
@@ -597,7 +602,7 @@ function unflattenParams(params) {
   params.forEach((p, idx) => {
     if (p.parentIndex !== undefined && p.parentIndex !== null) return
     if (!p.paramKey || !p.paramKey.trim()) return
-    if (p.dataType === 'object') {
+    if (p.dataType === 'object' || p.dataType === 'array') {
       result[p.paramKey] = buildObjectValue(params, idx)
     } else {
       result[p.paramKey] = convertParamValue(p.defaultValue, p.dataType)
@@ -607,10 +612,23 @@ function unflattenParams(params) {
 }
 
 function flattenObjectToTable(obj, parentIndex = null, result = []) {
-  if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) return result
+  if (obj === null || typeof obj !== 'object') return result
+  if (Array.isArray(obj)) {
+    const currentIndex = result.length
+    result.push({ paramKey: '', paramName: '', dataType: 'array', defaultValue: '', parentIndex })
+    if (obj.length > 0 && obj[0] !== null && typeof obj[0] === 'object' && !Array.isArray(obj[0])) {
+      flattenObjectToTable(obj[0], currentIndex, result)
+    }
+    return result
+  }
   for (const [key, value] of Object.entries(obj)) {
     const currentIndex = result.length
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    if (Array.isArray(value)) {
+      result.push({ paramKey: key, paramName: '', dataType: 'array', defaultValue: '', parentIndex })
+      if (value.length > 0 && value[0] !== null && typeof value[0] === 'object' && !Array.isArray(value[0])) {
+        flattenObjectToTable(value[0], currentIndex, result)
+      }
+    } else if (value !== null && typeof value === 'object') {
       result.push({ paramKey: key, paramName: '', dataType: 'object', defaultValue: '', parentIndex })
       flattenObjectToTable(value, currentIndex, result)
     } else {
