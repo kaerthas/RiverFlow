@@ -487,6 +487,7 @@ function handleReset() {
   searchForm.keyword = ''
   searchForm.status = ''
   searchForm.triggerType = ''
+  searchForm.executionMode = ''
   searchForm.showAllVersions = false
   pagination.page = 1
   handleSearch()

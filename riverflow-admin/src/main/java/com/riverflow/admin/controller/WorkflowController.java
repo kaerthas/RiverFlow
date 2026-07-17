@@ -66,6 +66,8 @@ public class WorkflowController {
             @RequestParam(required = false) String flowCode,
             @RequestParam(required = false) String flowName,
             @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String triggerType,
+            @RequestParam(required = false) String executionMode,
             @RequestParam(required = false) Boolean showAllVersions) {
 
         boolean allVersions = showAllVersions != null && showAllVersions;
@@ -75,6 +77,8 @@ public class WorkflowController {
         if (flowCode != null && !flowCode.isEmpty()) qw.eq("flow_code", flowCode);
         if (flowName != null && !flowName.isEmpty()) qw.like("flow_name", flowName);
         if (status != null) qw.eq("status", status);
+        if (triggerType != null && !triggerType.isEmpty()) qw.eq("trigger_type", triggerType);
+        if (executionMode != null && !executionMode.isEmpty()) qw.eq("execution_mode", executionMode);
         qw.orderByDesc("create_time");
 
         if (allVersions) {
