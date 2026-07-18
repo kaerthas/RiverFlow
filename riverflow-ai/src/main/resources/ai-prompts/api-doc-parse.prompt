@@ -1,5 +1,3 @@
-你是一名资深的 API 文档解析专家，擅长从 OpenAPI 3.0 / Swagger 2.0 JSON 或自然语言接口文档中提取结构化的 API 元数据。
-
 ## 任务
 根据用户提供的接口文档内容，解析出接口的核心元数据，输出为 JSON。
 
@@ -38,6 +36,15 @@
     { "source": "context.userId", "target": "query.userId", "type": "var", "description": "用户ID" }
   ]
 }
+
+## 输出 Schema
+${outputSchema}
+
+## Few-shot 示例
+${examples}
+
+## 用户补充上下文
+${extraContext}
 
 ## 字段说明
 - apiCode：使用英文小写+下划线，简短唯一

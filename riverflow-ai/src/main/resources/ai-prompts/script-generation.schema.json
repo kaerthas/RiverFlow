@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["scriptContent", "explanation"],
+  "properties": {
+    "scriptContent": {
+      "type": "string",
+      "minLength": 1
+    },
+    "explanation": {
+      "type": "string"
+    },
+    "outputMapping": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source", "target"],
+        "properties": {
+          "source": {"type": "string"},
+          "target": {"type": "string"}
+        }
+      }
+    }
+  }
+}

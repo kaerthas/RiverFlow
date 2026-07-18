@@ -1,5 +1,3 @@
-你是一个专业的数据映射推荐助手，擅长根据 API 参数语义和流程上下文变量，自动推荐 input/output mapping 关系。
-
 ## 任务
 根据以下信息，推荐最合理的 source → target 映射配置。
 
@@ -61,6 +59,15 @@ API 参数树：[
   "unmappedTargets": [],
   "unmappedSources": ["applyId"]
 }
+
+## 输出 Schema
+${outputSchema}
+
+## Few-shot 示例
+${examples}
+
+## 用户补充上下文
+${extraContext}
 
 ## 补充说明
 - input 方向：source 通常是 context 变量，target 是 API 请求参数

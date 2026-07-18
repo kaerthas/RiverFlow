@@ -6,17 +6,20 @@ import com.riverflow.ai.client.AiChatClient;
 import com.riverflow.ai.config.AiProperties;
 import com.riverflow.ai.dto.AiGenerateScriptRequest;
 import com.riverflow.ai.dto.AiGenerateScriptResponse;
+import com.riverflow.ai.parser.AiJsonSchemaValidator;
 import com.riverflow.ai.parser.AiOutputPostProcessor;
 import com.riverflow.ai.parser.AiOutputValidator;
 import com.riverflow.ai.parser.AiResponseParser;
 import com.riverflow.ai.prompt.PromptTemplateEngine;
 import com.riverflow.ai.prompt.PromptTemplateLoader;
+import com.riverflow.ai.prompt.dto.PromptContent;
 import com.riverflow.ai.provider.AiChatRequest;
 import com.riverflow.ai.provider.AiChatResponse;
 import com.riverflow.ai.provider.AiMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -30,7 +33,7 @@ import java.util.Map;
 public class ScriptGenerationService {
 
     private static final String SCENE = "script";
-    private static final String SYSTEM_PROMPT = "你是一个专业的 Groovy 脚本编写助手，擅长为政务流程编排生成安全、简洁的 Groovy 脚本。";
+    private static final String DEFAULT_SYSTEM_PROMPT = "你是一个专业的 Groovy 脚本编写助手，擅长为政务流程编排生成安全、简洁的 Groovy 脚本。";
 
     private final AiChatClient aiChatClient;
     private final AiProperties aiProperties;
@@ -40,12 +43,14 @@ public class ScriptGenerationService {
     private final AiResponseParser responseParser;
     private final AiOutputValidator outputValidator;
     private final AiOutputPostProcessor outputPostProcessor;
+    private final AiJsonSchemaValidator schemaValidator;
 
     @Autowired
     public ScriptGenerationService(AiChatClient aiChatClient, AiProperties aiProperties,
                                    AiAuditLogService auditLogService, PromptTemplateEngine templateEngine,
                                    PromptTemplateLoader templateLoader, AiResponseParser responseParser,
-                                   AiOutputValidator outputValidator, AiOutputPostProcessor outputPostProcessor) {
+                                   AiOutputValidator outputValidator, AiOutputPostProcessor outputPostProcessor,
+                                   AiJsonSchemaValidator schemaValidator) {
         this.aiChatClient = aiChatClient;
         this.aiProperties = aiProperties;
         this.auditLogService = auditLogService;
@@ -54,25 +59,26 @@ public class ScriptGenerationService {
         this.responseParser = responseParser;
         this.outputValidator = outputValidator;
         this.outputPostProcessor = outputPostProcessor;
+        this.schemaValidator = schemaValidator;
     }
 
     /**
      * 生成 Groovy 脚本
      */
     public AiGenerateScriptResponse generate(AiGenerateScriptRequest request, String userId) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("userPrompt", request.getUserPrompt());
-        variables.put("contextVariables", JSON.toJSONString(request.getContextVariables()));
-        variables.put("expectedOutput", request.getExpectedOutput());
+        String model = resolveModel(request.getModel());
+        PromptContent promptContent = templateLoader.load(SCENE, model, request.getPromptVersion());
+        Map<String, Object> variables = buildPromptVariables(request, promptContent);
 
-        String template = templateLoader.load(SCENE);
-        String userPrompt = templateEngine.render(template, variables);
+        String userPrompt = templateEngine.render(promptContent.getTemplate(), variables);
+        String systemPrompt = StringUtils.hasText(promptContent.getSystemPrompt())
+                ? promptContent.getSystemPrompt() : DEFAULT_SYSTEM_PROMPT;
 
         String provider = request.getProvider();
 
         AiChatRequest chatRequest = AiChatRequest.builder()
                 .model(request.getModel())
-                .messages(List.of(AiMessage.system(SYSTEM_PROMPT), AiMessage.user(userPrompt)))
+                .messages(List.of(AiMessage.system(systemPrompt), AiMessage.user(userPrompt)))
                 .responseFormat("json_object")
                 .scene(SCENE)
                 .build();
@@ -84,18 +90,48 @@ public class ScriptGenerationService {
                     : aiChatClient.chat(chatRequest, userId);
         } catch (Exception e) {
             if (aiProperties.isAuditEnabled()) {
-                auditLogService.logError(SCENE, userId, chatRequest, e.getMessage());
+                auditLogService.logError(SCENE, userId, chatRequest, e.getMessage(), buildPromptVersion(promptContent));
             }
             throw e;
         }
         if (aiProperties.isAuditEnabled()) {
-            auditLogService.log(SCENE, userId, chatRequest, response);
+            auditLogService.log(SCENE, userId, chatRequest, response, buildPromptVersion(promptContent));
         }
 
+        validateSchema(response.getContent(), promptContent.getOutputSchema());
         AiGenerateScriptResponse result = responseParser.parseObject(response.getContent(), AiGenerateScriptResponse.class);
         result.setScriptContent(responseParser.sanitizeGroovy(result.getScriptContent()));
         outputPostProcessor.postProcess(result);
         outputValidator.validate(result);
         return result;
+    }
+
+    private Map<String, Object> buildPromptVariables(AiGenerateScriptRequest request, PromptContent promptContent) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("userPrompt", request.getUserPrompt());
+        variables.put("contextVariables", JSON.toJSONString(request.getContextVariables()));
+        variables.put("expectedOutput", request.getExpectedOutput());
+        variables.put("extraContext", JSON.toJSONString(request.getExtraContext()));
+        variables.put("outputSchema", StringUtils.hasText(promptContent.getOutputSchema())
+                ? promptContent.getOutputSchema() : "");
+        variables.put("examples", StringUtils.hasText(promptContent.getExamples())
+                ? promptContent.getExamples() : "[]");
+        return variables;
+    }
+
+    private String resolveModel(String model) {
+        return StringUtils.hasText(model) ? model : "default";
+    }
+
+    private String buildPromptVersion(PromptContent promptContent) {
+        return promptContent.getScene() + ":" + promptContent.getModel() + ":" + promptContent.getVersion();
+    }
+
+    private void validateSchema(String content, String outputSchema) {
+        if (!StringUtils.hasText(outputSchema)) {
+            return;
+        }
+        String json = responseParser.extractJson(content);
+        schemaValidator.validate(json, outputSchema);
     }
 }

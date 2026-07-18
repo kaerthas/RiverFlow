@@ -76,6 +76,10 @@ const props = defineProps({
   model: {
     type: String,
     default: ''
+  },
+  promptVersion: {
+    type: String,
+    default: 'v1'
   }
 })
 
@@ -139,7 +143,8 @@ function buildRequestPayload() {
     userPrompt: userPrompt.value.trim(),
     contextVariables: props.context?.variables || [],
     provider: props.provider || undefined,
-    model: props.model || undefined
+    model: props.model || undefined,
+    promptVersion: props.promptVersion || undefined
   }
   if (props.scene === 'mapping') {
     return {

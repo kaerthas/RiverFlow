@@ -85,14 +85,49 @@ const routes = [
       {
         path: 'ai',
         name: 'Ai',
-        component: () => import('@/views/ai/index.vue'),
-        meta: { title: t('routeRouter.AI助手_1306956f'), icon: 'MagicStick' }
+        redirect: '/ai/assistant',
+        meta: { title: t('routeRouter.AI助手_1306956f'), icon: 'MagicStick' },
+        children: [
+          {
+            path: 'assistant',
+            name: 'AiAssistant',
+            component: () => import('@/views/ai/index.vue'),
+            meta: { title: t('routeRouter.AI助手_1306956f'), icon: 'MagicStick' }
+          },
+          {
+            path: 'model',
+            name: 'AiModel',
+            component: () => import('@/views/ai/model/index.vue'),
+            meta: { title: t('routeRouter.AI模型管理_a1b2c3d4'), icon: 'Cpu' }
+          },
+          {
+            path: 'prompt',
+            name: 'AiPrompt',
+            component: () => import('@/views/ai/prompt/index.vue'),
+            meta: { title: 'AI Prompt 管理', icon: 'ChatDotSquare' }
+          },
+          {
+            path: 'knowledge',
+            name: 'AiKnowledge',
+            component: () => import('@/views/ai/knowledge/index.vue'),
+            meta: { title: 'AI 知识库', icon: 'Collection' }
+          }
+        ]
+      },
+      {
+        path: 'ai-assistant',
+        redirect: '/ai/assistant',
+        meta: { hidden: true }
       },
       {
         path: 'ai-model',
-        name: 'AiModel',
-        component: () => import('@/views/ai/model/index.vue'),
-        meta: { title: t('routeRouter.AI模型管理_a1b2c3d4'), icon: 'Cpu' }
+        redirect: '/ai/model',
+        meta: { hidden: true }
+      },
+      {
+        path: 'ai-prompt',
+        redirect: '/ai/prompt',
+        meta: { hidden: true }
       },
       {
         path: 'monitor',

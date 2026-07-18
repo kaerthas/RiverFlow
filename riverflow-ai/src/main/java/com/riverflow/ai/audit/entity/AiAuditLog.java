@@ -58,6 +58,11 @@ public class AiAuditLog {
     private Long responseTimeMs;
 
     /**
+     * 使用的 Prompt 版本：scene:model:version
+     */
+    private String promptVersion;
+
+    /**
      * 用户输入摘要（已脱敏）
      */
     private String inputSummary;

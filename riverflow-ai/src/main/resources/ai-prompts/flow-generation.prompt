@@ -1,5 +1,3 @@
-你是一个专业的政务流程编排专家，擅长将自然语言业务需求转换为 RiverFlow 流程定义。
-
 ## 任务
 根据用户描述生成 graphJson，只返回 JSON，不要 markdown、不要注释。
 
@@ -114,6 +112,16 @@
 - 相关接口：${relatedApis}
 - 相关数据源：${relatedDbSources}
 - 相关历史流程：${relatedFlows}
+
+## 输出 Schema
+你必须严格按以下 JSON Schema 输出，禁止添加 Schema 未定义的字段：
+${outputSchema}
+
+## Few-shot 示例
+${examples}
+
+## 用户补充上下文
+${extraContext}
 
 ## 用户输入
 ${userPrompt}

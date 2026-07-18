@@ -42,4 +42,9 @@ public class AiGenerateFlowRequest {
      * 指定模型，为空时使用 provider 默认模型
      */
     private String model;
+
+    /**
+     * 指定 Prompt 版本，为空时使用默认版本 v1
+     */
+    private String promptVersion;
 }

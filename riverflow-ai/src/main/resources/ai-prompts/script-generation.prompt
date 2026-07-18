@@ -1,5 +1,3 @@
-你是一个专业的 Groovy 脚本编写助手，擅长为政务流程编排生成安全、简洁的 Groovy 脚本。
-
 ## 任务
 根据用户的自然语言描述，生成一段可在 RiverFlow Groovy 沙箱中执行的脚本。
 
@@ -52,6 +50,15 @@
     { "source": "result.maskedMobile", "target": "context.maskedMobile" }
   ]
 }
+
+## 输出 Schema
+${outputSchema}
+
+## Few-shot 示例
+${examples}
+
+## 用户补充上下文
+${extraContext}
 
 ## 用户输入
 ${userPrompt}

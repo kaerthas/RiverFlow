@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["apiName", "apiCode", "method", "path"],
+  "properties": {
+    "apiName": {"type": "string", "minLength": 1},
+    "apiCode": {"type": "string", "minLength": 1},
+    "method": {"type": "string", "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]},
+    "path": {"type": "string", "minLength": 1},
+    "summary": {"type": "string"},
+    "description": {"type": "string"},
+    "parameters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "in", "required", "dataType"],
+        "properties": {
+          "name": {"type": "string"},
+          "in": {"type": "string", "enum": ["path", "query", "header", "body"]},
+          "required": {"type": "boolean"},
+          "dataType": {"type": "string"},
+          "description": {"type": "string"}
+        }
+      }
+    },
+    "requestBody": {
+      "type": "object",
+      "required": ["contentType", "schemaJson", "fields"],
+      "properties": {
+        "contentType": {"type": "string"},
+        "schemaJson": {"type": "string"},
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "in", "required", "dataType"],
+            "properties": {
+              "name": {"type": "string"},
+              "in": {"type": "string"},
+              "required": {"type": "boolean"},
+              "dataType": {"type": "string"},
+              "description": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["status", "description"],
+        "properties": {
+          "status": {"type": "string"},
+          "description": {"type": "string"},
+          "contentType": {"type": "string"},
+          "schemaJson": {"type": "string"},
+          "fields": {
+            "type": "array",
+            "items": {"type": "object"}
+          }
+        }
+      }
+    },
+    "recommendedMappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source", "target", "type"],
+        "properties": {
+          "source": {"type": "string"},
+          "target": {"type": "string"},
+          "type": {"type": "string"},
+          "description": {"type": "string"}
+        }
+      }
+    }
+  }
+}

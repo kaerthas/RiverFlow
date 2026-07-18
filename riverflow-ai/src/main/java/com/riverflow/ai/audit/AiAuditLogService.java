@@ -33,10 +33,18 @@ public class AiAuditLogService {
     }
 
     /**
-     * 记录 AI 调用审计日志
+     * 记录 AI 调用审计日志（兼容旧接口）
      */
     @Async("aiAuditExecutor")
     public void log(String scene, String userId, AiChatRequest request, AiChatResponse response) {
+        log(scene, userId, request, response, null);
+    }
+
+    /**
+     * 记录 AI 调用审计日志
+     */
+    @Async("aiAuditExecutor")
+    public void log(String scene, String userId, AiChatRequest request, AiChatResponse response, String promptVersion) {
         try {
             String inputText = summarizeInput(request);
             String outputText = response != null ? summarizeOutput(response) : "";
@@ -61,6 +69,7 @@ public class AiAuditLogService {
             entity.setInputSummary(maskSensitive(inputText));
             entity.setOutputSummary(maskSensitive(outputText));
             entity.setSuccess(response != null ? 1 : 0);
+            entity.setPromptVersion(promptVersion);
             entity.setCreateTime(LocalDateTime.now());
             auditLogMapper.insert(entity);
         } catch (Exception e) {
@@ -73,6 +82,14 @@ public class AiAuditLogService {
      */
     @Async("aiAuditExecutor")
     public void logError(String scene, String userId, AiChatRequest request, String errorMsg) {
+        logError(scene, userId, request, errorMsg, null);
+    }
+
+    /**
+     * 记录失败审计日志
+     */
+    @Async("aiAuditExecutor")
+    public void logError(String scene, String userId, AiChatRequest request, String errorMsg, String promptVersion) {
         try {
             AiAuditLog entity = new AiAuditLog();
             entity.setScene(scene);
@@ -80,6 +97,7 @@ public class AiAuditLogService {
             entity.setInputSummary(maskSensitive(summarizeInput(request)));
             entity.setOutputSummary("");
             entity.setSuccess(0);
+            entity.setPromptVersion(promptVersion);
             entity.setErrorMsg(errorMsg != null && errorMsg.length() > 500 ? errorMsg.substring(0, 500) : errorMsg);
             entity.setCreateTime(LocalDateTime.now());
             auditLogMapper.insert(entity);

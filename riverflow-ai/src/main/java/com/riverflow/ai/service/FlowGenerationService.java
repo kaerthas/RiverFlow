@@ -12,16 +12,19 @@ import com.riverflow.ai.knowledge.entity.ApiCatalog;
 import com.riverflow.ai.knowledge.entity.Datasource;
 import com.riverflow.ai.knowledge.entity.FlowDefinition;
 import com.riverflow.ai.knowledge.service.AiKnowledgeService;
+import com.riverflow.ai.parser.AiJsonSchemaValidator;
 import com.riverflow.ai.parser.AiOutputValidator;
 import com.riverflow.ai.parser.AiResponseParser;
 import com.riverflow.ai.prompt.PromptTemplateEngine;
 import com.riverflow.ai.prompt.PromptTemplateLoader;
+import com.riverflow.ai.prompt.dto.PromptContent;
 import com.riverflow.ai.provider.AiChatRequest;
 import com.riverflow.ai.provider.AiChatResponse;
 import com.riverflow.ai.provider.AiMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +42,7 @@ import java.util.function.Consumer;
 public class FlowGenerationService {
 
     private static final String SCENE = "flow-generation";
-    private static final String SYSTEM_PROMPT = "你是一个专业的政务流程编排专家，擅长将自然语言业务需求转换为可视化的 RiverFlow 流程定义。";
+    private static final String DEFAULT_SYSTEM_PROMPT = "你是一个专业的政务流程编排专家，擅长将自然语言业务需求转换为可视化的 RiverFlow 流程定义。";
 
     private final AiChatClient aiChatClient;
     private final AiProperties aiProperties;
@@ -48,13 +51,15 @@ public class FlowGenerationService {
     private final PromptTemplateLoader templateLoader;
     private final AiResponseParser responseParser;
     private final AiOutputValidator outputValidator;
+    private final AiJsonSchemaValidator schemaValidator;
     private final AiKnowledgeService knowledgeService;
 
     @Autowired
     public FlowGenerationService(AiChatClient aiChatClient, AiProperties aiProperties,
                                  AiAuditLogService auditLogService, PromptTemplateEngine templateEngine,
                                  PromptTemplateLoader templateLoader, AiResponseParser responseParser,
-                                 AiOutputValidator outputValidator, AiKnowledgeService knowledgeService) {
+                                 AiOutputValidator outputValidator, AiJsonSchemaValidator schemaValidator,
+                                 AiKnowledgeService knowledgeService) {
         this.aiChatClient = aiChatClient;
         this.aiProperties = aiProperties;
         this.auditLogService = auditLogService;
@@ -62,6 +67,7 @@ public class FlowGenerationService {
         this.templateLoader = templateLoader;
         this.responseParser = responseParser;
         this.outputValidator = outputValidator;
+        this.schemaValidator = schemaValidator;
         this.knowledgeService = knowledgeService;
     }
 
@@ -69,10 +75,13 @@ public class FlowGenerationService {
      * 自然语言生成流程草稿
      */
     public AiGenerateFlowResponse generate(AiGenerateFlowRequest request, String userId) {
-        Map<String, Object> variables = buildPromptVariables(request);
+        String model = resolveModel(request.getModel());
+        PromptContent promptContent = templateLoader.load(SCENE, model, request.getPromptVersion());
+        Map<String, Object> variables = buildPromptVariables(request, promptContent);
 
-        String template = templateLoader.load(SCENE);
-        String userPrompt = templateEngine.render(template, variables);
+        String userPrompt = templateEngine.render(promptContent.getTemplate(), variables);
+        String systemPrompt = StringUtils.hasText(promptContent.getSystemPrompt())
+                ? promptContent.getSystemPrompt() : DEFAULT_SYSTEM_PROMPT;
 
         String provider = request.getProvider();
         log.info("开始 AI 流程生成, userId={}, provider={}, model={}", userId, provider, request.getModel());
@@ -80,7 +89,7 @@ public class FlowGenerationService {
 
         AiChatRequest chatRequest = AiChatRequest.builder()
                 .model(request.getModel())
-                .messages(List.of(AiMessage.system(SYSTEM_PROMPT), AiMessage.user(userPrompt)))
+                .messages(List.of(AiMessage.system(systemPrompt), AiMessage.user(userPrompt)))
                 .responseFormat("json_object")
                 .scene(SCENE)
                 .maxTokens(16384)
@@ -97,15 +106,16 @@ public class FlowGenerationService {
         } catch (Exception e) {
             log.error("AI 流程生成调用失败, userId={}, cost={}ms", userId, System.currentTimeMillis() - start, e);
             if (aiProperties.isAuditEnabled()) {
-                auditLogService.logError(SCENE, userId, chatRequest, e.getMessage());
+                auditLogService.logError(SCENE, userId, chatRequest, e.getMessage(), buildPromptVersion(promptContent));
             }
             throw e;
         }
         if (aiProperties.isAuditEnabled()) {
-            auditLogService.log(SCENE, userId, chatRequest, response);
+            auditLogService.log(SCENE, userId, chatRequest, response, buildPromptVersion(promptContent));
         }
 
         String thinking = responseParser.extractThink(response.getContent());
+        validateSchema(response.getContent(), promptContent.getOutputSchema());
         AiGenerateFlowResponse result = responseParser.parseObject(response.getContent(), AiGenerateFlowResponse.class);
         result.setThinking(thinking);
         syncNodesEdgesFromGraphJson(result);
@@ -128,17 +138,20 @@ public class FlowGenerationService {
                                Consumer<AiGenerateFlowResponse> onResult,
                                Consumer<Throwable> onError,
                                Runnable onComplete) {
-        Map<String, Object> variables = buildPromptVariables(request);
+        String model = resolveModel(request.getModel());
+        PromptContent promptContent = templateLoader.load(SCENE, model, request.getPromptVersion());
+        Map<String, Object> variables = buildPromptVariables(request, promptContent);
 
-        String template = templateLoader.load(SCENE);
-        String prompt = templateEngine.render(template, variables);
+        String prompt = templateEngine.render(promptContent.getTemplate(), variables);
+        String systemPrompt = StringUtils.hasText(promptContent.getSystemPrompt())
+                ? promptContent.getSystemPrompt() : DEFAULT_SYSTEM_PROMPT;
 
         String provider = request.getProvider();
         log.info("开始 AI 流程生成流式调用, userId={}, provider={}, model={}", userId, provider, request.getModel());
 
         AiChatRequest chatRequest = AiChatRequest.builder()
                 .model(request.getModel())
-                .messages(List.of(AiMessage.system(SYSTEM_PROMPT), AiMessage.user(prompt)))
+                .messages(List.of(AiMessage.system(systemPrompt), AiMessage.user(prompt)))
                 .responseFormat("json_object")
                 .scene(SCENE)
                 .maxTokens(16384)
@@ -200,9 +213,11 @@ public class FlowGenerationService {
             }
         };
 
+        PromptContent finalPromptContent = promptContent;
         Runnable completionHandler = () -> {
             try {
                 String content = buffer.toString();
+                validateSchema(content, finalPromptContent.getOutputSchema());
                 String thinking = responseParser.extractThink(content);
                 AiGenerateFlowResponse result = responseParser.parseObject(content, AiGenerateFlowResponse.class);
                 result.setThinking(thinking);
@@ -231,33 +246,20 @@ public class FlowGenerationService {
     /**
      * 组装 Prompt 变量，并检索知识库补充相关接口/流程/数据源
      */
-    private Map<String, Object> buildPromptVariables(AiGenerateFlowRequest request) {
+    private Map<String, Object> buildPromptVariables(AiGenerateFlowRequest request, PromptContent promptContent) {
         Map<String, Object> variables = new HashMap<>();
         String userPrompt = request.getUserPrompt();
         variables.put("userPrompt", userPrompt);
         variables.put("availableApis", JSON.toJSONString(request.getAvailableApis()));
         variables.put("availableDbSources", JSON.toJSONString(request.getAvailableDbSources()));
         variables.put("extraContext", JSON.toJSONString(request.getExtraContext()));
+        variables.put("outputSchema", StringUtils.hasText(promptContent.getOutputSchema())
+                ? promptContent.getOutputSchema() : "");
+        variables.put("examples", StringUtils.hasText(promptContent.getExamples())
+                ? promptContent.getExamples() : "[]");
 
         try {
-            List<ApiCatalog> relatedApis = knowledgeService.searchApis(userPrompt, 5);
-            List<FlowDefinition> relatedFlows = knowledgeService.searchFlows(userPrompt, 3);
-            List<Datasource> relatedDatasources = knowledgeService.searchDatasources(userPrompt, 3);
-
-            variables.put("relatedApis", JSON.toJSONString(relatedApis));
-            variables.put("relatedFlows", JSON.toJSONString(relatedFlows.stream()
-                    .map(f -> {
-                        JSONObject obj = new JSONObject();
-                        obj.put("flowCode", f.getFlowCode());
-                        obj.put("flowName", f.getFlowName());
-                        obj.put("triggerType", f.getTriggerType());
-                        obj.put("triggerConfig", f.getTriggerConfig());
-                        obj.put("executionMode", f.getExecutionMode());
-                        return obj;
-                    }).toList()));
-            variables.put("relatedDbSources", JSON.toJSONString(relatedDatasources));
-            log.debug("AI 知识库检索完成: apis={}, flows={}, datasources={}",
-                    relatedApis.size(), relatedFlows.size(), relatedDatasources.size());
+            buildRelatedKnowledge(userPrompt, variables);
         } catch (Exception e) {
             log.warn("AI 知识库检索失败，将不使用相关知识", e);
             variables.put("relatedApis", "[]");
@@ -265,6 +267,94 @@ public class FlowGenerationService {
             variables.put("relatedDbSources", "[]");
         }
         return variables;
+    }
+
+    private void buildRelatedKnowledge(String userPrompt, Map<String, Object> variables) {
+        // 优先使用语义检索
+        Map<String, List<com.riverflow.ai.knowledge.vector.VectorDocument>> semanticResults =
+                knowledgeService.searchSemanticGrouped(userPrompt, null, null, null);
+
+        List<JSONObject> relatedApis = new ArrayList<>();
+        List<JSONObject> relatedFlows = new ArrayList<>();
+        List<JSONObject> relatedDbSources = new ArrayList<>();
+
+        if (semanticResults != null && !semanticResults.isEmpty()) {
+            for (Map.Entry<String, List<com.riverflow.ai.knowledge.vector.VectorDocument>> entry : semanticResults.entrySet()) {
+                String sourceType = entry.getKey();
+                List<com.riverflow.ai.knowledge.vector.VectorDocument> docs = entry.getValue();
+                for (com.riverflow.ai.knowledge.vector.VectorDocument doc : docs) {
+                    JSONObject obj = new JSONObject();
+                    obj.put("title", doc.getMetadata() != null ? doc.getMetadata().get("title") : "");
+                    obj.put("content", doc.getContent());
+                    obj.put("score", doc.getScore());
+                    obj.put("sourceType", sourceType);
+                    switch (sourceType) {
+                        case "api" -> relatedApis.add(obj);
+                        case "flow" -> relatedFlows.add(obj);
+                        case "datasource" -> relatedDbSources.add(obj);
+                        default -> relatedFlows.add(obj);
+                    }
+                }
+            }
+        }
+
+        // 语义检索为空时，使用 MySQL LIKE 兜底
+        if (relatedApis.isEmpty()) {
+            List<ApiCatalog> apis = knowledgeService.searchApis(userPrompt, 5);
+            for (ApiCatalog api : apis) {
+                JSONObject obj = new JSONObject();
+                obj.put("title", api.getApiName());
+                obj.put("apiCode", api.getApiCode());
+                obj.put("apiType", api.getApiType());
+                obj.put("method", api.getMethod());
+                obj.put("url", api.getUrl());
+                relatedApis.add(obj);
+            }
+        }
+        if (relatedFlows.isEmpty()) {
+            List<FlowDefinition> flows = knowledgeService.searchFlows(userPrompt, 3);
+            for (FlowDefinition f : flows) {
+                JSONObject obj = new JSONObject();
+                obj.put("flowCode", f.getFlowCode());
+                obj.put("flowName", f.getFlowName());
+                obj.put("triggerType", f.getTriggerType());
+                obj.put("triggerConfig", f.getTriggerConfig());
+                obj.put("executionMode", f.getExecutionMode());
+                relatedFlows.add(obj);
+            }
+        }
+        if (relatedDbSources.isEmpty()) {
+            List<Datasource> datasources = knowledgeService.searchDatasources(userPrompt, 3);
+            for (Datasource ds : datasources) {
+                JSONObject obj = new JSONObject();
+                obj.put("dsCode", ds.getDsCode());
+                obj.put("dsName", ds.getDsName());
+                obj.put("dbType", ds.getDbType());
+                relatedDbSources.add(obj);
+            }
+        }
+
+        variables.put("relatedApis", JSON.toJSONString(relatedApis));
+        variables.put("relatedFlows", JSON.toJSONString(relatedFlows));
+        variables.put("relatedDbSources", JSON.toJSONString(relatedDbSources));
+        log.debug("AI 知识库检索完成: apis={}, flows={}, datasources={}",
+                relatedApis.size(), relatedFlows.size(), relatedDbSources.size());
+    }
+
+    private String resolveModel(String model) {
+        return StringUtils.hasText(model) ? model : "default";
+    }
+
+    private String buildPromptVersion(PromptContent promptContent) {
+        return promptContent.getScene() + ":" + promptContent.getModel() + ":" + promptContent.getVersion();
+    }
+
+    private void validateSchema(String content, String outputSchema) {
+        if (!StringUtils.hasText(outputSchema)) {
+            return;
+        }
+        String json = responseParser.extractJson(content);
+        schemaValidator.validate(json, outputSchema);
     }
 
     /**

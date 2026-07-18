@@ -75,4 +75,26 @@ public interface AiAuditLogMapper extends BaseMapper<AiAuditLog> {
             "GROUP BY provider ORDER BY value DESC" +
             "</script>")
     List<Map<String, Object>> groupByProvider(@Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
+
+    /**
+     * 按 Prompt 版本统计成功率
+     */
+    @Select("<script>" +
+            "SELECT " +
+            "  prompt_version AS promptVersion, " +
+            "  COUNT(*) AS totalCount, " +
+            "  SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) AS successCount, " +
+            "  SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) AS failCount, " +
+            "  ROUND(100.0 * SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) / COUNT(*), 2) AS successRate, " +
+            "  COALESCE(AVG(CASE WHEN success = 1 THEN response_time_ms END), 0) AS avgResponseTimeMs " +
+            "FROM wf_ai_audit_log " +
+            "WHERE prompt_version IS NOT NULL AND prompt_version != '' " +
+            "<if test='scene != null and scene != \"\"'> AND scene = #{scene} </if>" +
+            "<if test='startTime != null'> AND create_time &gt;= #{startTime} </if>" +
+            "<if test='endTime != null'> AND create_time &lt;= #{endTime} </if>" +
+            "GROUP BY prompt_version ORDER BY totalCount DESC" +
+            "</script>")
+    List<Map<String, Object>> groupByPromptVersion(@Param("scene") String scene,
+                                                    @Param("startTime") LocalDateTime startTime,
+                                                    @Param("endTime") LocalDateTime endTime);
 }

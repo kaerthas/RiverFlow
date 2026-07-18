@@ -41,6 +41,11 @@ public class AiGenerateMappingRequest {
     private Map<String, Object> sampleResponse;
 
     /**
+     * 额外上下文：前端用户可传入的补充说明、约束条件等
+     */
+    private Map<String, Object> extraContext;
+
+    /**
      * 指定 LLM provider，为空时使用默认 provider
      */
     private String provider;
@@ -49,6 +54,11 @@ public class AiGenerateMappingRequest {
      * 指定模型，为空时使用 provider 默认模型
      */
     private String model;
+
+    /**
+     * 指定 Prompt 版本，为空时使用默认版本 v1
+     */
+    private String promptVersion;
 
     @Data
     public static class ApiParamNode {

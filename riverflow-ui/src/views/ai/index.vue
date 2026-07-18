@@ -41,14 +41,24 @@
           clearable
           class="model-input"
         />
+        <div class="selector-title" style="margin-top: 12px;">Prompt 版本</div>
+        <el-select
+          v-model="selectedPromptVersion"
+          placeholder="选择 Prompt 版本"
+          clearable
+          size="small"
+          class="provider-select"
+        >
+          <el-option v-for="v in versionOptions" :key="v" :label="v" :value="v" />
+        </el-select>
       </div>
     </div>
 
     <div class="ai-content">
       <AiChatPanel v-if="activeMenu === 'chat'" :scene="chatScene" :context="chatContext" :provider="selectedProvider" :model="selectedModel" />
-      <AiFlowHelper v-else-if="activeMenu === 'flow'" :provider="selectedProvider" :model="selectedModel" />
-      <AiPromptHelper v-else-if="['condition', 'script', 'mapping'].includes(activeMenu)" :scene="activeMenu" :context="chatContext" :provider="selectedProvider" :model="selectedModel" />
-      <AiApiParser v-else-if="activeMenu === 'api-doc'" :provider="selectedProvider" :model="selectedModel" />
+      <AiFlowHelper v-else-if="activeMenu === 'flow'" :provider="selectedProvider" :model="selectedModel" :prompt-version="selectedPromptVersion" />
+      <AiPromptHelper v-else-if="['condition', 'script', 'mapping'].includes(activeMenu)" :scene="activeMenu" :context="chatContext" :provider="selectedProvider" :model="selectedModel" :prompt-version="selectedPromptVersion" />
+      <AiApiParser v-else-if="activeMenu === 'api-doc'" :provider="selectedProvider" :model="selectedModel" :prompt-version="selectedPromptVersion" />
       <AiStatsPanel v-else-if="activeMenu === 'stats'" />
       <AiAuditLogPanel v-else-if="activeMenu === 'audit'" />
     </div>
@@ -58,7 +68,7 @@
 <script setup>
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -80,6 +90,7 @@ import AiStatsPanel from './components/AiStatsPanel.vue'
 import AiAuditLogPanel from './components/AiAuditLogPanel.vue'
 import { getAiModelOptions } from '@/api/aiModel'
 import { aiGetProviders } from '@/api/ai'
+import { getAiPromptVersions } from '@/api/aiPrompt'
 
 const route = useRoute()
 
@@ -95,6 +106,38 @@ const menuList = [
 ]
 
 const activeMenu = ref('chat')
+
+const SCENE_MAP = {
+  flow: 'flow-generation',
+  condition: 'condition-generation',
+  script: 'script-generation',
+  mapping: 'mapping-recommendation',
+  'api-doc': 'api-doc-parse'
+}
+
+watch(activeMenu, () => {
+  loadVersions()
+})
+
+async function loadVersions() {
+  const scene = SCENE_MAP[activeMenu.value]
+  if (!scene) {
+    versionOptions.value = ['v1']
+    selectedPromptVersion.value = 'v1'
+    return
+  }
+  try {
+    const res = await getAiPromptVersions(scene)
+    const versions = (res || []).filter(v => v)
+    versionOptions.value = versions.length > 0 ? versions : ['v1']
+    if (!versionOptions.value.includes(selectedPromptVersion.value)) {
+      selectedPromptVersion.value = versionOptions.value[0]
+    }
+  } catch (e) {
+    versionOptions.value = ['v1']
+    selectedPromptVersion.value = 'v1'
+  }
+}
 
 const chatScene = computed(() => {
   const scene = route.query.scene
@@ -113,6 +156,8 @@ const chatContext = computed(() => {
 const providerList = ref([])
 const selectedProvider = ref('')
 const selectedModel = ref('')
+const selectedPromptVersion = ref('v1')
+const versionOptions = ref(['v1'])
 
 async function loadProviders() {
   try {
@@ -161,6 +206,7 @@ onMounted(() => {
     activeMenu.value = scene
   }
   loadProviders()
+  loadVersions()
 })
 </script>
 
