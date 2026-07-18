@@ -13,6 +13,21 @@
     <div class="parser-body">
       <el-form label-position="top">
         <el-form-item :label="$t('aiApiParser.接口文档内容_5')">
+          <div class="doc-upload-bar">
+            <el-upload
+              ref="uploadRef"
+              action="#"
+              :auto-upload="false"
+              :show-file-list="false"
+              :on-change="handleFileChange"
+              accept=".json,.yaml,.yml,.md,.txt"
+            >
+              <el-button type="primary" plain size="small">
+                <el-icon><Upload /></el-icon>上传接口文档
+              </el-button>
+            </el-upload>
+            <span class="upload-tip">支持 .json / .yaml / .yml / .md / .txt，最大 5MB</span>
+          </div>
           <el-input
             v-model="docContent"
             type="textarea"
@@ -56,7 +71,7 @@ const { t } = useI18n()
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { MagicStick, Document, DocumentCopy, Link } from '@element-plus/icons-vue'
+import { MagicStick, Document, DocumentCopy, Link, Upload } from '@element-plus/icons-vue'
 import { aiParseApiDoc } from '@/api/ai'
 
 const router = useRouter()
@@ -68,12 +83,36 @@ const props = defineProps({
   model: {
     type: String,
     default: ''
+  },
+  promptVersion: {
+    type: String,
+    default: 'v1'
   }
 })
 const docContent = ref('')
 const parseOptions = ref(['extractParams', 'extractResponses'])
 const loading = ref(false)
 const result = ref(null)
+const uploadRef = ref(null)
+
+function handleFileChange(file) {
+  const raw = file.raw
+  if (!raw) return
+  const maxSize = 5 * 1024 * 1024
+  if (raw.size > maxSize) {
+    ElMessage.warning('文件大小不能超过 5MB')
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    docContent.value = e.target.result
+    ElMessage.success(`已读取文件：${raw.name}`)
+  }
+  reader.onerror = () => {
+    ElMessage.error('文件读取失败')
+  }
+  reader.readAsText(raw)
+}
 
 const formattedResult = computed(() => {
   if (!result.value) return ''
@@ -91,7 +130,8 @@ async function handleParse() {
       docContent: docContent.value.trim(),
       options: parseOptions.value,
       provider: props.provider || undefined,
-      model: props.model || undefined
+      model: props.model || undefined,
+      promptVersion: props.promptVersion || undefined
     })
     result.value = res
   } catch (err) {
@@ -184,5 +224,15 @@ function goToApiMgr() {
 .result-actions {
   display: flex;
   gap: 10px;
+}
+.doc-upload-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.upload-tip {
+  font-size: 12px;
+  color: #909399;
 }
 </style>
