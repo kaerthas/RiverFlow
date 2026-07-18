@@ -25,6 +25,41 @@ riverflow:
     default-provider: kimi
     timeout: 30000
     retry: 1
+
+    # 知识库与向量检索配置
+    knowledge:
+      vector-store:
+        type: memory          # 可选：milvus / pgvector / memory
+        default-collection: riverflow_default
+        milvus:
+          host: localhost
+          port: 19530
+          database: default
+          token: ''
+          secure: false
+          index-type: HNSW
+        pgvector:
+          url: jdbc:postgresql://localhost:5432/riverflow
+          username: postgres
+          password: postgres
+          schema: public
+      embedding:
+        type: openai          # 可选：openai / ollama / qwen / zhipu
+        base-url: https://api.openai.com/v1
+        api-key: ${OPENAI_API_KEY}
+        model: text-embedding-3-small
+        dimension: 1536
+        timeout: 30000
+      chunk:
+        size: 512
+        overlap: 64
+        max-chunks: 100
+      rag:
+        enabled: true
+        top-k: 5
+        min-score: 0.7
+        collection: riverflow_default
+
     providers:
       # 本地 Ollama（原生 API）
       - name: ollama

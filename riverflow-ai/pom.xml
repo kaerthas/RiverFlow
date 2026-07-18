@@ -64,6 +64,26 @@
             <artifactId>fastjson2</artifactId>
         </dependency>
 
+        <!-- JSON Schema 校验 -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.4.0</version>
+        </dependency>
+
+        <!-- 向量数据库：Milvus -->
+        <dependency>
+            <groupId>io.milvus</groupId>
+            <artifactId>milvus-sdk-java</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL 驱动（PGVector 扩展使用） -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- 工具库 -->
         <dependency>
             <groupId>cn.hutool</groupId>

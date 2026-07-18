@@ -71,9 +71,162 @@ public class AiProperties {
     private int retry = 1;
 
     /**
+     * 知识库与 RAG 配置
+     */
+    private KnowledgeConfig knowledge = new KnowledgeConfig();
+
+    /**
      * Provider 列表（配置文件中的静态配置，数据库无可用配置时作为兜底）
      */
     private List<Provider> providers = new ArrayList<>();
+
+    @Data
+    public static class KnowledgeConfig {
+
+        /**
+         * 向量库配置
+         */
+        private VectorStoreConfig vectorStore = new VectorStoreConfig();
+
+        /**
+         * Embedding 配置
+         */
+        private EmbeddingConfig embedding = new EmbeddingConfig();
+
+        /**
+         * 分块配置
+         */
+        private ChunkConfig chunk = new ChunkConfig();
+
+        /**
+         * RAG 检索配置
+         */
+        private RagConfig rag = new RagConfig();
+    }
+
+    @Data
+    public static class VectorStoreConfig {
+
+        /**
+         * 向量库类型：milvus / pgvector / memory
+         */
+        private String type = "milvus";
+
+        /**
+         * 默认向量集合/表名
+         */
+        private String defaultCollection = "riverflow_default";
+
+        /**
+         * Milvus 配置
+         */
+        private MilvusConfig milvus = new MilvusConfig();
+
+        /**
+         * PGVector 配置
+         */
+        private PgVectorConfig pgvector = new PgVectorConfig();
+    }
+
+    @Data
+    public static class MilvusConfig {
+
+        private String host = "localhost";
+        private int port = 19530;
+        private String database = "default";
+        private String token;
+        private boolean secure = false;
+        /**
+         * 向量索引类型：IVF_FLAT / HNSW
+         */
+        private String indexType = "HNSW";
+    }
+
+    @Data
+    public static class PgVectorConfig {
+
+        private String url;
+        private String username;
+        private String password;
+        private String schema = "public";
+    }
+
+    @Data
+    public static class EmbeddingConfig {
+
+        /**
+         * Embedding 类型：openai / ollama / qwen / zhipu
+         */
+        private String type = "openai";
+
+        /**
+         * 基础 URL（OpenAI 协议兼容）
+         */
+        private String baseUrl;
+
+        /**
+         * API Key
+         */
+        private String apiKey;
+
+        /**
+         * 模型名称
+         */
+        private String model = "text-embedding-3-small";
+
+        /**
+         * 向量维度，需与 collection 配置一致
+         */
+        private int dimension = 1536;
+
+        /**
+         * 调用超时（毫秒）
+         */
+        private int timeout = 30000;
+    }
+
+    @Data
+    public static class ChunkConfig {
+
+        /**
+         * 分块大小（字符数）
+         */
+        private int size = 512;
+
+        /**
+         * 分块重叠字符数
+         */
+        private int overlap = 64;
+
+        /**
+         * 单个文档最大分块数
+         */
+        private int maxChunks = 100;
+    }
+
+    @Data
+    public static class RagConfig {
+
+        /**
+         * 是否启用 RAG 检索增强
+         */
+        private boolean enabled = true;
+
+        /**
+         * 检索 Top-K
+         */
+        private int topK = 5;
+
+        /**
+         * 相似度最低阈值（0~1，COSINE）
+         */
+        private double minScore = 0.7;
+
+        /**
+         * 默认检索集合
+         */
+        private String collection = "riverflow_default";
+    }
 
     @Data
     public static class Provider {

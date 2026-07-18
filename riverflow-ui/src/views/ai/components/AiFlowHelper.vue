@@ -84,6 +84,10 @@ const props = defineProps({
   model: {
     type: String,
     default: ''
+  },
+  promptVersion: {
+    type: String,
+    default: 'v1'
   }
 })
 const userPrompt = ref('')
@@ -133,7 +137,8 @@ function handleGenerate() {
     {
       userPrompt: userPrompt.value.trim(),
       provider: props.provider || undefined,
-      model: props.model || undefined
+      model: props.model || undefined,
+      promptVersion: props.promptVersion || undefined
     },
     (text) => {
       thinkingContent.value += text
