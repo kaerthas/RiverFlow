@@ -54,7 +54,7 @@ const routes = [
         path: 'api-mgr',
         name: 'ApiMgr',
         component: () => import('@/views/apiMgr/index.vue'),
-        meta: { title: t('routeRouter.接口注册_5c992ccb'), icon: 'Link' }
+        meta: { title: t('routeRouter.接口管理_8f7e6d5c'), icon: 'Link' }
       },
       {
         path: 'workflow',
@@ -146,6 +146,12 @@ const routes = [
         name: 'ScriptMgr',
         component: () => import('@/views/scriptMgr/index.vue'),
         meta: { title: t('routeRouter.脚本管理_a1fb7f16'), icon: 'DocumentCopy' }
+      },
+      {
+        path: 'operation-log',
+        name: 'OperationLog',
+        component: () => import('@/views/log/index.vue'),
+        meta: { title: t('routeRouter.操作日志_9c8b7a6d'), icon: 'DocumentCopy' }
       },
       {
         path: 'system',
