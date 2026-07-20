@@ -7,6 +7,7 @@
       </div>
       <div style="display: flex; gap: 12px;">
         <button class="btn-primary" @click="handleAdd"><el-icon><Plus /></el-icon>{{ $t('aiModel.新增模型_9') }}</button>
+        <button class="btn-primary" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);" @click="handleEmbeddingTest"><el-icon><Connection /></el-icon>Embedding 测试</button>
         <button class="btn-primary" style="background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25);" @click="handleReload"><el-icon><Refresh /></el-icon>{{ $t('aiModel.刷新运行时_10') }}</button>
       </div>
     </div>
@@ -56,7 +57,7 @@
     </div>
 
     <div class="rf-table-card">
-      <el-table :data="tableData" v-loading="loading" stripe class="rf-data-table">
+      <el-table :data="tableData" v-loading="loading" stripe class="rf-data-table" :empty-text="'暂无数据'">
         <el-table-column prop="modelCode" :label="$t('aiModel.模型编码_11')" width="140" />
         <el-table-column prop="modelName" :label="$t('aiModel.模型名称_12')" width="160" />
         <el-table-column prop="providerType" :label="$t('aiModel.provider类型_3')" width="120" />
@@ -80,10 +81,16 @@
           </template>
         </el-table-column>
         <el-table-column prop="sortNo" :label="$t('aiModel.排序_18')" width="80" />
-        <el-table-column :label="$t('aiModel.操作_19')" width="180" fixed="right">
+        <el-table-column :label="$t('aiModel.操作_19')" width="120" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleEdit(row)">{{ $t('aiModel.编辑_20') }}</el-button>
-            <el-button link type="danger" size="small" @click="handleDelete(row)">{{ $t('aiModel.删除_21') }}</el-button>
+            <div class="rf-actions">
+              <button class="action-btn primary" :title="$t('aiModel.编辑_20')" @click="handleEdit(row)">
+                <el-icon><Edit /></el-icon>
+              </button>
+              <button class="action-btn danger" :title="$t('aiModel.删除_21')" @click="handleDelete(row)">
+                <el-icon><Delete /></el-icon>
+              </button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -177,6 +184,47 @@
         <el-button type="primary" :loading="submitLoading" @click="handleSubmit">{{ $t('aiModel.确定_35') }}</el-button>
       </template>
     </el-dialog>
+    <!-- Embedding 连接测试弹窗 -->
+    <el-dialog v-model="embeddingDialogVisible" title="Embedding 连接测试" width="560px" destroy-on-close>
+      <el-form :model="embeddingForm" label-width="110px">
+        <el-form-item label="Provider">
+          <el-select v-model="embeddingForm.type" placeholder="请选择" style="width: 100%" @change="handleEmbeddingTypeChange">
+            <el-option label="Ollama" value="ollama" />
+            <el-option label="OpenAI" value="openai" />
+            <el-option label="Memory（测试）" value="memory" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Base URL">
+          <el-input v-model="embeddingForm.baseUrl" placeholder="如 http://localhost:11434" />
+        </el-form-item>
+        <el-form-item v-if="embeddingForm.type !== 'ollama' && embeddingForm.type !== 'memory'" label="API Key">
+          <el-input v-model="embeddingForm.apiKey" type="password" show-password placeholder="请输入 API Key" />
+        </el-form-item>
+        <el-form-item label="模型">
+          <el-input v-model="embeddingForm.model" placeholder="如 nomic-embed-text" />
+        </el-form-item>
+        <el-form-item label="维度">
+          <el-input-number v-model="embeddingForm.dimension" :min="1" :max="8192" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="超时(ms)">
+          <el-input-number v-model="embeddingForm.timeout" :min="1000" :step="1000" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="测试文本">
+          <el-input v-model="embeddingForm.text" type="textarea" :rows="2" placeholder="用于测试的文本" />
+        </el-form-item>
+      </el-form>
+      <div v-if="embeddingResult" style="margin-top: 16px; padding: 12px; border-radius: 8px;" :style="{ background: embeddingResult.success ? '#d1fae5' : '#fee2e2', color: embeddingResult.success ? '#059669' : '#dc2626' }">
+        <div style="font-weight: 600;">{{ embeddingResult.success ? '✅ 测试成功' : '❌ 测试失败' }}</div>
+        <div>{{ embeddingResult.message }}</div>
+        <div v-if="embeddingResult.success" style="margin-top: 4px; font-size: 12px;">
+          模型：{{ embeddingResult.model }} | 维度：{{ embeddingResult.sampleDimension }} | 耗时：{{ embeddingResult.elapsedMs }}ms
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="embeddingDialogVisible = false">关闭</el-button>
+        <el-button type="primary" :loading="embeddingTesting" @click="handleSubmitEmbeddingTest">测试连接</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -185,7 +233,7 @@ import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Cpu, Plus, Search, Refresh } from '@element-plus/icons-vue'
+import { Cpu, Plus, Search, Refresh, Connection, Edit, Delete } from '@element-plus/icons-vue'
 import {
   getAiModelList,
   saveAiModel,
@@ -194,6 +242,7 @@ import {
   reloadAiModel,
   getAiModelById
 } from '@/api/aiModel'
+import { testEmbeddingConfig } from '@/api/ai/vector'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -203,6 +252,19 @@ const submitLoading = ref(false)
 const isEdit = ref(false)
 const tableData = ref([])
 const total = ref(0)
+
+const embeddingDialogVisible = ref(false)
+const embeddingTesting = ref(false)
+const embeddingResult = ref(null)
+const embeddingForm = reactive({
+  type: 'ollama',
+  baseUrl: 'http://localhost:11434',
+  apiKey: '',
+  model: 'nomic-embed-text',
+  dimension: 768,
+  timeout: 30000,
+  text: 'RiverFlow 是一个流程编排平台'
+})
 
 const query = reactive({
   page: 1,
@@ -330,6 +392,44 @@ async function handleReload() {
     ElMessage.success(t('aiModel.刷新成功_48'))
   } catch (err) {
     ElMessage.error(err.message || t('aiModel.刷新失败_49'))
+  }
+}
+
+function handleEmbeddingTypeChange(type) {
+  if (type === 'ollama') {
+    embeddingForm.baseUrl = 'http://localhost:11434'
+    embeddingForm.model = 'nomic-embed-text'
+    embeddingForm.apiKey = ''
+  } else if (type === 'openai') {
+    embeddingForm.baseUrl = 'https://api.openai.com/v1'
+    embeddingForm.model = 'text-embedding-3-small'
+  } else if (type === 'memory') {
+    embeddingForm.baseUrl = ''
+    embeddingForm.apiKey = ''
+    embeddingForm.model = ''
+  }
+}
+
+function handleEmbeddingTest() {
+  embeddingResult.value = null
+  embeddingForm.type = 'ollama'
+  handleEmbeddingTypeChange('ollama')
+  embeddingDialogVisible.value = true
+}
+
+async function handleSubmitEmbeddingTest() {
+  embeddingTesting.value = true
+  embeddingResult.value = null
+  try {
+    const res = await testEmbeddingConfig({ ...embeddingForm })
+    embeddingResult.value = res
+    if (res && res.success) {
+      ElMessage.success('Embedding 连接测试成功')
+    }
+  } catch (err) {
+    ElMessage.error(err.message || '测试失败')
+  } finally {
+    embeddingTesting.value = false
   }
 }
 

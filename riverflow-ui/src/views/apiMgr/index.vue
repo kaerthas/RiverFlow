@@ -822,12 +822,15 @@ async function loadList() {
     if (queryForm.apiCode) params.apiCode = queryForm.apiCode
     if (queryForm.apiName) params.apiName = queryForm.apiName
     const res = await getApiCatalogList(params)
-    apiList.value = res.list || res.records || res || []
-    pagination.total = Number(res.total) || 0
+    apiList.value = res?.list || res?.records || res || []
+    pagination.total = Number(res?.total) || 0
     // 同时更新全部接口计数（用于左侧"全部接口"卡片）
     if (!selectedAppId.value) {
       totalApiCount.value = pagination.total
     }
+  } catch (e) {
+    console.error('加载接口列表失败', e)
+    apiList.value = []
   } finally {
     loading.value = false
   }

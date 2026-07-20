@@ -111,6 +111,12 @@ const routes = [
             name: 'AiKnowledge',
             component: () => import('@/views/ai/knowledge/index.vue'),
             meta: { title: 'AI 知识库', icon: 'Collection' }
+          },
+          {
+            path: 'vector',
+            name: 'AiVector',
+            component: () => import('@/views/ai/vector/index.vue'),
+            meta: { title: '向量库管理', icon: 'Coin' }
           }
         ]
       },

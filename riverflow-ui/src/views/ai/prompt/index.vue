@@ -35,7 +35,7 @@
     </div>
 
     <div class="rf-table-card">
-      <el-table :data="tableData" v-loading="loading" stripe class="rf-data-table">
+      <el-table :data="tableData" v-loading="loading" stripe class="rf-data-table" :empty-text="'暂无数据'">
         <el-table-column prop="scene" label="场景" width="160" />
         <el-table-column prop="model" label="模型" width="140" />
         <el-table-column prop="version" label="版本" width="80" />
@@ -48,11 +48,19 @@
         </el-table-column>
         <el-table-column prop="sortNo" label="排序" width="80" />
         <el-table-column prop="updateTime" label="更新时间" width="160" />
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="primary" size="small" @click="handleRefresh(row)">刷新缓存</el-button>
-            <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            <div class="rf-actions">
+              <button class="action-btn primary" title="编辑" @click="handleEdit(row)">
+                <el-icon><Edit /></el-icon>
+              </button>
+              <button class="action-btn warning" title="刷新缓存" @click="handleRefresh(row)">
+                <el-icon><Refresh /></el-icon>
+              </button>
+              <button class="action-btn danger" title="删除" @click="handleDelete(row)">
+                <el-icon><Delete /></el-icon>
+              </button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -209,7 +217,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Refresh, QuestionFilled } from '@element-plus/icons-vue'
+import { Plus, Search, Refresh, Edit, Delete, QuestionFilled } from '@element-plus/icons-vue'
 import {
   getAiPromptList,
   saveAiPrompt,

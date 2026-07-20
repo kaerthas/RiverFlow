@@ -26,7 +26,13 @@ public class EmbeddingClientFactory {
      * 根据配置创建 EmbeddingClient
      */
     public EmbeddingClient create() {
-        AiProperties.EmbeddingConfig config = aiProperties.getKnowledge().getEmbedding();
+        return create(aiProperties.getKnowledge().getEmbedding());
+    }
+
+    /**
+     * 根据传入配置创建 EmbeddingClient（用于测试或临时场景）
+     */
+    public EmbeddingClient create(AiProperties.EmbeddingConfig config) {
         String type = config.getType();
         if (!StringUtils.hasText(type)) {
             type = "memory";

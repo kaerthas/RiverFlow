@@ -1,5 +1,7 @@
 package com.riverflow.ai.knowledge.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -12,6 +14,7 @@ import java.time.LocalDateTime;
 @TableName("wf_ai_vector_collection")
 public class AiVectorCollection {
 
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
     /**

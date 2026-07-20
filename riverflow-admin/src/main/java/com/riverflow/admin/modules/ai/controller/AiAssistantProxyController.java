@@ -35,7 +35,7 @@ import java.util.Enumeration;
  */
 @Slf4j
 @RestController
-@RequestMapping("/ai")
+@RequestMapping("/ai/**")
 public class AiAssistantProxyController {
 
     private final AiServiceClient aiServiceClient;
@@ -50,7 +50,7 @@ public class AiAssistantProxyController {
         this.streamRestTemplate = new RestTemplate(factory);
     }
 
-    @RequestMapping(value = "/**", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
+    @RequestMapping(method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
     public Object proxy(HttpServletRequest request, HttpServletResponse response) {
         String uri = request.getRequestURI();
         String queryString = request.getQueryString();
