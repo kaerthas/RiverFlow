@@ -53,6 +53,7 @@
 
         <!-- AI -->
         <okhttp.version>4.12.0</okhttp.version>
+        <milvus-sdk.version>2.5.4</milvus-sdk.version>
 
         <!-- 插件 -->
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
@@ -191,6 +192,13 @@
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
                 <version>4.4.16</version>
+            </dependency>
+
+            <!-- Milvus Java SDK -->
+            <dependency>
+                <groupId>io.milvus</groupId>
+                <artifactId>milvus-sdk-java</artifactId>
+                <version>${milvus-sdk.version}</version>
             </dependency>
 
             <!-- 内部模块依赖管理 -->

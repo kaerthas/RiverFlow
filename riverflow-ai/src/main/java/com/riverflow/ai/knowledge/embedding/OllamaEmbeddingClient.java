@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Ollama Embedding 客户端
  *
- * <p>调用 Ollama /api/embed 或 /api/embeddings 接口。Ollama 原生批量能力较弱，
+ * <p>调用 Ollama /api/embeddings 接口。Ollama 原生批量能力较弱，
  * 默认逐条调用后合并结果。</p>
  */
 @Slf4j
@@ -66,10 +66,11 @@ public class OllamaEmbeddingClient implements EmbeddingClient {
     private float[] embedSingle(String text) {
         JSONObject body = new JSONObject();
         body.put("model", model);
-        body.put("input", text);
+        // Ollama /api/embeddings 单条接口使用 prompt 字段
+        body.put("prompt", text);
 
         Request request = new Request.Builder()
-                .url(baseUrl + "embed")
+                .url(baseUrl + "api/embeddings")
                 .post(RequestBody.create(JSON.toJSONString(body), JSON_MEDIA_TYPE))
                 .build();
 

@@ -14,6 +14,7 @@ import com.riverflow.ai.knowledge.service.KnowledgeRagService;
 import com.riverflow.ai.knowledge.vector.VectorDocument;
 import com.riverflow.common.result.R;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +31,7 @@ import java.util.Map;
 /**
  * AI 知识库管理接口
  */
+@Slf4j
 @RestController
 @RequestMapping("/ai/knowledge")
 public class AiKnowledgeController {
@@ -55,9 +57,21 @@ public class AiKnowledgeController {
      */
     @PostMapping("/docs")
     public R<Long> createDoc(@Valid @RequestBody KnowledgeDocRequest request) {
-        AiKnowledgeDoc doc = knowledgeDocService.toEntity(request);
-        knowledgeIndexingService.indexDoc(doc);
-        return R.ok(doc.getId());
+        try {
+            AiKnowledgeDoc doc = knowledgeDocService.toEntity(request);
+            log.info("接收到新增文档请求: title={}", doc.getTitle());
+            knowledgeIndexingService.indexDoc(doc);
+            log.info("文档索引完成: id={}", doc.getId());
+            Long docId = doc.getId();
+            if (docId == null) {
+                log.error("新增文档失败: 文档保存后主键未生成");
+                return R.fail("新增文档失败: 文档保存后主键未生成");
+            }
+            return R.ok(docId);
+        } catch (Exception e) {
+            log.error("新增文档失败", e);
+            return R.fail("新增文档失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -69,7 +83,15 @@ public class AiKnowledgeController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String sourceType,
             @RequestParam(required = false) String keyword) {
-        return R.ok(knowledgeDocService.pageDocs(page, size, sourceType, keyword));
+        try {
+            log.info("查询文档列表: page={}, size={}, sourceType={}, keyword={}", page, size, sourceType, keyword);
+            Page<AiKnowledgeDoc> result = knowledgeDocService.pageDocs(page, size, sourceType, keyword);
+            log.info("查询文档列表成功: total={}", result.getTotal());
+            return R.ok(result);
+        } catch (Exception e) {
+            log.error("查询文档列表失败", e);
+            return R.fail("查询文档列表失败: " + e.getMessage());
+        }
     }
 
     /**

@@ -13,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -52,6 +53,10 @@ public class AiAssistantProxyController {
     @RequestMapping(value = "/**", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
     public Object proxy(HttpServletRequest request, HttpServletResponse response) {
         String uri = request.getRequestURI();
+        String queryString = request.getQueryString();
+        if (StringUtils.hasText(queryString)) {
+            uri = uri + "?" + queryString;
+        }
         String method = request.getMethod();
         String body = readBodyIfNeeded(request, method);
 

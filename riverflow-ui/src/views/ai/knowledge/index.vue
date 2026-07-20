@@ -42,7 +42,7 @@
     <div class="rf-table-card">
       <el-table :data="docList" v-loading="loading" class="rf-data-table" :empty-text="'暂无数据'">
         <el-table-column type="index" label="#" width="52" align="center" />
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="id" label="ID" width="160" show-overflow-tooltip />
         <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
         <el-table-column prop="sourceType" label="来源类型" width="120" />
         <el-table-column prop="chunkCount" label="分块数" width="100" />
@@ -104,11 +104,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <button class="btn-reset" @click="addDialogVisible = false">取消</button>
-        <button class="btn-search" :disabled="submitting" @click="submitAdd">
-          <el-icon v-if="submitting"><Loading /></el-icon>
-          <span v-else>确定</span>
-        </button>
+        <el-button @click="addDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitAdd">确定</el-button>
       </template>
     </el-dialog>
 
@@ -164,7 +161,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Refresh, Delete, View, Loading } from '@element-plus/icons-vue'
+import { Plus, Search, Refresh, Delete, View } from '@element-plus/icons-vue'
 import {
   listKnowledgeDocs,
   createKnowledgeDoc,
@@ -217,10 +214,12 @@ const loadDocs = async () => {
   loading.value = true
   try {
     const res = await listKnowledgeDocs(queryForm)
-    docList.value = res.data.records || []
-    total.value = res.data.total || 0
+    docList.value = res?.records || []
+    total.value = res?.total || 0
   } catch (e) {
-    ElMessage.error('加载文档失败')
+    // request.js 已统一提示，这里打印详细错误便于调试
+    const msg = e?.response?.data?.msg || e?.message || '未知错误'
+    console.error('加载文档失败:', msg, e)
   } finally {
     loading.value = false
   }
@@ -246,12 +245,20 @@ const submitAdd = async () => {
   await addFormRef.value.validate()
   submitting.value = true
   try {
-    await createKnowledgeDoc(addForm)
-    ElMessage.success('新增文档成功')
-    addDialogVisible.value = false
-    loadDocs()
+    const res = await createKnowledgeDoc(addForm)
+    if (res != null) {
+      ElMessage.success('新增文档成功，ID: ' + res)
+      addDialogVisible.value = false
+      loadDocs()
+    } else {
+      ElMessage.warning('新增文档成功，但后端未返回文档ID')
+      addDialogVisible.value = false
+      loadDocs()
+    }
   } catch (e) {
-    ElMessage.error('新增文档失败')
+    const msg = e?.response?.data?.msg || e?.message || '新增文档失败'
+    ElMessage.error(msg)
+    console.error('新增文档失败', e)
   } finally {
     submitting.value = false
   }
@@ -273,7 +280,7 @@ const deleteDoc = async (row) => {
 const viewChunks = async (row) => {
   try {
     const res = await getKnowledgeChunks(row.id)
-    chunkList.value = res.data || []
+    chunkList.value = res || []
     chunkDialogVisible.value = true
   } catch (e) {
     ElMessage.error('加载分块失败')
@@ -301,7 +308,7 @@ const testSearch = async () => {
   searching.value = true
   try {
     const res = await searchKnowledge({ query: searchForm.query })
-    searchResults.value = res.data || []
+    searchResults.value = res || []
   } catch (e) {
     ElMessage.error('检索失败')
   } finally {

@@ -155,7 +155,8 @@ public class AiProperties {
     public static class EmbeddingConfig {
 
         /**
-         * Embedding 类型：openai / ollama / qwen / zhipu
+         * Embedding 类型：openai / ollama / qwen / zhipu / memory
+         * memory 仅用于测试，不依赖外部服务，返回随机向量
          */
         private String type = "openai";
 

@@ -31,24 +31,30 @@ riverflow:
       vector-store:
         type: memory          # 可选：milvus / pgvector / memory
         default-collection: riverflow_default
-        milvus:
-          host: localhost
-          port: 19530
-          database: default
-          token: ''
-          secure: false
-          index-type: HNSW
-        pgvector:
-          url: jdbc:postgresql://localhost:5432/riverflow
-          username: postgres
-          password: postgres
-          schema: public
+#        milvus:
+#          host: localhost
+#          port: 19530
+#          database: default
+#          token: ''
+#          secure: false
+#          index-type: HNSW
+#        pgvector:
+#          url: jdbc:postgresql://localhost:5432/riverflow
+#          username: postgres
+#          password: postgres
+#          schema: public
+#      embedding:
+#        type: memory          # 可选：openai / ollama / qwen / zhipu / memory（memory 不需要外部服务，仅测试）
+#        base-url: https://api.openai.com/v1
+#        api-key: ${OPENAI_API_KEY}
+#        model: text-embedding-3-small
+#        dimension: 1536
+#        timeout: 30000
       embedding:
-        type: openai          # 可选：openai / ollama / qwen / zhipu
-        base-url: https://api.openai.com/v1
-        api-key: ${OPENAI_API_KEY}
-        model: text-embedding-3-small
-        dimension: 1536
+        type: ollama          # 可选：openai / ollama / qwen / zhipu / memory（memory 不需要外部服务，仅测试）
+        base-url: http://localhost:11434
+        model: nomic-embed-text
+        dimension: 768
         timeout: 30000
       chunk:
         size: 512

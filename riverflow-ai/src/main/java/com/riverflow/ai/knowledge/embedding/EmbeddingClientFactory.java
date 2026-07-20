@@ -29,9 +29,20 @@ public class EmbeddingClientFactory {
         AiProperties.EmbeddingConfig config = aiProperties.getKnowledge().getEmbedding();
         String type = config.getType();
         if (!StringUtils.hasText(type)) {
-            type = "openai";
+            type = "memory";
         }
         String typeLower = type.trim().toLowerCase();
+
+        // 如果外部 Embedding 服务未配置 baseUrl，自动降级为内存测试模式
+        if ((OpenAiEmbeddingClient.TYPE.equals(typeLower)
+                || "qwen".equals(typeLower)
+                || "zhipu".equals(typeLower)
+                || "openai-compatible".equals(typeLower)
+                || OllamaEmbeddingClient.TYPE.equals(typeLower))
+                && !StringUtils.hasText(config.getBaseUrl())) {
+            log.warn("Embedding 类型配置为 {} 但 baseUrl 为空，自动降级为 memory 测试模式", type);
+            return new InMemoryEmbeddingClient(config.getDimension());
+        }
 
         switch (typeLower) {
             case OpenAiEmbeddingClient.TYPE:
@@ -52,6 +63,8 @@ public class EmbeddingClientFactory {
                         config.getDimension(),
                         config.getTimeout()
                 );
+            case InMemoryEmbeddingClient.TYPE:
+                return new InMemoryEmbeddingClient(config.getDimension());
             default:
                 throw new IllegalArgumentException("不支持的 Embedding 类型: " + type);
         }

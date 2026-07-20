@@ -92,8 +92,8 @@ const handleSearch = async () => {
       operation: queryForm.operation,
       username: queryForm.username
     })
-    tableData.value = res.data?.records || []
-    pagination.total = res.data?.total || 0
+    tableData.value = res?.records || []
+    pagination.total = res?.total || 0
   } catch (e) {
     // request.js 已统一提示错误，此处无需重复
     console.error('加载操作日志失败', e)

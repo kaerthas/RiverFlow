@@ -300,6 +300,9 @@ public class KnowledgeIndexingService {
         if (doc.getId() == null) {
             doc.setEnabled(doc.getEnabled() != null ? doc.getEnabled() : 1);
             docMapper.insert(doc);
+            if (doc.getId() == null) {
+                throw new RuntimeException("文档保存后主键未生成，请检查 wf_ai_knowledge_doc 表结构和 MyBatis Plus 主键策略配置");
+            }
         } else {
             docMapper.updateById(doc);
         }
