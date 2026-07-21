@@ -46,7 +46,12 @@ public class AiKnowledgeDoc extends BaseEntity {
     private Integer vectorStatus;
 
     /**
-     * 所属向量集合
+     * 所属向量集合配置ID
+     */
+    private Long collectionId;
+
+    /**
+     * 所属向量集合（冗余名称）
      */
     private String collection;
 

@@ -77,6 +77,13 @@
             <artifactId>milvus-sdk-java</artifactId>
         </dependency>
 
+        <!-- Milvus SDK 依赖 protobuf 3.24.0，覆盖 Spring Boot 默认的 3.21.9，避免 LazyStringArrayList 不兼容 -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>3.24.0</version>
+        </dependency>
+
         <!-- PostgreSQL 驱动（PGVector 扩展使用） -->
         <dependency>
             <groupId>org.postgresql</groupId>

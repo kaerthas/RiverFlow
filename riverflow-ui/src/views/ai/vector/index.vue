@@ -40,6 +40,13 @@
         <el-table-column prop="dimension" label="维度" width="100" align="center" />
         <el-table-column prop="distanceMetric" label="距离度量" width="120" align="center" />
         <el-table-column prop="embeddingType" label="Embedding 类型" width="140" align="center" />
+        <el-table-column prop="isDefault" label="默认" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="row.isDefault === 1" type="success">默认</el-tag>
+            <span v-else class="text-muted">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="docCount" label="关联文档数" width="110" align="center" />
         <el-table-column prop="description" label="描述" min-width="180" show-overflow-tooltip />
         <el-table-column prop="enabled" label="状态" width="100" align="center">
           <template #default="{ row }">
@@ -47,11 +54,14 @@
             <el-tag v-else type="info">停用</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right" align="center">
+        <el-table-column label="操作" width="220" fixed="right" align="center">
           <template #default="{ row }">
             <div class="rf-actions">
               <button class="action-btn info" title="测试连接" @click="handleTestStore(row)">
                 <el-icon><Connection /></el-icon>
+              </button>
+              <button class="action-btn success" title="设为默认" :disabled="row.isDefault === 1" @click="handleSetDefault(row)">
+                <el-icon><Star /></el-icon>
               </button>
               <button class="action-btn primary" title="编辑" @click="handleEdit(row)">
                 <el-icon><Edit /></el-icon>
@@ -107,6 +117,39 @@
             <el-option label="Memory（测试）" value="memory" />
           </el-select>
         </el-form-item>
+        <el-form-item label="Embedding URL" prop="embeddingBaseUrl">
+          <el-input v-model="form.embeddingBaseUrl" placeholder="为空则使用全局配置，如 http://localhost:11434" />
+        </el-form-item>
+        <el-form-item label="Embedding Key" prop="embeddingApiKey">
+          <el-input v-model="form.embeddingApiKey" placeholder="为空则使用全局配置" />
+        </el-form-item>
+        <el-form-item label="Embedding 模型" prop="embeddingModel">
+          <el-input v-model="form.embeddingModel" placeholder="为空则使用全局配置，如 qwen2.5:14b" />
+        </el-form-item>
+
+        <!-- Milvus 连接配置 -->
+        <template v-if="form.storeType === 'milvus'">
+          <el-divider content-position="left">Milvus 连接配置</el-divider>
+          <el-form-item label="主机地址" prop="milvusHost">
+            <el-input v-model="form.milvusHost" placeholder="为空则使用全局配置，如 localhost" />
+          </el-form-item>
+          <el-form-item label="端口" prop="milvusPort">
+            <el-input-number v-model="form.milvusPort" :min="1" :max="65535" placeholder="为空则使用全局配置" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="数据库" prop="milvusDatabase">
+            <el-input v-model="form.milvusDatabase" placeholder="为空则使用全局配置，如 default" />
+          </el-form-item>
+          <el-form-item label="Token" prop="milvusToken">
+            <el-input v-model="form.milvusToken" placeholder="为空则使用全局配置" />
+          </el-form-item>
+          <el-form-item label="使用 HTTPS" prop="milvusSecure">
+            <el-radio-group v-model="form.milvusSecure">
+              <el-radio :label="1">是</el-radio>
+              <el-radio :label="0">否</el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </template>
+
         <el-form-item label="描述" prop="description">
           <el-input v-model="form.description" type="textarea" :rows="3" placeholder="集合用途描述" />
         </el-form-item>
@@ -114,6 +157,12 @@
           <el-radio-group v-model="form.enabled">
             <el-radio :label="1">启用</el-radio>
             <el-radio :label="0">停用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="默认集合" prop="isDefault">
+          <el-radio-group v-model="form.isDefault">
+            <el-radio :label="1">是</el-radio>
+            <el-radio :label="0">否</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -128,14 +177,15 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Edit, Delete, Connection } from '@element-plus/icons-vue'
+import { Plus, Search, Edit, Delete, Connection, Star } from '@element-plus/icons-vue'
 import {
   listVectorCollections,
   getVectorCollection,
   createVectorCollection,
   updateVectorCollection,
   deleteVectorCollection,
-  testVectorStore
+  testVectorStore,
+  setDefaultVectorCollection
 } from '@/api/ai/vector'
 
 const loading = ref(false)
@@ -160,8 +210,17 @@ const form = reactive({
   dimension: 768,
   distanceMetric: 'COSINE',
   embeddingType: 'ollama',
+  embeddingBaseUrl: '',
+  embeddingApiKey: '',
+  embeddingModel: '',
+  milvusHost: '',
+  milvusPort: null,
+  milvusDatabase: '',
+  milvusToken: '',
+  milvusSecure: 0,
   description: '',
-  enabled: 1
+  enabled: 1,
+  isDefault: 0
 })
 
 const formRules = {
@@ -215,8 +274,17 @@ const resetForm = () => {
   form.dimension = 768
   form.distanceMetric = 'COSINE'
   form.embeddingType = 'ollama'
+  form.embeddingBaseUrl = ''
+  form.embeddingApiKey = ''
+  form.embeddingModel = ''
+  form.milvusHost = ''
+  form.milvusPort = null
+  form.milvusDatabase = ''
+  form.milvusToken = ''
+  form.milvusSecure = 0
   form.description = ''
   form.enabled = 1
+  form.isDefault = 0
 }
 
 const openAddDialog = () => {
@@ -256,7 +324,21 @@ const handleTestStore = async (row) => {
       ElMessage.warning('测试返回为空')
     }
   } catch (e) {
+    const msg = e?.response?.data?.msg || e?.message || '测试连接失败'
+    ElMessage.error(msg)
     console.error('测试向量库失败', e)
+  }
+}
+
+const handleSetDefault = async (row) => {
+  try {
+    await setDefaultVectorCollection(row.id)
+    ElMessage.success('已设为默认集合')
+    loadData()
+  } catch (e) {
+    const msg = e?.response?.data?.msg || e?.message || '设置默认集合失败'
+    ElMessage.error(msg)
+    console.error('设置默认集合失败', e)
   }
 }
 
@@ -275,6 +357,8 @@ const handleSubmit = async () => {
     dialogVisible.value = false
     loadData()
   } catch (e) {
+    const msg = e?.response?.data?.msg || e?.message || '保存失败'
+    ElMessage.error(msg)
     console.error('保存向量集合失败', e)
   } finally {
     submitting.value = false

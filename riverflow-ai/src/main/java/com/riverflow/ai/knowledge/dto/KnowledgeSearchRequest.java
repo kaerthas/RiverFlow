@@ -13,7 +13,12 @@ public class KnowledgeSearchRequest {
     private String query;
 
     /**
-     * 指定集合
+     * 指定向量集合配置ID，为空使用默认
+     */
+    private Long collectionId;
+
+    /**
+     * 指定集合名称（兼容字段，优先使用 collectionId）
      */
     private String collection;
 

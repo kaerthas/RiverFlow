@@ -69,6 +69,7 @@ public class KnowledgeDocService {
         doc.setSourceType(request.getSourceType());
         doc.setSourceId(request.getSourceId());
         doc.setContent(request.getContent());
+        doc.setCollectionId(request.getCollectionId());
         doc.setCollection(request.getCollection());
         doc.setEnabled(1);
         doc.setVectorStatus(0);

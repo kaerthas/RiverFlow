@@ -17,6 +17,15 @@
           <div :class="['message-content', { error: msg.isError }]">
             <span v-if="msg.isError" class="error-tag">{{ $t('aiChatPanel.调用失败_26') }}</span>
             {{ msg.content }}
+            <div v-if="msg.role === 'assistant' && !msg.isError && msg.references && msg.references.length > 0" class="message-references">
+              <div class="references-title">{{ $t('aiChatPanel.引用知识_30') }}</div>
+              <div v-for="(ref, rIdx) in msg.references" :key="rIdx" class="reference-item">
+                <span class="reference-index">[{{ rIdx + 1 }}]</span>
+                <span class="reference-type">{{ ref.sourceType }}</span>
+                <span class="reference-title">{{ ref.title }}</span>
+                <span v-if="ref.score !== undefined" class="reference-score">{{ formatScore(ref.score) }}</span>
+              </div>
+            </div>
             <div v-if="msg.role === 'assistant' && !msg.isError" class="message-actions">
               <el-icon class="msg-action" @click="copyMessage(msg.content)" :title="$t('aiChatPanel.复制_24')"><DocumentCopy /></el-icon>
               <el-icon class="msg-action" @click="regenerate(idx)" :title="$t('aiChatPanel.重新生成_25')"><RefreshRight /></el-icon>
@@ -30,6 +39,17 @@
       </div>
 
       <div class="chat-input-area">
+        <div class="input-toolbar">
+          <span class="toolbar-label">{{ $t('aiChatPanel.知识库集合_31') }}</span>
+          <el-select v-model="selectedCollectionId" placeholder="默认集合" clearable size="small" class="collection-select">
+            <el-option
+              v-for="item in vectorCollections"
+              :key="item.id"
+              :label="item.collection"
+              :value="item.id"
+            />
+          </el-select>
+        </div>
         <el-input
           v-model="chatInput"
           type="textarea"
@@ -55,6 +75,7 @@ import { ref, nextTick, onMounted, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { MagicStick, DocumentCopy, RefreshRight, Promotion, Delete } from '@element-plus/icons-vue'
 import { aiChatStream } from '@/api/ai'
+import { listAllVectorCollections } from '@/api/ai/vector'
 
 const props = defineProps({
   scene: {
@@ -120,7 +141,17 @@ const messages = ref([
 
 onMounted(() => {
   loadHistory()
+  loadVectorCollections()
 })
+
+const loadVectorCollections = async () => {
+  try {
+    const res = await listAllVectorCollections()
+    vectorCollections.value = res || []
+  } catch (e) {
+    console.error('加载向量集合失败', e)
+  }
+}
 
 watch(welcomeMessage, (newVal) => {
   if (messages.value.length === 1 && messages.value[0].role === 'assistant') {
@@ -163,7 +194,10 @@ const chatInput = ref('')
 const sending = ref(false)
 const streaming = ref(false)
 const streamingContent = ref('')
+const streamingReferences = ref([])
 const chatMessagesRef = ref(null)
+const vectorCollections = ref([])
+const selectedCollectionId = ref(null)
 
 function handleSend() {
   const text = chatInput.value.trim()
@@ -191,18 +225,29 @@ function sendMessage(text, replaceIndex = -1) {
     {
       message: text,
       history,
+      collectionId: selectedCollectionId.value || undefined,
       scene: props.scene,
       context: props.context,
       provider: props.provider || undefined,
       model: props.model || undefined
     },
     (data) => {
-      streamingContent.value += data
+      if (data.startsWith('[REF]')) {
+        try {
+          const refs = JSON.parse(data.substring(5))
+          streamingReferences.value = refs || []
+        } catch (e) {
+          console.error('解析引用事件失败', e)
+        }
+      } else {
+        streamingContent.value += data
+      }
       scrollToBottom()
     },
     (err) => {
       streaming.value = false
       sending.value = false
+      streamingReferences.value = []
       const errText = err && err.message ? err.message : t('aiChatPanel._a_i对话失败_21')
       ElMessage.error(errText)
       // 优先把错误信息展示在对话中；若已有流式内容则追加在错误信息后
@@ -222,11 +267,12 @@ function sendMessage(text, replaceIndex = -1) {
       streaming.value = false
       sending.value = false
       if (replaceIndex === -1) {
-        messages.value.push({ role: 'assistant', content: streamingContent.value })
+        messages.value.push({ role: 'assistant', content: streamingContent.value, references: streamingReferences.value })
       } else {
-        messages.value[replaceIndex] = { role: 'assistant', content: streamingContent.value }
+        messages.value[replaceIndex] = { role: 'assistant', content: streamingContent.value, references: streamingReferences.value }
       }
       streamingContent.value = ''
+      streamingReferences.value = []
       scrollToBottom()
     }
   )
@@ -260,6 +306,11 @@ function scrollToBottom() {
       chatMessagesRef.value.scrollTop = chatMessagesRef.value.scrollHeight
     }
   })
+}
+
+function formatScore(score) {
+  if (score === undefined || score === null) return ''
+  return (score * 100).toFixed(1) + '%'
 }
 </script>
 
@@ -400,5 +451,74 @@ function scrollToBottom() {
   justify-content: space-between;
   align-items: center;
   margin-top: 10px;
+}
+
+.input-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.toolbar-label {
+  font-size: 13px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.collection-select {
+  width: 220px;
+}
+
+.message-references {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  border-left: 3px solid #409eff;
+}
+
+.references-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 6px;
+}
+
+.reference-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #606266;
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+.reference-index {
+  color: #409eff;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.reference-type {
+  background: #e6f7ff;
+  color: #409eff;
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.reference-title {
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reference-score {
+  color: #909399;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 </style>

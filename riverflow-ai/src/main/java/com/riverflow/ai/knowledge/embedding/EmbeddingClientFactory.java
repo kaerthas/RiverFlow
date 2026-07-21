@@ -1,6 +1,7 @@
 package com.riverflow.ai.knowledge.embedding;
 
 import com.riverflow.ai.config.AiProperties;
+import com.riverflow.ai.knowledge.entity.AiVectorCollection;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,38 @@ public class EmbeddingClientFactory {
     @Autowired
     public EmbeddingClientFactory(AiProperties aiProperties) {
         this.aiProperties = aiProperties;
+    }
+
+    /**
+     * 根据向量集合配置创建 EmbeddingClient
+     *
+     * <p>优先使用集合自身的 Embedding 配置，未配置则回退到全局配置。</p>
+     */
+    public EmbeddingClient create(AiVectorCollection collection) {
+        if (collection == null) {
+            return create();
+        }
+        AiProperties.EmbeddingConfig config = new AiProperties.EmbeddingConfig();
+        config.setType(collection.getEmbeddingType());
+        config.setBaseUrl(StringUtils.hasText(collection.getEmbeddingBaseUrl())
+                ? collection.getEmbeddingBaseUrl()
+                : aiProperties.getKnowledge().getEmbedding().getBaseUrl());
+        config.setApiKey(StringUtils.hasText(collection.getEmbeddingApiKey())
+                ? collection.getEmbeddingApiKey()
+                : aiProperties.getKnowledge().getEmbedding().getApiKey());
+        config.setModel(StringUtils.hasText(collection.getEmbeddingModel())
+                ? collection.getEmbeddingModel()
+                : aiProperties.getKnowledge().getEmbedding().getModel());
+        config.setDimension(resolveDimension(collection.getDimension()));
+        config.setTimeout(aiProperties.getKnowledge().getEmbedding().getTimeout());
+        return create(config);
+    }
+
+    private int resolveDimension(Integer collectionDimension) {
+        if (collectionDimension != null && collectionDimension > 0) {
+            return collectionDimension;
+        }
+        return aiProperties.getKnowledge().getEmbedding().getDimension();
     }
 
     /**

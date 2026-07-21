@@ -52,6 +52,13 @@ export function testVectorStore(id) {
   })
 }
 
+export function setDefaultVectorCollection(id) {
+  return request({
+    url: `/ai/vector/collections/${id}/default`,
+    method: 'post'
+  })
+}
+
 export function testEmbeddingConfig(data) {
   return request({
     url: '/ai/embedding/test',

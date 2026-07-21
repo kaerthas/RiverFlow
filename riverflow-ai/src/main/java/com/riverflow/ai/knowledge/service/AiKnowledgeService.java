@@ -46,12 +46,26 @@ public class AiKnowledgeService {
     /**
      * 语义检索
      */
+    public List<VectorDocument> searchSemantic(String query, Long collectionId, String collection, Integer topK, Double minScore) {
+        return knowledgeRagService.search(query, collectionId, collection, topK, minScore);
+    }
+
+    /**
+     * 按来源类型分组的语义检索
+     */
+    public Map<String, List<VectorDocument>> searchSemanticGrouped(String query, Long collectionId, String collection, Integer topK, Double minScore) {
+        return knowledgeRagService.searchGrouped(query, collectionId, collection, topK, minScore);
+    }
+
+    /**
+     * 语义检索（兼容旧接口）
+     */
     public List<VectorDocument> searchSemantic(String query, String collection, Integer topK, Double minScore) {
         return knowledgeRagService.search(query, collection, topK, minScore);
     }
 
     /**
-     * 按来源类型分组的语义检索
+     * 按来源类型分组的语义检索（兼容旧接口）
      */
     public Map<String, List<VectorDocument>> searchSemanticGrouped(String query, String collection, Integer topK, Double minScore) {
         return knowledgeRagService.searchGrouped(query, collection, topK, minScore);

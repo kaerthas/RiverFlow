@@ -1,6 +1,8 @@
 package com.riverflow.ai.controller;
 
 import com.alibaba.fastjson2.JSON;
+import com.riverflow.ai.dto.AiChatReference;
+import com.riverflow.ai.dto.AiChatResult;
 import com.riverflow.ai.dto.AiGenerateConditionRequest;
 import com.riverflow.ai.dto.AiGenerateConditionResponse;
 import com.riverflow.ai.dto.AiGenerateFlowRequest;
@@ -81,11 +83,11 @@ public class AiAssistantController {
      * 通用 AI 对话
      */
     @PostMapping("/chat")
-    public R<String> chat(@Valid @RequestBody com.riverflow.ai.dto.AiChatRequest request,
+    public R<AiChatResult> chat(@Valid @RequestBody com.riverflow.ai.dto.AiChatRequest request,
                           @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        String reply = aiAssistantService.chat(request.getMessage(), request.getHistory(),
+        AiChatResult result = aiAssistantService.chat(request.getMessage(), request.getHistory(), request.getCollectionId(),
                 request.getProvider(), request.getModel(), defaultUserId(userId));
-        return R.ok(reply);
+        return R.ok(result);
     }
 
     /**
@@ -104,12 +106,21 @@ public class AiAssistantController {
             }
             emitter.complete();
         });
-        List<AiMessage> messages = new ArrayList<>();
-        messages.add(AiMessage.system("你是 RiverFlow 流程编排平台的 AI 助手，帮助用户理解、设计、优化流程。"));
-        if (request.getHistory() != null && !request.getHistory().isBlank()) {
-            messages.add(AiMessage.user(request.getHistory()));
+
+        // 1. 检索知识库引用
+        List<AiChatReference> references = aiAssistantService.retrieveReferences(
+                request.getMessage(), request.getCollectionId());
+        if (!references.isEmpty()) {
+            try {
+                emitter.send(SseEmitter.event().data("[REF]" + JSON.toJSONString(references)));
+            } catch (Exception e) {
+                log.warn("发送 RAG 引用事件失败", e);
+            }
         }
-        messages.add(AiMessage.user(request.getMessage()));
+
+        // 2. 组装带 RAG 上下文的对话消息
+        List<AiMessage> messages = aiAssistantService.buildMessages(
+                request.getMessage(), request.getHistory(), references);
 
         AiChatRequest chatRequest = AiChatRequest.builder()
                 .model(request.getModel())

@@ -99,6 +99,16 @@
         <el-form-item label="来源ID" prop="sourceId">
           <el-input v-model="addForm.sourceId" />
         </el-form-item>
+        <el-form-item label="所属向量集合" prop="collectionId">
+          <el-select v-model="addForm.collectionId" placeholder="请选择（默认集合）" clearable style="width: 100%">
+            <el-option
+              v-for="item in vectorCollections"
+              :key="item.id"
+              :label="item.collection"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="内容" prop="content">
           <el-input v-model="addForm.content" type="textarea" :rows="8" />
         </el-form-item>
@@ -138,6 +148,16 @@
           <el-form-item label="查询文本">
             <el-input v-model="searchForm.query" placeholder="输入查询文本" style="width: 320px" />
           </el-form-item>
+          <el-form-item label="向量集合">
+            <el-select v-model="searchForm.collectionId" placeholder="默认集合" clearable style="width: 180px">
+              <el-option
+                v-for="item in vectorCollections"
+                :key="item.id"
+                :label="item.collection"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
         </el-form>
       </div>
       <div class="search-actions">
@@ -150,7 +170,11 @@
     <div class="rf-table-card">
       <el-table :data="searchResults" class="rf-data-table" :empty-text="'暂无数据'">
         <el-table-column type="index" label="#" width="52" align="center" />
-        <el-table-column prop="content" label="内容" min-width="300" show-overflow-tooltip />
+        <el-table-column prop="content" label="内容" min-width="300">
+          <template #default="{ row }">
+            <div class="search-result-content">{{ row.content }}</div>
+          </template>
+        </el-table-column>
         <el-table-column prop="score" label="相似度" width="120" />
         <el-table-column prop="metadata.sourceType" label="来源类型" width="120" />
       </el-table>
@@ -170,6 +194,7 @@ import {
   rebuildKnowledgeIndex,
   searchKnowledge
 } from '@/api/ai/knowledge'
+import { listAllVectorCollections } from '@/api/ai/vector'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -181,6 +206,7 @@ const total = ref(0)
 const chunkList = ref([])
 const searchResults = ref([])
 const addFormRef = ref(null)
+const vectorCollections = ref([])
 
 const queryForm = reactive({
   page: 1,
@@ -193,7 +219,8 @@ const addForm = reactive({
   title: '',
   sourceType: 'upload',
   sourceId: '',
-  content: ''
+  content: '',
+  collectionId: null
 })
 
 const addRules = {
@@ -203,11 +230,13 @@ const addRules = {
 }
 
 const searchForm = reactive({
-  query: ''
+  query: '',
+  collectionId: null
 })
 
 onMounted(() => {
   loadDocs()
+  loadVectorCollections()
 })
 
 const loadDocs = async () => {
@@ -225,6 +254,15 @@ const loadDocs = async () => {
   }
 }
 
+const loadVectorCollections = async () => {
+  try {
+    const res = await listAllVectorCollections()
+    vectorCollections.value = res || []
+  } catch (e) {
+    console.error('加载向量集合失败', e)
+  }
+}
+
 const handleReset = () => {
   queryForm.sourceType = ''
   queryForm.keyword = ''
@@ -237,6 +275,7 @@ const openAddDialog = () => {
   addForm.sourceType = 'upload'
   addForm.sourceId = ''
   addForm.content = ''
+  addForm.collectionId = null
   addDialogVisible.value = true
 }
 
@@ -307,7 +346,7 @@ const testSearch = async () => {
   }
   searching.value = true
   try {
-    const res = await searchKnowledge({ query: searchForm.query })
+    const res = await searchKnowledge({ query: searchForm.query, collectionId: searchForm.collectionId })
     searchResults.value = res || []
   } catch (e) {
     ElMessage.error('检索失败')
@@ -318,6 +357,12 @@ const testSearch = async () => {
 </script>
 
 <style scoped>
+.search-result-content {
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.6;
+}
+
 .header-actions {
   display: flex;
   gap: 10px;

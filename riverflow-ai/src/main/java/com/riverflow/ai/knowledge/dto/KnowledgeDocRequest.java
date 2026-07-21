@@ -21,7 +21,12 @@ public class KnowledgeDocRequest {
     private String content;
 
     /**
-     * 指定向量集合，为空使用默认
+     * 指定向量集合配置ID，为空使用默认集合
+     */
+    private Long collectionId;
+
+    /**
+     * 指定向量集合名称（兼容旧字段，优先使用 collectionId）
      */
     private String collection;
 }

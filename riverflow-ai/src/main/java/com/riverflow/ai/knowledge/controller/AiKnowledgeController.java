@@ -116,7 +116,9 @@ public class AiKnowledgeController {
      */
     @PostMapping("/rebuild")
     public R<Void> rebuild(@RequestBody KnowledgeRebuildRequest request) {
-        knowledgeIndexingService.rebuildCollection(request != null ? request.getCollection() : null);
+        knowledgeIndexingService.rebuildCollection(
+                request != null ? request.getCollectionId() : null,
+                request != null ? request.getCollection() : null);
         return R.ok();
     }
 
@@ -125,7 +127,7 @@ public class AiKnowledgeController {
      */
     @PostMapping("/search")
     public R<List<VectorDocument>> search(@Valid @RequestBody KnowledgeSearchRequest request) {
-        return R.ok(knowledgeRagService.search(request.getQuery(), request.getCollection(),
+        return R.ok(knowledgeRagService.search(request.getQuery(), request.getCollectionId(), request.getCollection(),
                 request.getTopK(), request.getMinScore()));
     }
 
@@ -134,7 +136,7 @@ public class AiKnowledgeController {
      */
     @PostMapping("/search/grouped")
     public R<Map<String, List<VectorDocument>>> searchGrouped(@Valid @RequestBody KnowledgeSearchRequest request) {
-        return R.ok(knowledgeRagService.searchGrouped(request.getQuery(), request.getCollection(),
+        return R.ok(knowledgeRagService.searchGrouped(request.getQuery(), request.getCollectionId(), request.getCollection(),
                 request.getTopK(), request.getMinScore()));
     }
 

@@ -28,4 +28,6 @@ export default {
   通过自然语言生成_4: 'Generate through natural language',
   重新生成_25: 'Regenerate',
   调用失败_26: 'Call failed',
+  引用知识_30: 'References',
+  知识库集合_31: 'Knowledge Base',
 }

@@ -39,21 +39,38 @@ public class AiVectorCollectionService {
                     .like(AiVectorCollection::getDescription, keyword);
         }
         wrapper.orderByDesc(AiVectorCollection::getCreateTime);
-        return collectionMapper.selectPage(new Page<>(page, size), wrapper);
+        Page<AiVectorCollection> result = collectionMapper.selectPage(new Page<>(page, size), wrapper);
+        fillDocCount(result.getRecords());
+        return result;
     }
 
     /**
      * 列表查询
      */
     public List<AiVectorCollection> list() {
-        return collectionMapper.selectList(null);
+        List<AiVectorCollection> records = collectionMapper.selectList(null);
+        fillDocCount(records);
+        return records;
     }
 
     /**
      * 根据 ID 查询
      */
     public AiVectorCollection getById(Long id) {
-        return collectionMapper.selectById(id);
+        AiVectorCollection collection = collectionMapper.selectById(id);
+        if (collection != null) {
+            collection.setDocCount(countDocs(id, collection.getCollection()));
+        }
+        return collection;
+    }
+
+    private void fillDocCount(List<AiVectorCollection> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        for (AiVectorCollection record : records) {
+            record.setDocCount(countDocs(record.getId(), record.getCollection()));
+        }
     }
 
     /**
@@ -68,7 +85,14 @@ public class AiVectorCollectionService {
         if (collection.getEnabled() == null) {
             collection.setEnabled(1);
         }
+        if (collection.getIsDefault() == null) {
+            collection.setIsDefault(0);
+        }
         collectionMapper.insert(collection);
+        // 如果设为默认，需要把其他集合设为非默认
+        if (Integer.valueOf(1).equals(collection.getIsDefault())) {
+            clearOtherDefault(collection.getId());
+        }
     }
 
     /**
@@ -80,8 +104,74 @@ public class AiVectorCollectionService {
         }
         validate(collection);
         checkDuplicate(collection, collection.getId());
+
+        AiVectorCollection existing = collectionMapper.selectById(collection.getId());
+        if (existing == null) {
+            throw new RuntimeException("集合不存在");
+        }
+        // 防止前端未传字段时被覆盖为 null
+        if (!StringUtils.hasText(collection.getEmbeddingBaseUrl())) {
+            collection.setEmbeddingBaseUrl(existing.getEmbeddingBaseUrl());
+        }
+        if (!StringUtils.hasText(collection.getEmbeddingApiKey())) {
+            collection.setEmbeddingApiKey(existing.getEmbeddingApiKey());
+        }
+        if (!StringUtils.hasText(collection.getEmbeddingModel())) {
+            collection.setEmbeddingModel(existing.getEmbeddingModel());
+        }
+        if (collection.getIsDefault() == null) {
+            collection.setIsDefault(existing.getIsDefault());
+        }
+        if (!StringUtils.hasText(collection.getMilvusHost())) {
+            collection.setMilvusHost(existing.getMilvusHost());
+        }
+        if (collection.getMilvusPort() == null) {
+            collection.setMilvusPort(existing.getMilvusPort());
+        }
+        if (!StringUtils.hasText(collection.getMilvusDatabase())) {
+            collection.setMilvusDatabase(existing.getMilvusDatabase());
+        }
+        if (!StringUtils.hasText(collection.getMilvusToken())) {
+            collection.setMilvusToken(existing.getMilvusToken());
+        }
+        if (collection.getMilvusSecure() == null) {
+            collection.setMilvusSecure(existing.getMilvusSecure());
+        }
+
         collection.setUpdateTime(LocalDateTime.now());
         collectionMapper.updateById(collection);
+        // 如果设为默认，需要把其他集合设为非默认
+        if (Integer.valueOf(1).equals(collection.getIsDefault())) {
+            clearOtherDefault(collection.getId());
+        }
+    }
+
+    /**
+     * 设置默认集合
+     */
+    public void setDefault(Long id) {
+        AiVectorCollection collection = collectionMapper.selectById(id);
+        if (collection == null) {
+            throw new RuntimeException("集合不存在");
+        }
+        collection.setIsDefault(1);
+        collection.setUpdateTime(LocalDateTime.now());
+        collectionMapper.updateById(collection);
+        clearOtherDefault(id);
+    }
+
+    private void clearOtherDefault(Long excludeId) {
+        LambdaQueryWrapper<AiVectorCollection> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AiVectorCollection::getIsDefault, 1);
+        if (excludeId != null) {
+            wrapper.ne(AiVectorCollection::getId, excludeId);
+        }
+        List<AiVectorCollection> others = collectionMapper.selectList(wrapper);
+        for (AiVectorCollection other : others) {
+            other.setIsDefault(0);
+            other.setUpdateTime(LocalDateTime.now());
+            collectionMapper.updateById(other);
+        }
     }
 
     /**
@@ -94,12 +184,29 @@ public class AiVectorCollectionService {
         }
         // 检查是否有关联文档
         LambdaQueryWrapper<AiKnowledgeDoc> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AiKnowledgeDoc::getCollection, collection.getCollection());
+        wrapper.eq(AiKnowledgeDoc::getCollectionId, id)
+                .or()
+                .eq(AiKnowledgeDoc::getCollection, collection.getCollection());
         long count = docMapper.selectCount(wrapper);
         if (count > 0) {
             throw new RuntimeException("该集合下存在 " + count + " 个文档，无法删除");
         }
         collectionMapper.deleteById(id);
+    }
+
+    /**
+     * 统计集合下关联文档数
+     */
+    public long countDocs(Long collectionId, String collectionName) {
+        LambdaQueryWrapper<AiKnowledgeDoc> wrapper = new LambdaQueryWrapper<>();
+        if (collectionId != null) {
+            wrapper.eq(AiKnowledgeDoc::getCollectionId, collectionId);
+        } else if (StringUtils.hasText(collectionName)) {
+            wrapper.eq(AiKnowledgeDoc::getCollection, collectionName);
+        } else {
+            return 0;
+        }
+        return docMapper.selectCount(wrapper);
     }
 
     private void validate(AiVectorCollection collection) {

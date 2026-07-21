@@ -29,4 +29,9 @@ public class AiChatRequest {
      * 历史对话上下文
      */
     private String history;
+
+    /**
+     * 指定知识库向量集合配置ID，为空使用默认集合
+     */
+    private Long collectionId;
 }

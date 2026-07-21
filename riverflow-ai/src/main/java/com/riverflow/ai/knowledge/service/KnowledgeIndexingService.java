@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * 知识库索引服务
@@ -48,27 +47,30 @@ public class KnowledgeIndexingService {
     private final DocumentChunker documentChunker;
     private final EmbeddingClientFactory embeddingClientFactory;
     private final VectorStoreProviderFactory vectorStoreProviderFactory;
+    private final VectorCollectionResolver collectionResolver;
     private final AiKnowledgeDocMapper docMapper;
     private final AiKnowledgeChunkMapper chunkMapper;
-    private final AiVectorCollectionMapper collectionMapper;
     private final AiKnowledgeMapper knowledgeMapper;
+    private final AiVectorCollectionMapper collectionMapper;
 
     @Autowired
     public KnowledgeIndexingService(AiProperties aiProperties, DocumentChunker documentChunker,
                                      EmbeddingClientFactory embeddingClientFactory,
                                      VectorStoreProviderFactory vectorStoreProviderFactory,
+                                     VectorCollectionResolver collectionResolver,
                                      AiKnowledgeDocMapper docMapper,
                                      AiKnowledgeChunkMapper chunkMapper,
-                                     AiVectorCollectionMapper collectionMapper,
-                                     AiKnowledgeMapper knowledgeMapper) {
+                                     AiKnowledgeMapper knowledgeMapper,
+                                     AiVectorCollectionMapper collectionMapper) {
         this.aiProperties = aiProperties;
         this.documentChunker = documentChunker;
         this.embeddingClientFactory = embeddingClientFactory;
         this.vectorStoreProviderFactory = vectorStoreProviderFactory;
+        this.collectionResolver = collectionResolver;
         this.docMapper = docMapper;
         this.chunkMapper = chunkMapper;
-        this.collectionMapper = collectionMapper;
         this.knowledgeMapper = knowledgeMapper;
+        this.collectionMapper = collectionMapper;
     }
 
     /**
@@ -79,7 +81,9 @@ public class KnowledgeIndexingService {
         if (doc == null || !StringUtils.hasText(doc.getContent())) {
             return;
         }
-        String collection = resolveCollection(doc.getCollection());
+        AiVectorCollection collectionConfig = collectionResolver.resolve(doc.getCollectionId(), doc.getCollection());
+        String collection = collectionConfig.getCollection();
+        doc.setCollectionId(collectionConfig.getId());
         doc.setCollection(collection);
         doc.setVectorStatus(1); // 索引中
         saveOrUpdateDoc(doc);
@@ -112,14 +116,29 @@ public class KnowledgeIndexingService {
                 chunkMapper.insert(chunk);
             }
 
-            // 向量化
-            EmbeddingClient embeddingClient = embeddingClientFactory.create();
-            int dimension = embeddingClient.dimension();
+            // 按集合配置选择 Embedding 客户端和向量库 Provider
+            EmbeddingClient embeddingClient = embeddingClientFactory.create(collectionConfig);
             List<float[]> embeddings = embeddingClient.embed(chunks);
+            if (embeddings.isEmpty() || embeddings.get(0) == null) {
+                throw new RuntimeException("Embedding 向量化结果为空");
+            }
+            int actualDimension = embeddings.get(0).length;
+            Integer configuredDimension = collectionConfig.getDimension();
+            if (configuredDimension != null && configuredDimension > 0 && configuredDimension != actualDimension) {
+                log.warn("集合 {} 配置维度 {} 与实际 Embedding 模型输出维度 {} 不一致，将按实际维度写入并同步更新集合配置",
+                        collection, configuredDimension, actualDimension);
+                collectionConfig.setDimension(actualDimension);
+                if (collectionConfig.getId() != null) {
+                    AiVectorCollection update = new AiVectorCollection();
+                    update.setId(collectionConfig.getId());
+                    update.setDimension(actualDimension);
+                    collectionMapper.updateById(update);
+                }
+            }
+            int dimension = actualDimension;
 
-            // 确保集合存在
-            VectorStoreProvider provider = vectorStoreProviderFactory.getProvider();
-            provider.createCollection(collection, dimension, DistanceMetric.COSINE);
+            VectorStoreProvider provider = vectorStoreProviderFactory.getProvider(collectionConfig.getStoreType());
+            provider.createCollection(collection, dimension, collectionResolver.toDistanceMetric(collectionConfig.getDistanceMetric()));
 
             // 写入向量库
             List<VectorDocument> vectorDocs = new ArrayList<>(chunks.size());
@@ -139,7 +158,8 @@ public class KnowledgeIndexingService {
             doc.setChunkCount(chunks.size());
             doc.setVectorStatus(2); // 已索引
             docMapper.updateById(doc);
-            log.info("知识文档索引完成: docId={}, chunks={}, collection={}", doc.getId(), chunks.size(), collection);
+            log.info("知识文档索引完成: docId={}, chunks={}, collection={}, storeType={}, embeddingType={}",
+                    doc.getId(), chunks.size(), collection, collectionConfig.getStoreType(), collectionConfig.getEmbeddingType());
         } catch (Exception e) {
             log.error("知识文档索引失败: docId={}", doc.getId(), e);
             doc.setVectorStatus(3); // 失败
@@ -151,25 +171,24 @@ public class KnowledgeIndexingService {
     /**
      * 重建指定集合或全部集合
      */
-    public void rebuildCollection(String collection) {
-        if (!StringUtils.hasText(collection)) {
-            collection = resolveCollection(null);
-        }
-        log.info("开始重建知识库索引: collection={}", collection);
+    public void rebuildCollection(Long collectionId, String collectionName) {
+        AiVectorCollection collectionConfig = collectionResolver.resolve(collectionId, collectionName);
+        String collection = collectionConfig.getCollection();
+        log.info("开始重建知识库索引: collection={}, storeType={}", collection, collectionConfig.getStoreType());
 
         // 清空旧文档
         LambdaQueryWrapper<AiKnowledgeDoc> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AiKnowledgeDoc::getCollection, collection);
+        wrapper.eq(AiKnowledgeDoc::getCollectionId, collectionConfig.getId());
         List<AiKnowledgeDoc> oldDocs = docMapper.selectList(wrapper);
         for (AiKnowledgeDoc oldDoc : oldDocs) {
             deleteDoc(oldDoc.getId());
         }
 
         // 从源表重建
-        rebuildFromFlows(collection);
-        rebuildFromApis(collection);
-        rebuildFromDatasources(collection);
-        rebuildFromDynamicTables(collection);
+        rebuildFromFlows(collectionConfig);
+        rebuildFromApis(collectionConfig);
+        rebuildFromDatasources(collectionConfig);
+        rebuildFromDynamicTables(collectionConfig);
 
         log.info("知识库索引重建完成: collection={}", collection);
     }
@@ -183,8 +202,9 @@ public class KnowledgeIndexingService {
         if (doc == null) {
             return;
         }
-        String collection = resolveCollection(doc.getCollection());
-        VectorStoreProvider provider = vectorStoreProviderFactory.getProvider();
+        AiVectorCollection collectionConfig = collectionResolver.resolve(doc.getCollectionId(), doc.getCollection());
+        String collection = collectionConfig.getCollection();
+        VectorStoreProvider provider = vectorStoreProviderFactory.getProvider(collectionConfig.getStoreType());
 
         // 查询分块确定 vector id
         List<AiKnowledgeChunk> chunks = chunkMapper.selectByDocId(docId);
@@ -203,7 +223,7 @@ public class KnowledgeIndexingService {
         docMapper.deleteById(docId);
     }
 
-    private void rebuildFromFlows(String collection) {
+    private void rebuildFromFlows(AiVectorCollection collectionConfig) {
         List<FlowDefinition> flows = knowledgeMapper.searchFlows(List.of(), 10000);
         for (FlowDefinition flow : flows) {
             if (flow.getDelFlag() != null && flow.getDelFlag() == 1) {
@@ -214,13 +234,14 @@ public class KnowledgeIndexingService {
             doc.setSourceType("flow");
             doc.setSourceId(String.valueOf(flow.getId()));
             doc.setContent(buildFlowContent(flow));
-            doc.setCollection(collection);
+            doc.setCollectionId(collectionConfig.getId());
+            doc.setCollection(collectionConfig.getCollection());
             doc.setEnabled(1);
             indexDoc(doc);
         }
     }
 
-    private void rebuildFromApis(String collection) {
+    private void rebuildFromApis(AiVectorCollection collectionConfig) {
         List<ApiCatalog> apis = knowledgeMapper.searchApis(List.of(), 10000);
         for (ApiCatalog api : apis) {
             if (api.getDelFlag() != null && api.getDelFlag() == 1) {
@@ -231,13 +252,14 @@ public class KnowledgeIndexingService {
             doc.setSourceType("api");
             doc.setSourceId(String.valueOf(api.getId()));
             doc.setContent(buildApiContent(api));
-            doc.setCollection(collection);
+            doc.setCollectionId(collectionConfig.getId());
+            doc.setCollection(collectionConfig.getCollection());
             doc.setEnabled(1);
             indexDoc(doc);
         }
     }
 
-    private void rebuildFromDatasources(String collection) {
+    private void rebuildFromDatasources(AiVectorCollection collectionConfig) {
         List<Datasource> datasources = knowledgeMapper.searchDatasources(List.of(), 10000);
         for (Datasource ds : datasources) {
             if (ds.getDelFlag() != null && ds.getDelFlag() == 1) {
@@ -248,13 +270,14 @@ public class KnowledgeIndexingService {
             doc.setSourceType("datasource");
             doc.setSourceId(String.valueOf(ds.getId()));
             doc.setContent(buildDatasourceContent(ds));
-            doc.setCollection(collection);
+            doc.setCollectionId(collectionConfig.getId());
+            doc.setCollection(collectionConfig.getCollection());
             doc.setEnabled(1);
             indexDoc(doc);
         }
     }
 
-    private void rebuildFromDynamicTables(String collection) {
+    private void rebuildFromDynamicTables(AiVectorCollection collectionConfig) {
         // 动态表数据源数量可能较大，通过 knowledgeMapper 的扩展方法查询
         // 当前 knowledgeMapper 未提供动态表查询，可后续补充；这里预留扩展点
     }
@@ -338,17 +361,6 @@ public class KnowledgeIndexingService {
 
     private String buildVectorId(Long docId, int chunkIndex) {
         return docId + "_" + chunkIndex;
-    }
-
-    private String resolveCollection(String collection) {
-        if (StringUtils.hasText(collection)) {
-            return collection;
-        }
-        AiProperties.VectorStoreConfig config = aiProperties.getKnowledge().getVectorStore();
-        if (StringUtils.hasText(config.getDefaultCollection())) {
-            return config.getDefaultCollection();
-        }
-        return "riverflow_default";
     }
 
     private void upsertInBatches(VectorStoreProvider provider, String collection, List<VectorDocument> vectorDocs) {
