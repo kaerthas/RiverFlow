@@ -177,15 +177,13 @@ public class WorkflowController {
 
     @PostMapping("/definition/{id}/validate")
     @PreAuthorize("@ss.hasPerm('workflow:add')")
-    public R<Void> validateDefinition(@PathVariable Long id) {
+    public R<com.riverflow.admin.modules.workflow.validate.FlowValidationResult> validateDefinition(@PathVariable Long id) {
         FlowDefinition def = flowDefinitionService.getById(id);
         if (def == null) return R.fail("流程定义不存在");
         List<FlowNode> nodes = flowNodeService.getNodesByFlowId(id);
-        List<String> errors = flowValidator.validate(nodes);
-        if (!errors.isEmpty()) {
-            return R.fail(String.join("; ", errors));
-        }
-        return R.ok();
+        List<FlowEdge> edges = flowEdgeService.getEdgesByFlowId(id);
+        com.riverflow.admin.modules.workflow.validate.FlowValidationResult result = flowValidator.validate(nodes, edges);
+        return R.ok(result);
     }
 
     @PutMapping("/definition/{id}/publish")
@@ -205,11 +203,12 @@ public class WorkflowController {
             }
         }
 
-        // 发布前校验：DB 节点 SQL 占位符必须在输入映射中配置
+        // 发布前校验：结构、语法、业务级校验
         if (def.getStatus() == null || def.getStatus() != 1) {
-            List<String> errors = flowValidator.validate(nodes);
-            if (!errors.isEmpty()) {
-                return R.fail(String.join("; ", errors));
+            List<FlowEdge> edges = flowEdgeService.getEdgesByFlowId(id);
+            com.riverflow.admin.modules.workflow.validate.FlowValidationResult result = flowValidator.validate(nodes, edges);
+            if (!result.isValid()) {
+                return R.fail(String.join("; ", result.getErrors()));
             }
         }
 
@@ -314,48 +313,11 @@ public class WorkflowController {
         }
 
         com.alibaba.fastjson2.JSONArray nodes = request.getJSONArray("nodes");
+        com.alibaba.fastjson2.JSONArray edges = request.getJSONArray("edges");
 
-        // 循环结构校验
-        List<FlowNode> nodeListForValidate = new ArrayList<>();
-        List<FlowEdge> edgeListForValidate = new ArrayList<>();
-        if (nodes != null) {
-            for (int i = 0; i < nodes.size(); i++) {
-                com.alibaba.fastjson2.JSONObject nodeJson = nodes.getJSONObject(i);
-                FlowNode node = new FlowNode();
-                node.setNodeId(nodeJson.getString("id"));
-                node.setNodeName(nodeJson.getString("text"));
-                node.setNodeType(nodeJson.getString("type"));
-                node.setConfigJson(nodeJson.getJSONObject("properties") != null ?
-                        nodeJson.getJSONObject("properties").toJSONString() : null);
-                nodeListForValidate.add(node);
-            }
-        }
-        com.alibaba.fastjson2.JSONArray edgesForValidate = request.getJSONArray("edges");
-        if (edgesForValidate != null) {
-            for (int i = 0; i < edgesForValidate.size(); i++) {
-                com.alibaba.fastjson2.JSONObject edgeJson = edgesForValidate.getJSONObject(i);
-                FlowEdge edge = new FlowEdge();
-                edge.setSourceNode(edgeJson.getString("sourceNodeId"));
-                edge.setTargetNode(edgeJson.getString("targetNodeId"));
-                edgeListForValidate.add(edge);
-            }
-        }
-        loopValidator.validate(nodeListForValidate, edgeListForValidate);
-
-        // 同步流程校验：不能包含 timer 节点
-        if ("SYNC".equals(def.getExecutionMode()) && nodes != null) {
-            for (int i = 0; i < nodes.size(); i++) {
-                com.alibaba.fastjson2.JSONObject nodeJson = nodes.getJSONObject(i);
-                if ("timer".equals(nodeJson.getString("type"))) {
-                    return R.fail("同步流程不支持定时(timer)节点，请删除后保存");
-                }
-            }
-        }
-
-        // 保存节点（物理删除旧记录，避免唯一键冲突）
-        flowNodeService.physicalDeleteByFlowId(flowId);
+        // 组装完整节点列表（用于校验和保存）
+        List<FlowNode> nodeList = new ArrayList<>();
         if (nodes != null && !nodes.isEmpty()) {
-            List<FlowNode> nodeList = new ArrayList<>();
             for (int i = 0; i < nodes.size(); i++) {
                 com.alibaba.fastjson2.JSONObject nodeJson = nodes.getJSONObject(i);
                 FlowNode node = new FlowNode();
@@ -364,30 +326,29 @@ public class WorkflowController {
                 node.setNodeName(nodeJson.getString("text"));
                 node.setNodeType(nodeJson.getString("type"));
 
-                // properties 整体序列化为 configJson
                 com.alibaba.fastjson2.JSONObject props = nodeJson.getJSONObject("properties");
                 if (props != null) {
                     node.setConfigJson(props.toJSONString());
                     if (node.getNodeName() == null) {
                         node.setNodeName(props.getString("name"));
                     }
-                    // 提取输入/输出映射（前端以JSON字符串存储）
                     if (props.containsKey("inputMapping")) {
                         node.setInputMapping(props.getString("inputMapping"));
                     }
                     if (props.containsKey("outputMapping")) {
                         node.setOutputMapping(props.getString("outputMapping"));
                     }
-                    // 提取超时和重试（兼容API/DB节点配置）
                     if (props.containsKey("timeout")) {
                         node.setTimeout(props.getIntValue("timeout"));
                     }
                     if (props.containsKey("retryTimes")) {
                         node.setRetryTimes(props.getIntValue("retryTimes"));
                     }
+                    if (props.containsKey("cronExpression")) {
+                        node.setCronExpression(props.getString("cronExpression"));
+                    }
                 }
 
-                // x, y 坐标
                 Object x = nodeJson.get("x");
                 Object y = nodeJson.get("y");
                 if (x != null) node.setXCoordinate(new java.math.BigDecimal(x.toString()));
@@ -397,19 +358,11 @@ public class WorkflowController {
                 node.setDelFlag(0);
                 nodeList.add(node);
             }
-            // 去重：同一个 flow_id + node_id 只保留一条（防止前端数据异常）
-            Map<String, FlowNode> nodeMap = new java.util.LinkedHashMap<>();
-            for (FlowNode n : nodeList) {
-                nodeMap.put(n.getNodeId(), n);
-            }
-            flowNodeService.saveBatch(new ArrayList<>(nodeMap.values()));
         }
 
-        // 保存边（物理删除旧记录，避免唯一键冲突）
-        flowEdgeService.physicalDeleteByFlowId(flowId);
-        com.alibaba.fastjson2.JSONArray edges = request.getJSONArray("edges");
+        // 组装完整边列表
+        List<FlowEdge> edgeList = new ArrayList<>();
         if (edges != null && !edges.isEmpty()) {
-            List<FlowEdge> edgeList = new ArrayList<>();
             for (int i = 0; i < edges.size(); i++) {
                 com.alibaba.fastjson2.JSONObject edgeJson = edges.getJSONObject(i);
                 FlowEdge edge = new FlowEdge();
@@ -428,6 +381,41 @@ public class WorkflowController {
                 edge.setDelFlag(0);
                 edgeList.add(edge);
             }
+        }
+
+        // 循环结构校验（保持原有校验）
+        loopValidator.validate(nodeList, edgeList);
+
+        // 全流程结构/语法/业务校验
+        com.riverflow.admin.modules.workflow.validate.FlowValidationResult validateResult = flowValidator.validate(nodeList, edgeList);
+        if (!validateResult.isValid()) {
+            return R.fail(String.join("; ", validateResult.getErrors()));
+        }
+
+        // 同步流程校验：不能包含 timer 节点
+        if ("SYNC".equals(def.getExecutionMode()) && nodes != null) {
+            for (int i = 0; i < nodes.size(); i++) {
+                com.alibaba.fastjson2.JSONObject nodeJson = nodes.getJSONObject(i);
+                if ("timer".equals(nodeJson.getString("type"))) {
+                    return R.fail("同步流程不支持定时(timer)节点，请删除后保存");
+                }
+            }
+        }
+
+        // 保存节点（物理删除旧记录，避免唯一键冲突）
+        flowNodeService.physicalDeleteByFlowId(flowId);
+        if (!nodeList.isEmpty()) {
+            // 去重：同一个 flow_id + node_id 只保留一条（防止前端数据异常）
+            Map<String, FlowNode> nodeMap = new java.util.LinkedHashMap<>();
+            for (FlowNode n : nodeList) {
+                nodeMap.put(n.getNodeId(), n);
+            }
+            flowNodeService.saveBatch(new ArrayList<>(nodeMap.values()));
+        }
+
+        // 保存边（物理删除旧记录，避免唯一键冲突）
+        flowEdgeService.physicalDeleteByFlowId(flowId);
+        if (!edgeList.isEmpty()) {
             flowEdgeService.saveBatch(edgeList);
         }
 

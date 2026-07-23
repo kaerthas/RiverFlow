@@ -1,108 +1,75 @@
 package com.riverflow.admin.modules.workflow.validate;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import com.riverflow.api.entity.FlowEdge;
 import com.riverflow.api.entity.FlowNode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * 流程定义校验器
+ *
+ * <p>统一入口，组合多个校验规则对流程图做结构、语法、业务级校验。
  */
 @Slf4j
 @Component
 public class FlowValidator {
 
-    private static final Pattern SPEL_PATTERN = Pattern.compile("#\\{([^}]+)}");
+    private final List<FlowValidationRule> rules;
+
+    @Autowired(required = false)
+    public FlowValidator(List<FlowValidationRule> rules) {
+        this.rules = rules == null ? Collections.emptyList() : rules;
+    }
 
     /**
-     * 校验流程节点列表，返回所有错误信息（空表示通过）
+     * 校验流程节点列表（兼容旧接口，默认无边）
+     *
+     * @param nodes 流程节点
+     * @return 错误信息列表，空表示通过
      */
     public List<String> validate(List<FlowNode> nodes) {
-        List<String> errors = new ArrayList<>();
-        if (nodes == null || nodes.isEmpty()) {
-            return errors;
-        }
-        for (FlowNode node : nodes) {
-            if ("db".equals(node.getNodeType())) {
-                validateDbNode(node, errors);
-            }
-        }
-        return errors;
+        return validate(nodes, null).getErrors();
     }
 
     /**
-     * 校验 DB 节点：SQL 中的占位符必须在输入映射中配置
+     * 校验流程节点与边
+     *
+     * @param nodes 流程节点
+     * @param edges 流程边
+     * @return 校验结果
      */
-    private void validateDbNode(FlowNode node, List<String> errors) {
-        String configJson = node.getConfigJson();
-        if (configJson == null || configJson.trim().isEmpty()) {
-            return;
-        }
-        JSONObject config = JSON.parseObject(configJson);
-        String sql = config.getString("sql");
-        if (sql == null || sql.trim().isEmpty()) {
-            return;
+    public FlowValidationResult validate(List<FlowNode> nodes, List<FlowEdge> edges) {
+        FlowValidationResult result = new FlowValidationResult();
+        result.setValid(true);
+
+        if (rules.isEmpty()) {
+            log.warn("当前未注册任何流程校验规则");
         }
 
-        Set<String> placeholders = extractPlaceholders(sql);
-        if (placeholders.isEmpty()) {
-            return;
-        }
-
-        Set<String> mappedTargets = new HashSet<>();
-        String inputMapping = node.getInputMapping();
-        if (inputMapping != null && !inputMapping.trim().isEmpty()) {
+        for (FlowValidationRule rule : rules) {
             try {
-                JSONArray mappings = JSON.parseArray(inputMapping);
-                for (int i = 0; i < mappings.size(); i++) {
-                    JSONObject map = mappings.getJSONObject(i);
-                    String target = map.getString("target");
-                    if (target != null && !target.trim().isEmpty()) {
-                        mappedTargets.add(target.trim());
-                    }
+                if (rule == null) continue;
+                FlowValidationResult subResult = rule.validate(nodes, edges);
+                if (subResult != null) {
+                    result.merge(subResult);
                 }
             } catch (Exception e) {
-                log.warn("DB节点 [{}] 输入映射解析失败: {}", getNodeDisplayName(node, config), e.getMessage());
+                log.error("流程校验规则 [{}] 执行异常", rule.getClass().getSimpleName(), e);
+                result.addError("校验规则 [" + rule.getClass().getSimpleName() + "] 执行异常: " + e.getMessage());
             }
         }
 
-        for (String placeholder : placeholders) {
-            if (!mappedTargets.contains(placeholder)) {
-                errors.add("数据库节点 [" + getNodeDisplayName(node, config) + "] SQL占位符 [#{" + placeholder + "}] 未在输入映射中配置");
-            }
-        }
-    }
-
-    private String getNodeDisplayName(FlowNode node, JSONObject config) {
-        String name = config != null ? config.getString("name") : null;
-        if (name != null && !name.trim().isEmpty()) {
-            return name.trim();
-        }
-        name = node.getNodeName();
-        if (name != null && !name.trim().isEmpty()) {
-            return name.trim();
-        }
-        return node.getNodeId();
+        return result;
     }
 
     /**
-     * 提取 SQL 中的 #{...} 占位符名
+     * 快速判断是否通过校验
      */
-    private Set<String> extractPlaceholders(String sql) {
-        Set<String> placeholders = new HashSet<>();
-        Matcher matcher = SPEL_PATTERN.matcher(sql);
-        while (matcher.find()) {
-            placeholders.add(matcher.group(1).trim());
-        }
-        return placeholders;
+    public boolean isValid(List<FlowNode> nodes, List<FlowEdge> edges) {
+        return validate(nodes, edges).isValid();
     }
 }

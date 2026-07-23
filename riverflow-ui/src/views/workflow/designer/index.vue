@@ -2642,7 +2642,9 @@ async function handleValidate() {
       placeholders.add(match[1].trim())
     }
     sqlPlaceholderPattern.lastIndex = 0
+    const builtInContextKeys = ['_businessKey', '_flowCode', '_instanceId', 'itemCode']
     for (const placeholder of placeholders) {
+      if (builtInContextKeys.includes(placeholder)) continue
       if (!mappedTargets.has(placeholder)) {
         ElMessage.error(`数据库节点 [${node.properties?.name || node.text?.value || node.id}] SQL占位符 [#{${placeholder}}] 未在输入映射中配置`)
         isValid.value = false
