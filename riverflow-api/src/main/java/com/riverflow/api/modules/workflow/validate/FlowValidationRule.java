@@ -1,4 +1,4 @@
-package com.riverflow.admin.modules.workflow.validate;
+package com.riverflow.api.modules.workflow.validate;
 
 import com.riverflow.api.entity.FlowEdge;
 import com.riverflow.api.entity.FlowNode;

@@ -1,12 +1,14 @@
 package com.riverflow.ai.knowledge.service;
 
 import com.riverflow.ai.knowledge.entity.ApiCatalog;
+import com.riverflow.ai.knowledge.entity.ApiParam;
 import com.riverflow.ai.knowledge.entity.Datasource;
 import com.riverflow.ai.knowledge.entity.FlowDefinition;
 import com.riverflow.ai.knowledge.mapper.AiKnowledgeMapper;
 import com.riverflow.ai.knowledge.vector.VectorDocument;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -32,7 +34,28 @@ public class AiKnowledgeService {
     }
 
     public List<ApiCatalog> searchApis(String query, int limit) {
-        return knowledgeMapper.searchApis(splitKeywords(query), limit);
+        return searchApisWithParams(query, limit);
+    }
+
+    /**
+     * 检索 API 并一次性填充接口参数（header/query/body/response）。
+     */
+    public List<ApiCatalog> searchApisWithParams(String query, int limit) {
+        List<ApiCatalog> apis = knowledgeMapper.searchApis(splitKeywords(query), limit);
+        if (CollectionUtils.isEmpty(apis)) {
+            return apis;
+        }
+        List<Long> apiIds = apis.stream().map(ApiCatalog::getId).distinct().collect(Collectors.toList());
+        List<ApiParam> params = knowledgeMapper.searchApiParamsByApiIds(apiIds);
+        if (CollectionUtils.isEmpty(params)) {
+            return apis;
+        }
+        Map<Long, List<ApiParam>> paramMap = params.stream()
+                .collect(Collectors.groupingBy(ApiParam::getApiId));
+        for (ApiCatalog api : apis) {
+            api.setParams(paramMap.getOrDefault(api.getId(), Collections.emptyList()));
+        }
+        return apis;
     }
 
     public List<FlowDefinition> searchFlows(String query, int limit) {

@@ -1,4 +1,4 @@
-package com.riverflow.admin.modules.workflow.validate;
+package com.riverflow.api.modules.workflow.validate;
 
 import lombok.Data;
 

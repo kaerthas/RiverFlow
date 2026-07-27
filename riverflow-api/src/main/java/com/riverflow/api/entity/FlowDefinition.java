@@ -51,9 +51,19 @@ public class FlowDefinition extends BaseEntity {
     private String triggerConfig;
 
     /**
-     * 状态：0-草稿，1-已发布，2-下线
+     * 状态：0-草稿，1-已发布，2-下线，3-待复核
      */
     private Integer status;
+
+    /**
+     * 来源：ai-AI生成 manual-手动创建
+     */
+    private String source;
+
+    /**
+     * 复核备注（复核拒绝时填写）
+     */
+    private String reviewRemark;
 
     /**
      * 执行模式：ASYNC-异步(默认) SYNC-同步

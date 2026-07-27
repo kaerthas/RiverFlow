@@ -9,6 +9,7 @@ import com.riverflow.ai.config.AiProperties;
 import com.riverflow.ai.dto.AiGenerateFlowRequest;
 import com.riverflow.ai.dto.AiGenerateFlowResponse;
 import com.riverflow.ai.knowledge.entity.ApiCatalog;
+import com.riverflow.ai.knowledge.entity.ApiParam;
 import com.riverflow.ai.knowledge.entity.Datasource;
 import com.riverflow.ai.knowledge.entity.FlowDefinition;
 import com.riverflow.ai.knowledge.service.AiKnowledgeService;
@@ -21,6 +22,10 @@ import com.riverflow.ai.prompt.dto.PromptContent;
 import com.riverflow.ai.provider.AiChatRequest;
 import com.riverflow.ai.provider.AiChatResponse;
 import com.riverflow.ai.provider.AiMessage;
+import com.riverflow.api.entity.FlowEdge;
+import com.riverflow.api.entity.FlowNode;
+import com.riverflow.api.modules.workflow.simulate.FlowSimulationResult;
+import com.riverflow.api.modules.workflow.validate.FlowValidationResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -53,13 +58,19 @@ public class FlowGenerationService {
     private final AiOutputValidator outputValidator;
     private final AiJsonSchemaValidator schemaValidator;
     private final AiKnowledgeService knowledgeService;
+    private final FlowValidationAdapter flowValidationAdapter;
+    private final FlowSimulationClient flowSimulationClient;
+    private final FlowAutoFixService flowAutoFixService;
 
     @Autowired
     public FlowGenerationService(AiChatClient aiChatClient, AiProperties aiProperties,
                                  AiAuditLogService auditLogService, PromptTemplateEngine templateEngine,
                                  PromptTemplateLoader templateLoader, AiResponseParser responseParser,
                                  AiOutputValidator outputValidator, AiJsonSchemaValidator schemaValidator,
-                                 AiKnowledgeService knowledgeService) {
+                                 AiKnowledgeService knowledgeService,
+                                 FlowValidationAdapter flowValidationAdapter,
+                                 FlowSimulationClient flowSimulationClient,
+                                 FlowAutoFixService flowAutoFixService) {
         this.aiChatClient = aiChatClient;
         this.aiProperties = aiProperties;
         this.auditLogService = auditLogService;
@@ -69,6 +80,9 @@ public class FlowGenerationService {
         this.outputValidator = outputValidator;
         this.schemaValidator = schemaValidator;
         this.knowledgeService = knowledgeService;
+        this.flowValidationAdapter = flowValidationAdapter;
+        this.flowSimulationClient = flowSimulationClient;
+        this.flowAutoFixService = flowAutoFixService;
     }
 
     /**
@@ -120,6 +134,7 @@ public class FlowGenerationService {
         result.setThinking(thinking);
         syncNodesEdgesFromGraphJson(result);
         outputValidator.validate(result);
+        validateAndSimulate(result, request);
         return result;
     }
 
@@ -223,6 +238,7 @@ public class FlowGenerationService {
                 result.setThinking(thinking);
                 syncNodesEdgesFromGraphJson(result);
                 outputValidator.validate(result);
+                validateAndSimulate(result, request);
                 onResult.accept(result);
                 onComplete.run();
             } catch (Exception e) {
@@ -250,8 +266,9 @@ public class FlowGenerationService {
         Map<String, Object> variables = new HashMap<>();
         String userPrompt = request.getUserPrompt();
         variables.put("userPrompt", userPrompt);
-        variables.put("availableApis", JSON.toJSONString(request.getAvailableApis()));
-        variables.put("availableDbSources", JSON.toJSONString(request.getAvailableDbSources()));
+        variables.put("availableApis", buildAvailableApisJson(request));
+        variables.put("availableDbSources", buildAvailableDbSourcesJson(request));
+        variables.put("availableNodePlugins", buildAvailableNodePluginsJson(request));
         variables.put("extraContext", JSON.toJSONString(request.getExtraContext()));
         variables.put("outputSchema", StringUtils.hasText(promptContent.getOutputSchema())
                 ? promptContent.getOutputSchema() : "");
@@ -267,6 +284,64 @@ public class FlowGenerationService {
             variables.put("relatedDbSources", "[]");
         }
         return variables;
+    }
+
+    private String buildAvailableApisJson(AiGenerateFlowRequest request) {
+        if (request.getAvailableApis() != null && !request.getAvailableApis().isEmpty()) {
+            return JSON.toJSONString(request.getAvailableApis());
+        }
+        // 未传入时，按关键词检索并补充参数元数据
+        List<ApiCatalog> apis = knowledgeService.searchApisWithParams(request.getUserPrompt(), 10);
+        return JSON.toJSONString(apis.stream().map(this::toApiInfoJson).toList());
+    }
+
+    private String buildAvailableDbSourcesJson(AiGenerateFlowRequest request) {
+        if (request.getAvailableDbSources() != null && !request.getAvailableDbSources().isEmpty()) {
+            return JSON.toJSONString(request.getAvailableDbSources());
+        }
+        List<Datasource> datasources = knowledgeService.searchDatasources(request.getUserPrompt(), 10);
+        return JSON.toJSONString(datasources);
+    }
+
+    private String buildAvailableNodePluginsJson(AiGenerateFlowRequest request) {
+        if (request.getAvailableNodePlugins() != null && !request.getAvailableNodePlugins().isEmpty()) {
+            return JSON.toJSONString(request.getAvailableNodePlugins());
+        }
+        return "[]";
+    }
+
+    private JSONObject toApiInfoJson(ApiCatalog api) {
+        JSONObject obj = new JSONObject();
+        obj.put("apiCode", api.getApiCode());
+        obj.put("apiName", api.getApiName());
+        obj.put("apiType", api.getApiType());
+        obj.put("pluginType", api.getPluginType());
+        obj.put("method", api.getMethod());
+        obj.put("url", api.getUrl());
+        obj.put("contentType", api.getContentType());
+        obj.put("authType", api.getAuthType());
+        if (api.getParams() != null) {
+            obj.put("headers", filterParams(api.getParams(), "header"));
+            obj.put("queryParams", filterParams(api.getParams(), "query"));
+            obj.put("bodyParams", filterParams(api.getParams(), "body"));
+            obj.put("responseParams", filterParams(api.getParams(), "response"));
+        }
+        return obj;
+    }
+
+    private List<JSONObject> filterParams(List<ApiParam> params, String type) {
+        return params.stream()
+                .filter(p -> type.equals(p.getParamType()))
+                .map(p -> {
+                    JSONObject obj = new JSONObject();
+                    obj.put("paramKey", p.getParamKey());
+                    obj.put("paramName", p.getParamName());
+                    obj.put("dataType", p.getDataType());
+                    obj.put("required", p.getIsRequired());
+                    obj.put("defaultValue", p.getDefaultValue());
+                    return obj;
+                })
+                .toList();
     }
 
     private void buildRelatedKnowledge(String userPrompt, Map<String, Object> variables) {
@@ -298,17 +373,11 @@ public class FlowGenerationService {
             }
         }
 
-        // 语义检索为空时，使用 MySQL LIKE 兜底
+        // 语义检索为空时，使用 MySQL LIKE 兜底，并携带接口参数
         if (relatedApis.isEmpty()) {
-            List<ApiCatalog> apis = knowledgeService.searchApis(userPrompt, 5);
+            List<ApiCatalog> apis = knowledgeService.searchApisWithParams(userPrompt, 5);
             for (ApiCatalog api : apis) {
-                JSONObject obj = new JSONObject();
-                obj.put("title", api.getApiName());
-                obj.put("apiCode", api.getApiCode());
-                obj.put("apiType", api.getApiType());
-                obj.put("method", api.getMethod());
-                obj.put("url", api.getUrl());
-                relatedApis.add(obj);
+                relatedApis.add(toApiInfoJson(api));
             }
         }
         if (relatedFlows.isEmpty()) {
@@ -341,6 +410,32 @@ public class FlowGenerationService {
                 relatedApis.size(), relatedFlows.size(), relatedDbSources.size());
     }
 
+
+    private void appendAutoFixThinking(AiGenerateFlowResponse response) {
+        if (response.getFixHistory() == null || response.getFixHistory().isEmpty()) {
+            return;
+        }
+        String originalThinking = StringUtils.hasText(response.getThinking())
+                ? response.getThinking() : "";
+        StringBuilder sb = new StringBuilder(originalThinking);
+        if (sb.length() > 0) {
+            sb.append("\n\n");
+        }
+        sb.append("--- 自动修复闭环 ---").append("\n");
+        for (int i = 0; i < response.getFixHistory().size(); i++) {
+            sb.append(response.getFixHistory().get(i));
+            if (i < response.getFixHistory().size() - 1) {
+                sb.append("\n");
+            }
+        }
+        if (response.isFullyRepaired()) {
+            sb.append("\n").append("最终校验与模拟执行均通过，流程已自动修复。");
+        } else if (response.isReviewRequired()) {
+            sb.append("\n").append("自动修复未完全通过，建议人工复核。");
+        }
+        response.setThinking(sb.toString());
+    }
+
     private String resolveModel(String model) {
         return StringUtils.hasText(model) ? model : "default";
     }
@@ -355,6 +450,46 @@ public class FlowGenerationService {
         }
         String json = responseParser.extractJson(content);
         schemaValidator.validate(json, outputSchema);
+    }
+
+    /**
+     * 对 AI 生成的流程执行校验与沙箱模拟执行，并将结果写入响应。
+     * 若未通过且启用自动修复，则启动最多 3 轮 LLM 自动修复闭环。
+     */
+    private void validateAndSimulate(AiGenerateFlowResponse response, AiGenerateFlowRequest request) {
+        if (response == null || response.getNodes() == null || response.getNodes().isEmpty()) {
+            return;
+        }
+        try {
+            List<FlowNode> nodes = FlowNodeEdgeConverter.toFlowNodes(response.getNodes());
+            List<FlowEdge> edges = FlowNodeEdgeConverter.toFlowEdges(response.getEdges());
+
+            FlowValidationResult validationResult = flowValidationAdapter.validate(nodes, edges);
+            response.setValidationResult(validationResult);
+
+            FlowSimulationResult simulationResult = null;
+            if (!request.isSkipSimulation() && validationResult.isValid()) {
+                Map<String, Object> initialContext = request.getExtraContext() != null
+                        ? request.getExtraContext() : new HashMap<>();
+                simulationResult = flowSimulationClient.simulate(nodes, edges, initialContext);
+                response.setSimulationResult(simulationResult);
+            }
+
+            boolean validationOk = validationResult.isValid();
+            boolean simulationOk = simulationResult == null || simulationResult.isSuccess();
+            boolean reviewRequired = !validationOk || !simulationOk;
+            response.setReviewRequired(reviewRequired);
+
+            if (reviewRequired && aiProperties.getFlowGeneration().isAutoFixEnabled()) {
+                log.info("AI 生成流程未通过校验或模拟，启动自动修复闭环");
+                flowAutoFixService.autoFix(response, request,
+                        aiProperties.getFlowGeneration().getAutoFixMaxRounds());
+                appendAutoFixThinking(response);
+            }
+        } catch (Exception e) {
+            log.warn("AI 生成流程校验或模拟执行异常", e);
+            response.setReviewRequired(true);
+        }
     }
 
     /**

@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.riverflow.admin.service.SysPluginService;
 import com.riverflow.api.entity.SysPlugin;
+import com.riverflow.api.modules.workflow.validate.FlowValidator;
 import com.riverflow.api.plugin.NodePlugin;
 import com.riverflow.common.result.R;
 import com.riverflow.common.spring.SpringContextHolder;
@@ -50,6 +51,9 @@ public class NodePluginLoader implements SmartInitializingSingleton {
     @Autowired
     private PluginFileValidator pluginFileValidator;
 
+    @Autowired(required = false)
+    private FlowValidator flowValidator;
+
     private String pluginDir;
     private final Map<String, NodePlugin> pluginMap = new ConcurrentHashMap<>();
     private final Map<String, URLClassLoader> classLoaderMap = new ConcurrentHashMap<>();
@@ -83,6 +87,14 @@ public class NodePluginLoader implements SmartInitializingSingleton {
         }
         log.info("所有Spring Bean初始化完成，开始加载插件...");
         loadPluginsFromDatabase();
+        registerAllLoadedPluginTypes();
+    }
+
+    private void registerAllLoadedPluginTypes() {
+        if (flowValidator == null || pluginMap.isEmpty()) {
+            return;
+        }
+        flowValidator.registerPluginNodeTypes(pluginMap.keySet());
     }
 
     private void loadPluginsFromDatabase() {
@@ -216,6 +228,7 @@ public class NodePluginLoader implements SmartInitializingSingleton {
                 pluginMap.put(nodeType, plugin);
                 classLoaderMap.put(nodeType, classLoader);
                 loadedPlugin = plugin;
+                registerPluginType(nodeType);
 
                 log.info("注册插件: type={}, name={}, category={}", 
                     nodeType, plugin.getNodeName(), plugin.getCategory());
@@ -238,6 +251,7 @@ public class NodePluginLoader implements SmartInitializingSingleton {
             }
         }
 
+        unregisterPluginType(nodeType);
         NodePlugin removed = pluginMap.remove(nodeType);
         if (removed != null) {
             log.info("卸载插件: {}", nodeType);
@@ -283,5 +297,19 @@ public class NodePluginLoader implements SmartInitializingSingleton {
 
     public int getPluginCount() {
         return pluginMap.size();
+    }
+
+    private void registerPluginType(String nodeType) {
+        if (flowValidator == null || nodeType == null) {
+            return;
+        }
+        flowValidator.registerPluginNodeTypes(Collections.singleton(nodeType));
+    }
+
+    private void unregisterPluginType(String nodeType) {
+        if (flowValidator == null || nodeType == null) {
+            return;
+        }
+        flowValidator.unregisterPluginNodeTypes(Collections.singleton(nodeType));
     }
 }

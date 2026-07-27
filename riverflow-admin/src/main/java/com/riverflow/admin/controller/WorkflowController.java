@@ -55,11 +55,11 @@ public class WorkflowController {
     @Autowired
     private com.riverflow.admin.modules.workflow.loop.LoopValidator loopValidator;
     @Autowired
-    private com.riverflow.admin.modules.workflow.validate.FlowValidator flowValidator;
+    private com.riverflow.api.modules.workflow.validate.FlowValidator flowValidator;
+    @Autowired
+    private com.riverflow.admin.modules.workflow.simulate.FlowSimulationEngine flowSimulationEngine;
     @Autowired
     private DynamicDataSourceService dynamicDataSourceService;
-
-    // ==================== 流程定义 ====================
 
     @GetMapping("/definition/list")
     @PreAuthorize("@ss.hasPerm('workflow:list')")
@@ -171,19 +171,138 @@ public class WorkflowController {
         if (!"ASYNC".equals(definition.getExecutionMode()) && !"SYNC".equals(definition.getExecutionMode())) {
             return R.fail("执行模式只能是 ASYNC 或 SYNC");
         }
+        // AI 生成的流程默认进入待复核状态
+        if ("ai".equals(definition.getSource())) {
+            definition.setStatus(3);
+        }
         flowDefinitionService.saveOrUpdate(definition);
         return R.ok(String.valueOf(definition.getId()));
     }
 
     @PostMapping("/definition/{id}/validate")
     @PreAuthorize("@ss.hasPerm('workflow:add')")
-    public R<com.riverflow.admin.modules.workflow.validate.FlowValidationResult> validateDefinition(@PathVariable Long id) {
+    public R<com.riverflow.api.modules.workflow.validate.FlowValidationResult> validateDefinition(@PathVariable Long id) {
         FlowDefinition def = flowDefinitionService.getById(id);
         if (def == null) return R.fail("流程定义不存在");
         List<FlowNode> nodes = flowNodeService.getNodesByFlowId(id);
         List<FlowEdge> edges = flowEdgeService.getEdgesByFlowId(id);
-        com.riverflow.admin.modules.workflow.validate.FlowValidationResult result = flowValidator.validate(nodes, edges);
+        com.riverflow.api.modules.workflow.validate.FlowValidationResult result = flowValidator.validate(nodes, edges);
         return R.ok(result);
+    }
+
+    @PostMapping("/definition/{id}/simulate")
+    @PreAuthorize("@ss.hasPerm('workflow:add')")
+    public R<com.riverflow.api.modules.workflow.simulate.FlowSimulationResult> simulateDefinition(@PathVariable Long id,
+                                                                                                      @RequestBody(required = false) com.alibaba.fastjson2.JSONObject initialContext) {
+        FlowDefinition def = flowDefinitionService.getById(id);
+        if (def == null) return R.fail("流程定义不存在");
+        List<FlowNode> nodes = flowNodeService.getNodesByFlowId(id);
+        List<FlowEdge> edges = flowEdgeService.getEdgesByFlowId(id);
+        Map<String, Object> initial = convertToMap(initialContext);
+        com.riverflow.api.modules.workflow.simulate.FlowSimulationResult result = flowSimulationEngine.simulate(nodes, edges, initial);
+        return R.ok(result);
+    }
+
+    @PostMapping("/simulate")
+    @PreAuthorize("@ss.hasPerm('workflow:add')")
+    public R<com.riverflow.api.modules.workflow.simulate.FlowSimulationResult> simulateFlowGraph(@RequestBody com.alibaba.fastjson2.JSONObject request) {
+        com.alibaba.fastjson2.JSONArray nodesJson = request.getJSONArray("nodes");
+        com.alibaba.fastjson2.JSONArray edgesJson = request.getJSONArray("edges");
+        com.alibaba.fastjson2.JSONObject initialContext = request.getJSONObject("initialContext");
+
+        if (nodesJson == null) {
+            return R.fail("nodes 不能为空");
+        }
+
+        List<FlowNode> nodes = new ArrayList<>();
+        for (int i = 0; i < nodesJson.size(); i++) {
+            com.alibaba.fastjson2.JSONObject nodeJson = nodesJson.getJSONObject(i);
+            FlowNode node = new FlowNode();
+            node.setNodeId(nodeJson.getString("id"));
+            node.setNodeName(nodeJson.getString("text"));
+            node.setNodeType(nodeJson.getString("type"));
+            com.alibaba.fastjson2.JSONObject props = nodeJson.getJSONObject("properties");
+            if (props != null) {
+                node.setConfigJson(props.toJSONString());
+                if (node.getNodeName() == null) {
+                    node.setNodeName(props.getString("name"));
+                }
+                if (props.containsKey("inputMapping")) {
+                    node.setInputMapping(props.getString("inputMapping"));
+                }
+                if (props.containsKey("outputMapping")) {
+                    node.setOutputMapping(props.getString("outputMapping"));
+                }
+                if (props.containsKey("cronExpression")) {
+                    node.setCronExpression(props.getString("cronExpression"));
+                }
+            }
+            node.setSortNo(i);
+            nodes.add(node);
+        }
+
+        List<FlowEdge> edges = new ArrayList<>();
+        if (edgesJson != null) {
+            for (int i = 0; i < edgesJson.size(); i++) {
+                com.alibaba.fastjson2.JSONObject edgeJson = edgesJson.getJSONObject(i);
+                FlowEdge edge = new FlowEdge();
+                edge.setSourceNode(edgeJson.getString("sourceNodeId"));
+                edge.setTargetNode(edgeJson.getString("targetNodeId"));
+                com.alibaba.fastjson2.JSONObject props = edgeJson.getJSONObject("properties");
+                if (props != null) {
+                    edge.setConditionType(props.getString("conditionType"));
+                    edge.setConditionExpression(props.getString("conditionExpression"));
+                }
+                edge.setPriority(i);
+                edges.add(edge);
+            }
+        }
+
+        Map<String, Object> initial = convertToMap(initialContext);
+        com.riverflow.api.modules.workflow.simulate.FlowSimulationResult result = flowSimulationEngine.simulate(nodes, edges, initial);
+        return R.ok(result);
+    }
+
+    private Map<String, Object> convertToMap(com.alibaba.fastjson2.JSONObject json) {
+        if (json == null) {
+            return Collections.emptyMap();
+        }
+        Map<String, Object> map = new HashMap<>();
+        for (Map.Entry<String, Object> entry : json.entrySet()) {
+            map.put(entry.getKey(), entry.getValue());
+        }
+        return map;
+    }
+
+    @PutMapping("/definition/{id}/review-approve")
+    @PreAuthorize("@ss.hasPerm('workflow:publish')")
+    public R<Void> reviewApproveDefinition(@PathVariable Long id) {
+        FlowDefinition def = flowDefinitionService.getById(id);
+        if (def == null) return R.fail("流程定义不存在");
+        if (def.getStatus() == null || def.getStatus() != 3) {
+            return R.fail("仅待复核状态的流程可复核通过");
+        }
+        def.setStatus(0);
+        def.setReviewRemark(null);
+        def.setUpdateTime(LocalDateTime.now());
+        flowDefinitionService.updateById(def);
+        return R.ok();
+    }
+
+    @PutMapping("/definition/{id}/review-reject")
+    @PreAuthorize("@ss.hasPerm('workflow:publish')")
+    public R<Void> reviewRejectDefinition(@PathVariable Long id,
+                                          @RequestBody(required = false) com.alibaba.fastjson2.JSONObject request) {
+        FlowDefinition def = flowDefinitionService.getById(id);
+        if (def == null) return R.fail("流程定义不存在");
+        if (def.getStatus() == null || def.getStatus() != 3) {
+            return R.fail("仅待复核状态的流程可复核拒绝");
+        }
+        String remark = request != null ? request.getString("reviewRemark") : null;
+        def.setReviewRemark(remark);
+        def.setUpdateTime(LocalDateTime.now());
+        flowDefinitionService.updateById(def);
+        return R.ok();
     }
 
     @PutMapping("/definition/{id}/publish")
@@ -192,6 +311,10 @@ public class WorkflowController {
     public R<String> publishDefinition(@PathVariable Long id) {
         FlowDefinition def = flowDefinitionService.getById(id);
         if (def == null) return R.fail("流程定义不存在");
+
+        if (def.getStatus() != null && def.getStatus() == 3) {
+            return R.fail("流程处于待复核状态，请先复核通过后再发布");
+        }
 
         List<FlowNode> nodes = flowNodeService.getNodesByFlowId(id);
 
@@ -206,7 +329,7 @@ public class WorkflowController {
         // 发布前校验：结构、语法、业务级校验
         if (def.getStatus() == null || def.getStatus() != 1) {
             List<FlowEdge> edges = flowEdgeService.getEdgesByFlowId(id);
-            com.riverflow.admin.modules.workflow.validate.FlowValidationResult result = flowValidator.validate(nodes, edges);
+            com.riverflow.api.modules.workflow.validate.FlowValidationResult result = flowValidator.validate(nodes, edges);
             if (!result.isValid()) {
                 return R.fail(String.join("; ", result.getErrors()));
             }
@@ -387,7 +510,7 @@ public class WorkflowController {
         loopValidator.validate(nodeList, edgeList);
 
         // 全流程结构/语法/业务校验
-        com.riverflow.admin.modules.workflow.validate.FlowValidationResult validateResult = flowValidator.validate(nodeList, edgeList);
+        com.riverflow.api.modules.workflow.validate.FlowValidationResult validateResult = flowValidator.validate(nodeList, edgeList);
         if (!validateResult.isValid()) {
             return R.fail(String.join("; ", validateResult.getErrors()));
         }

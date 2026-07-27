@@ -30,6 +30,7 @@
           <el-option :label="$t('definition.已发布_dca0c13b_1')" :value="1" />
           <el-option :label="$t('definition.草稿_22b4334f_1')" :value="0" />
           <el-option :label="$t('definition.已下线_0a666759_1')" :value="2" />
+          <el-option label="待复核" :value="3" />
         </el-select>
         <el-select v-model="searchForm.triggerType" :placeholder="$t('definition.全部触发方式_c2f5f720')" clearable style="width: 150px" @change="handleSearch">
           <el-option :label="$t('definition.手动_2a3e7f5c_1')" value="manual" />
@@ -119,6 +120,16 @@
               <el-tooltip v-if="row.status === 0" :content="$t('definition.发布_83611abd')" placement="top">
                 <button class="action-btn success" @click="handlePublish(row)">
                   <el-icon><Promotion /></el-icon>
+                </button>
+              </el-tooltip>
+              <el-tooltip v-if="row.status === 3" content="复核通过" placement="top">
+                <button class="action-btn success" @click="handleReviewApprove(row)">
+                  <el-icon><CircleCheck /></el-icon>
+                </button>
+              </el-tooltip>
+              <el-tooltip v-if="row.status === 3" content="复核拒绝" placement="top">
+                <button class="action-btn warning" @click="handleReviewReject(row)">
+                  <el-icon><CircleClose /></el-icon>
                 </button>
               </el-tooltip>
               <el-tooltip v-if="row.status === 1" :content="$t('definition.下线_4805dd77')" placement="top">
@@ -398,7 +409,9 @@ import {
   saveFlowDefinition,
   copyFlowDefinition,
   getFlowVersions,
-  executeSyncFlow
+  executeSyncFlow,
+  reviewApproveFlowDefinition,
+  reviewRejectFlowDefinition
 } from '@/api/workflow'
 
 const router = useRouter()
@@ -442,12 +455,12 @@ function executionModeLabel(mode) {
 }
 
 function statusLabel(status) {
-  const map = { 1: t('definition.已发布_dca0c13b'), 0: t('definition.草稿_22b4334f'), 2: t('definition.已下线_0a666759') }
+  const map = { 1: t('definition.已发布_dca0c13b'), 0: t('definition.草稿_22b4334f'), 2: t('definition.已下线_0a666759'), 3: '待复核' }
   return map[status] || t('definition.未知_1622dc9b')
 }
 
 function statusClass(status) {
-  const map = { 1: 'published', 0: 'draft', 2: 'offline' }
+  const map = { 1: 'published', 0: 'draft', 2: 'offline', 3: 'pending-review' }
   return map[status] || 'draft'
 }
 
@@ -511,6 +524,36 @@ async function handlePublish(row) {
     handleSearch()
   } catch (e) {
     if (e !== 'cancel') ElMessage.error(t('definition.发布失败_bd774adc') + (e.message || e))
+  }
+}
+
+async function handleReviewApprove(row) {
+  try {
+    await ElMessageBox.confirm(`确认复核通过流程「${row.flowName}」v${row.version}？通过后状态将变为草稿，可继续发布。`, '复核确认', { type: 'info' })
+    await reviewApproveFlowDefinition(row.id)
+    ElMessage.success('复核通过')
+    handleSearch()
+  } catch (e) {
+    if (e !== 'cancel') {
+      ElMessage.error(e.message || '复核失败')
+    }
+  }
+}
+
+async function handleReviewReject(row) {
+  try {
+    const { value } = await ElMessageBox.prompt(
+      `请输入流程「${row.flowName}」v${row.version} 的复核拒绝备注（可选）：`,
+      '复核拒绝',
+      { confirmButtonText: '确认拒绝', cancelButtonText: '取消', inputPlaceholder: '拒绝原因' }
+    )
+    await reviewRejectFlowDefinition(row.id, value)
+    ElMessage.success('已拒绝复核')
+    handleSearch()
+  } catch (e) {
+    if (e !== 'cancel') {
+      ElMessage.error(e.message || '拒绝复核失败')
+    }
   }
 }
 

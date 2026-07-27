@@ -80,6 +80,30 @@ public class AiProperties {
      */
     private List<Provider> providers = new ArrayList<>();
 
+    /**
+     * Admin 服务基础地址（用于 AI 模块调用沙箱模拟执行接口）
+     */
+    private String adminBaseUrl = "http://localhost:8080";
+
+    /**
+     * 流程生成配置
+     */
+    private FlowGenerationConfig flowGeneration = new FlowGenerationConfig();
+
+    @Data
+    public static class FlowGenerationConfig {
+
+        /**
+         * 是否启用自动修复闭环
+         */
+        private boolean autoFixEnabled = true;
+
+        /**
+         * 自动修复最大轮数
+         */
+        private int autoFixMaxRounds = 3;
+    }
+
     @Data
     public static class KnowledgeConfig {
 
@@ -260,7 +284,10 @@ public class AiProperties {
          */
         @NotBlank
         private String defaultModel;
-
+        /***
+         * format:json
+         * **/
+        private String format = "json";
         /**
          * 默认温度
          */

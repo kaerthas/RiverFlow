@@ -22,6 +22,21 @@
 ## 节点规则
 - start、end 各一个
 - 涉及数据库读写优先用 db 节点
+- 流程设计器左侧"组件库"里有两类可拖拽节点：
+  1. **基础节点 / 数据处理节点**：start、end、api、db、script、condition、timer、while、end_while 等，节点 type 就是这些固定值。
+  2. **插件节点**：在"插件节点"分组里，如"华为云Token认证"，其 type 等于下方"可用节点插件"中的 `nodeType`（如 `hw-auth`），而不是 `api`。
+- 调用外部接口（接口管理中注册的 API）统一使用 API 节点：type=api，properties.apiCode 必须等于下方"可用 API 列表"或"相关知识库"中的真实 apiCode，禁止编造不存在的 apiCode
+- apiType 是接口 catalog 中的分类，仅用于说明，**节点类型必须是 api**，不允许生成 type=proxy / type=sql / type=data / type=script 等节点类型；执行引擎会根据 apiCode 自动找到对应接口并按其 apiType（proxy/sql/data/script/plugin）执行
+- 如果用户描述的是左侧"插件节点"里的节点（如"华为云Token认证"），则生成对应 `nodeType` 的插件节点，而不是 API 节点
+- 插件节点输出字段由 `outputSchema` 决定，通常用 `outputMapping` 把字段写入上下文，例如 `[{"source":"token","target":"context.token"}]`
+- API 节点和插件节点调用顺序必须遵循用户描述：若描述"A 返回值是 B 的输入"，则必须先执行 A，再执行 B
+- **不要生成专门用于设置 header / query / body 参数的 script 节点**。所有参数传递必须通过 API 节点的 inputMapping 完成：
+  - A 接口返回的字段，用 A 的 outputMapping 写入上下文，例如 `[{"source":"token","target":"context.token"}]`
+  - B 接口使用 inputMapping 把上下文变量映射到真实参数位置：
+    - header 参数：target 写成 `header.token`
+    - query 参数：target 写成 `query.xxx`
+    - body 参数：target 写成 `body.xxx`（支持多级 `body.user.name`）
+  - 只有对返回结果做复杂转换（如从嵌套 JSON 提取字段、类型转换、拼接等）时才使用 script 节点
 - while 循环必须包含 while 和 end_while 两个节点；end_while 的 type 必须是 end_while，properties.loopNodeId 必须等于 while 节点的 id
 - while 循环结构：初始化参数 -> while -> [循环体] -> end_while -> 后续节点；不要画循环体回指 while 的线，也不要画 while 直接到 end_while 的线
 - 严禁把整个循环逻辑写到一个 script 节点的 scriptContent 里；循环必须用 while 节点表达，循环体内部只能用 db/script 节点写单步逻辑
@@ -31,6 +46,8 @@
 - scriptContent、sql、expression 等字符串值使用单引号包裹；如果字符串内部必须出现单引号，请用 \\' 转义，绝对不要在字符串内部使用未转义的双引号
 - maxIterations、timeout 等数字字段必须是整数，不能是变量名或表达式
 - 不要生成没有 name、code 的空 while/end_while 节点；不要生成重复的空节点
+- 输出 mapping 的 source 必须是上游节点实际返回的字段名（或 context 变量名），禁止编造不存在字段
+- inputMapping 中的 target 位置必须能在对应接口的参数元数据中找到匹配参数，优先使用用户描述中的字段名；如果找不到则使用 context 变量名并说明
 
 ## 坐标与连线
 - start (120, 240)
@@ -65,6 +82,37 @@
       { "id": "e3", "type": "bezier", "sourceNodeId": "while_loop", "targetNodeId": "script_body", "text": "", "properties": {} },
       { "id": "e4", "type": "bezier", "sourceNodeId": "script_body", "targetNodeId": "end_while", "text": "", "properties": {} },
       { "id": "e5", "type": "bezier", "sourceNodeId": "end_while", "targetNodeId": "end_1", "text": "", "properties": {} }
+    ]
+  }
+}
+
+## 示例：插件节点 + API 节点组合（华为云 token 插件 → B 系统接口写入）
+用户输入：调用左侧插件节点"华为云Token认证"获取 token，再调用 B 系统-订单同步单条写入接口，A 返回的 token 作为 B 接口 header 的 token 入参
+可用 API：[
+  {"apiCode":"b-sys-order-sync-write","apiName":"B系统-订单同步单条写入","apiType":"proxy","method":"POST","url":"http://b-system/api/order/sync/write","contentType":"application/json","headers":[{"paramKey":"token","paramName":"认证令牌","dataType":"string","required":1}],"queryParams":[],"bodyParams":[{"paramKey":"orderNo","paramName":"订单号","dataType":"string","required":1},{"paramKey":"data","paramName":"订单数据","dataType":"object","required":1}],"responseParams":[{"paramKey":"success","paramName":"是否成功","dataType":"boolean","required":1},{"paramKey":"message","paramName":"返回消息","dataType":"string","required":0}]}
+]
+可用节点插件：[
+  {"nodeType":"hw-auth","nodeName":"华为云Token认证","description":"华为云网关 Token 获取与缓存，支持 HmacSHA256 签名、Query/Form 参数传递和自动刷新","outputSchema":"{\"type\":\"object\",\"properties\":{\"token\":{\"type\":\"string\",\"description\":\"访问令牌\"}}}"}
+]
+可用数据源：[]
+输出：
+{
+  "flowName": "订单同步写入流程",
+  "description": "使用华为云Token认证插件获取 token，再调用 B 系统订单同步写入接口",
+  "triggerType": "manual",
+  "triggerConfig": "",
+  "executionMode": "SYNC",
+  "graphJson": {
+    "nodes": [
+      { "id": "start_1", "type": "start", "x": 120, "y": 240, "text": "开始", "properties": { "name": "开始", "code": "start_1" } },
+      { "id": "plugin_hw_auth", "type": "hw-auth", "x": 340, "y": 240, "text": "获取华为云 token", "properties": { "name": "获取华为云 token", "code": "plugin_hw_auth", "outputMapping": "[{\"source\":\"token\",\"target\":\"context.token\"}]" } },
+      { "id": "api_write", "type": "api", "x": 560, "y": 240, "text": "订单同步写入", "properties": { "name": "订单同步写入", "code": "api_write", "apiCode": "b-sys-order-sync-write", "inputMapping": "[{\"source\":\"context.token\",\"target\":\"header.token\"},{\"source\":\"orderNo\",\"target\":\"body.orderNo\"},{\"source\":\"data\",\"target\":\"body.data\"}]", "outputMapping": "[{\"source\":\"success\",\"target\":\"context.writeSuccess\"},{\"source\":\"message\",\"target\":\"context.writeMessage\"}]" } },
+      { "id": "end_1", "type": "end", "x": 780, "y": 240, "text": "结束", "properties": { "name": "结束", "code": "end_1" } }
+    ],
+    "edges": [
+      { "id": "e1", "type": "bezier", "sourceNodeId": "start_1", "targetNodeId": "plugin_hw_auth", "text": "", "properties": {} },
+      { "id": "e2", "type": "bezier", "sourceNodeId": "plugin_hw_auth", "targetNodeId": "api_write", "text": "", "properties": {} },
+      { "id": "e3", "type": "bezier", "sourceNodeId": "api_write", "targetNodeId": "end_1", "text": "", "properties": {} }
     ]
   }
 }
@@ -105,7 +153,8 @@
 }
 
 ## 可用资源
-- API 接口列表：${availableApis}
+- API 接口列表（接口管理中注册的真实接口）：${availableApis}
+- 已加载节点插件列表（左侧插件节点面板）：${availableNodePlugins}
 - 数据库数据源：${availableDbSources}
 
 ## 相关知识库（供参考，优先使用相关接口和数据源）

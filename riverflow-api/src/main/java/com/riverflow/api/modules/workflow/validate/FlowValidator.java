@@ -1,18 +1,22 @@
-package com.riverflow.admin.modules.workflow.validate;
+package com.riverflow.api.modules.workflow.validate;
 
 import com.riverflow.api.entity.FlowEdge;
 import com.riverflow.api.entity.FlowNode;
+import com.riverflow.api.modules.workflow.validate.rules.GraphStructureValidationRule;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 /**
  * 流程定义校验器
  *
- * <p>统一入口，组合多个校验规则对流程图做结构、语法、业务级校验。
+ * <p>统一入口，组合多个校验规则对流程图做结构、语法、业务级校验。</p>
+ * <p>支持通过 {@link #registerPluginNodeTypes(Collection)} 动态注册插件节点类型，
+ * 使图结构校验能识别节点插件。</p>
  */
 @Slf4j
 @Component
@@ -23,6 +27,36 @@ public class FlowValidator {
     @Autowired(required = false)
     public FlowValidator(List<FlowValidationRule> rules) {
         this.rules = rules == null ? Collections.emptyList() : rules;
+    }
+
+    /**
+     * 注册插件节点类型，使结构校验允许这些节点类型。
+     */
+    public void registerPluginNodeTypes(Collection<String> nodeTypes) {
+        if (nodeTypes == null || nodeTypes.isEmpty()) {
+            return;
+        }
+        for (FlowValidationRule rule : rules) {
+            if (rule instanceof GraphStructureValidationRule graphRule) {
+                graphRule.addAllowedNodeTypes(nodeTypes);
+                log.info("[FlowValidator] 已注册插件节点类型: {}", nodeTypes);
+            }
+        }
+    }
+
+    /**
+     * 注销插件节点类型（如插件被卸载时）。
+     */
+    public void unregisterPluginNodeTypes(Collection<String> nodeTypes) {
+        if (nodeTypes == null || nodeTypes.isEmpty()) {
+            return;
+        }
+        for (FlowValidationRule rule : rules) {
+            if (rule instanceof GraphStructureValidationRule graphRule) {
+                graphRule.removeAllowedNodeTypes(nodeTypes);
+                log.info("[FlowValidator] 已注销插件节点类型: {}", nodeTypes);
+            }
+        }
     }
 
     /**

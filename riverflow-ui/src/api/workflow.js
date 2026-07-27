@@ -52,6 +52,21 @@ export function offlineFlowDefinition(id) {
   })
 }
 
+export function reviewApproveFlowDefinition(id) {
+  return request({
+    url: `/workflow/definition/${id}/review-approve`,
+    method: 'put'
+  })
+}
+
+export function reviewRejectFlowDefinition(id, reviewRemark) {
+  return request({
+    url: `/workflow/definition/${id}/review-reject`,
+    method: 'put',
+    data: { reviewRemark }
+  })
+}
+
 export function copyFlowDefinition(id) {
   return request({
     url: `/workflow/definition/${id}/copy`,

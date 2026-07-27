@@ -26,6 +26,14 @@ riverflow:
     timeout: 30000
     retry: 1
 
+    # Admin 服务基础地址，AI 模块通过此地址调用沙箱模拟执行接口
+    admin-base-url: http://localhost:8080
+
+    # 流程生成配置
+    flow-generation:
+      auto-fix-enabled: true
+      auto-fix-max-rounds: 3
+
     # 知识库与向量检索配置
     knowledge:
       vector-store:

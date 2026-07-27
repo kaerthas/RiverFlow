@@ -8,8 +8,8 @@
         </div>
         <div class="flow-info">
           <span class="flow-name">{{ flowName || t('designer.未命名流程_7e7b43eb') }}</span>
-          <span :class="['flow-badge', flowStatus === 1 ? 'published' : 'draft']">
-            {{ flowStatus === 1 ? '已发布' : '草稿' }}
+          <span :class="['flow-badge', statusBadgeClass]">
+            {{ statusLabel }}
           </span>
         </div>
       </div>
@@ -711,10 +711,30 @@ const flowId = ref(route.query.id ? String(route.query.id) : null)
 const activeRightTab = ref('property')
 const flowName = ref(t('designer.未命名流程_7e7b43eb_1'))
 const flowStatus = ref(0)
+const flowSource = ref('manual')
 const flowExecutionMode = ref('ASYNC')
 const version = ref(1)
 const flowInputParams = ref([])
 const flowOutputParams = ref([])
+
+// 状态标签与样式
+const statusLabel = computed(() => {
+  switch (flowStatus.value) {
+    case 1: return '已发布'
+    case 2: return '下线'
+    case 3: return '待复核'
+    default: return '草稿'
+  }
+})
+
+const statusBadgeClass = computed(() => {
+  switch (flowStatus.value) {
+    case 1: return 'published'
+    case 2: return 'offline'
+    case 3: return 'pending-review'
+    default: return 'draft'
+  }
+})
 
 // 属性面板宽度（可拖动调整）
 const propertyPanelWidth = ref(340)
@@ -2665,11 +2685,13 @@ async function handleSave() {
   }
   debugger
   const graphData = lf.getGraphData()
+  const isAiFlow = flowSource.value === 'ai'
   const defData = {
     id: flowId.value,
     flowCode: !flowId.value && flowName.value ? 'FLOW_' + Date.now() : undefined,
     flowName: flowName.value,
-    status: 0,
+    source: flowSource.value || 'manual',
+    status: isAiFlow ? 3 : 0,
     version: version.value,
     executionMode: flowExecutionMode.value,
     graphJson: JSON.stringify(graphData)
@@ -2807,6 +2829,7 @@ function loadAiFlowData(aiFlowData) {
     const data = JSON.parse(decodeURIComponent(aiFlowData))
     flowName.value = data.flowName || t('designer.未命名流程_7e7b43eb')
     flowExecutionMode.value = data.executionMode || 'ASYNC'
+    flowSource.value = 'ai'
     if (data.graphJson) {
       const graphData = data.graphJson
       normalizeAiGraphData(graphData)
@@ -2960,6 +2983,7 @@ async function loadFlowData() {
     if (def) {
       flowName.value = def.flowName || t('designer.未命名流程_7e7b43eb')
       flowStatus.value = def.status || 0
+      flowSource.value = def.source || 'manual'
       flowExecutionMode.value = def.executionMode || 'ASYNC'
       version.value = def.version || 1
       isDirty.value = false
@@ -3137,6 +3161,16 @@ $text-muted: #94a3b8;
       &.draft {
         background: #f1f5f9;
         color: $text-muted;
+      }
+
+      &.offline {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+
+      &.pending-review {
+        background: #fef3c7;
+        color: #d97706;
       }
     }
   }

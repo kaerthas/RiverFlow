@@ -5,6 +5,8 @@ import com.riverflow.ai.knowledge.embedding.EmbeddingClient;
 import com.riverflow.ai.knowledge.embedding.EmbeddingClientFactory;
 import com.riverflow.ai.knowledge.vector.DistanceMetric;
 import com.riverflow.ai.knowledge.vector.InMemoryVectorStore;
+import com.riverflow.ai.knowledge.service.VectorCollectionResolver;
+import com.riverflow.ai.knowledge.entity.AiVectorCollection;
 import com.riverflow.ai.knowledge.vector.VectorDocument;
 import com.riverflow.ai.knowledge.vector.VectorStoreProviderFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +18,9 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -30,6 +35,8 @@ class KnowledgeRagServiceTest {
     private InMemoryVectorStore vectorStore;
     private AiProperties aiProperties;
 
+    private VectorCollectionResolver vectorCollectionResolver;
+
     @BeforeEach
     void setUp() {
         aiProperties = new AiProperties();
@@ -43,7 +50,8 @@ class KnowledgeRagServiceTest {
         vectorStore = new InMemoryVectorStore();
         vectorStore.createCollection("test", 3, DistanceMetric.COSINE);
         vectorStoreProviderFactory = mock(VectorStoreProviderFactory.class);
-        when(vectorStoreProviderFactory.getProvider()).thenReturn(vectorStore);
+        when(vectorStoreProviderFactory.getProvider(anyString())).thenReturn(vectorStore);
+        vectorCollectionResolver = mock(VectorCollectionResolver.class);
 
         EmbeddingClient embeddingClient = new EmbeddingClient() {
             @Override
@@ -66,13 +74,20 @@ class KnowledgeRagServiceTest {
                 return "test";
             }
         };
-        when(embeddingClientFactory.create()).thenReturn(embeddingClient);
+        when(embeddingClientFactory.create(any(AiVectorCollection.class))).thenReturn(embeddingClient);
 
-        knowledgeRagService = new KnowledgeRagService(aiProperties, embeddingClientFactory, vectorStoreProviderFactory);
+        knowledgeRagService = new KnowledgeRagService(aiProperties, embeddingClientFactory, vectorStoreProviderFactory, vectorCollectionResolver);
     }
 
     @Test
     void testSearchGrouped() {
+        AiVectorCollection collection = new AiVectorCollection();
+        collection.setCollection("test");
+        collection.setStoreType("memory");
+        collection.setDimension(3);
+        collection.setDistanceMetric("COSINE");
+        when(vectorCollectionResolver.resolve(any(), any())).thenReturn(collection);
+
         VectorDocument apiDoc = new VectorDocument();
         apiDoc.setId("api_1");
         apiDoc.setCollection("test");

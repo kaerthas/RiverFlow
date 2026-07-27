@@ -58,11 +58,22 @@ public class PromptTemplateEngine {
         StringBuffer sb = new StringBuffer();
         StandardEvaluationContext context = new StandardEvaluationContext();
         if (variables != null) {
+            // 把 variables 作为 root object，使 #{businessId} 可直接从 Map 取值；
+            // 同时保留 setVariable，兼容 #{#var} 写法。
+            context.setRootObject(variables);
             variables.forEach(context::setVariable);
         }
         while (matcher.find()) {
             String expr = matcher.group(1);
-            Object value = spelParser.parseExpression(expr).getValue(context);
+            Object value;
+            try {
+                value = spelParser.parseExpression(expr).getValue(context);
+            } catch (Exception e) {
+                // Prompt 中经常包含示例代码里的 #{...}（如 SQL 占位符、条件表达式），
+                // 这些不是模板变量，解析失败时保留原文，避免破坏示例并导致整个生成流程中断。
+                matcher.appendReplacement(sb, Matcher.quoteReplacement(matcher.group(0)));
+                continue;
+            }
             matcher.appendReplacement(sb, value == null ? "" : Matcher.quoteReplacement(value.toString()));
         }
         matcher.appendTail(sb);

@@ -1,12 +1,12 @@
-package com.riverflow.admin.modules.workflow.validate.rules;
+package com.riverflow.api.modules.workflow.validate.rules;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
-import com.riverflow.admin.modules.workflow.validate.FlowValidationResult;
-import com.riverflow.admin.modules.workflow.validate.FlowValidationRule;
 import com.riverflow.api.entity.FlowEdge;
 import com.riverflow.api.entity.FlowNode;
 import com.riverflow.api.enums.FlowNodeTypeEnum;
+import com.riverflow.api.modules.workflow.validate.FlowValidationResult;
+import com.riverflow.api.modules.workflow.validate.FlowValidationRule;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import org.springframework.expression.spel.standard.SpelExpressionParser;

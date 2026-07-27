@@ -47,6 +47,12 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Groovy（流程语法校验需要解析脚本节点） -->
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy</artifactId>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

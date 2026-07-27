@@ -69,11 +69,14 @@
 <script setup>
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
-import { ref, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { MagicStick, Share, DocumentCopy, Loading } from '@element-plus/icons-vue'
 import { aiGenerateFlowStream } from '@/api/ai'
+import { getApiCatalogList, getApiParams } from '@/api/apiMgr'
+import { getDatasourceList } from '@/api/datasource'
+import request from '@/utils/request'
 
 const router = useRouter()
 const props = defineProps({
@@ -96,7 +99,85 @@ const result = ref(null)
 const thinkingContent = ref('')
 const elapsedTime = ref(0)
 const currentStep = ref('')
+const availableApis = ref([])
+const availableDbSources = ref([])
+const availableNodePlugins = ref([])
 let timer = null
+
+onMounted(() => {
+  loadAvailableResources()
+})
+
+async function loadAvailableResources() {
+  try {
+    const [apiRes, dsRes, pluginRes] = await Promise.all([
+      getApiCatalogList({ page: 1, size: 999, status: 1 }),
+      getDatasourceList({ page: 1, size: 999, status: 1 }),
+      request({ url: '/plugin/loaded', method: 'get' })
+    ])
+    const apis = apiRes.list || apiRes.records || apiRes || []
+    const datasources = dsRes.list || dsRes.records || dsRes || []
+    const plugins = pluginRes.plugins || []
+    availableDbSources.value = datasources.map(ds => ({
+      dsCode: ds.dsCode,
+      dsName: ds.dsName,
+      dbType: ds.dbType
+    }))
+    // 并行加载每个 API 的参数元数据
+    const apiWithParams = await Promise.all(
+      apis.map(async api => {
+        try {
+          const params = await getApiParams(api.id)
+          return buildApiInfo(api, params || [])
+        } catch (e) {
+          return buildApiInfo(api, [])
+        }
+      })
+    )
+    availableApis.value = apiWithParams
+    availableNodePlugins.value = plugins.map(p => ({
+      nodeType: p.nodeType,
+      nodeName: p.nodeName,
+      description: p.description,
+      outputSchema: p.outputSchema
+    }))
+  } catch (e) {
+    availableApis.value = []
+    availableDbSources.value = []
+    availableNodePlugins.value = []
+  }
+}
+
+function buildApiInfo(api, params) {
+  const grouped = { header: [], query: [], body: [], response: [] }
+  ;(params || []).forEach(p => {
+    const info = {
+      paramKey: p.paramKey,
+      paramName: p.paramName,
+      paramType: p.paramType,
+      dataType: p.dataType,
+      required: p.isRequired,
+      defaultValue: p.defaultValue
+    }
+    if (grouped[p.paramType]) {
+      grouped[p.paramType].push(info)
+    }
+  })
+  return {
+    apiCode: api.apiCode,
+    apiName: api.apiName,
+    apiType: api.apiType,
+    pluginType: api.pluginType,
+    method: api.method,
+    url: api.url,
+    contentType: api.contentType,
+    authType: api.authType,
+    headers: grouped.header,
+    queryParams: grouped.query,
+    bodyParams: grouped.body,
+    responseParams: grouped.response
+  }
+}
 
 function startProgress() {
   elapsedTime.value = 0
@@ -136,6 +217,9 @@ function handleGenerate() {
   aiGenerateFlowStream(
     {
       userPrompt: userPrompt.value.trim(),
+      availableApis: availableApis.value,
+      availableDbSources: availableDbSources.value,
+      availableNodePlugins: availableNodePlugins.value,
       provider: props.provider || undefined,
       model: props.model || undefined,
       promptVersion: props.promptVersion || undefined

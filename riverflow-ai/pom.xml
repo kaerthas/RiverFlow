@@ -22,6 +22,12 @@
             <artifactId>riverflow-common</artifactId>
         </dependency>
 
+        <!-- API 契约模块（复用 FlowNode/FlowEdge 及 FlowValidator） -->
+        <dependency>
+            <groupId>com.riverflow</groupId>
+            <artifactId>riverflow-api</artifactId>
+        </dependency>
+
         <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -42,6 +48,12 @@
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
+        </dependency>
+
+        <!-- Groovy（流程语法校验依赖，由 riverflow-api 以 provided 传递，需显式引入） -->
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy</artifactId>
         </dependency>
 
         <!-- HTTP Client（调用 LLM） -->

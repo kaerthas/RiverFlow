@@ -1,8 +1,10 @@
 package com.riverflow.admin.modules.workflow.validate;
 
-import com.riverflow.admin.modules.workflow.validate.rules.BusinessValidationRule;
-import com.riverflow.admin.modules.workflow.validate.rules.GraphStructureValidationRule;
-import com.riverflow.admin.modules.workflow.validate.rules.SyntaxValidationRule;
+import com.riverflow.api.modules.workflow.validate.FlowValidator;
+import com.riverflow.api.modules.workflow.validate.FlowValidationResult;
+import com.riverflow.api.modules.workflow.validate.rules.BusinessValidationRule;
+import com.riverflow.api.modules.workflow.validate.rules.GraphStructureValidationRule;
+import com.riverflow.api.modules.workflow.validate.rules.SyntaxValidationRule;
 import com.riverflow.api.entity.FlowEdge;
 import com.riverflow.api.entity.FlowNode;
 import org.junit.jupiter.api.Test;

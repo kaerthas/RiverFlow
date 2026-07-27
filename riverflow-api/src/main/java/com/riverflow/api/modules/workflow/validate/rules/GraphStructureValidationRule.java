@@ -1,23 +1,44 @@
-package com.riverflow.admin.modules.workflow.validate.rules;
+package com.riverflow.api.modules.workflow.validate.rules;
 
-import com.riverflow.admin.modules.workflow.validate.FlowValidationResult;
-import com.riverflow.admin.modules.workflow.validate.FlowValidationRule;
 import com.riverflow.api.entity.FlowEdge;
 import com.riverflow.api.entity.FlowNode;
 import com.riverflow.api.enums.FlowNodeTypeEnum;
-
+import com.riverflow.api.modules.workflow.validate.FlowValidationResult;
+import com.riverflow.api.modules.workflow.validate.FlowValidationRule;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 图结构校验规则
  *
  * <p>校验节点与边的图结构合法性：节点唯一性、开始/结束节点、边指向、死节点、
- * 连通性、可达性、循环结构等。
+ * 连通性、可达性、循环结构等。</p>
+ * <p>支持通过 {@link #addAllowedNodeTypes(Collection)} 动态注册插件节点类型。</p>
  */
 @Component
 public class GraphStructureValidationRule implements FlowValidationRule {
+
+    private final Set<String> additionalAllowedNodeTypes = ConcurrentHashMap.newKeySet();
+
+    /**
+     * 注册额外的合法节点类型（如节点插件 nodeType）。
+     */
+    public void addAllowedNodeTypes(Collection<String> nodeTypes) {
+        if (nodeTypes != null) {
+            additionalAllowedNodeTypes.addAll(nodeTypes);
+        }
+    }
+
+    /**
+     * 移除已注册的合法节点类型（如节点插件被卸载时）。
+     */
+    public void removeAllowedNodeTypes(Collection<String> nodeTypes) {
+        if (nodeTypes != null) {
+            additionalAllowedNodeTypes.removeAll(nodeTypes);
+        }
+    }
 
     @Override
     public FlowValidationResult validate(List<FlowNode> nodes, List<FlowEdge> edges) {
@@ -53,7 +74,7 @@ public class GraphStructureValidationRule implements FlowValidationRule {
             String nodeType = node.getNodeType();
             if (nodeType == null || nodeType.trim().isEmpty()) {
                 result.addError("节点 [" + node.getNodeId() + "] 未设置类型");
-            } else if (FlowNodeTypeEnum.fromCode(nodeType) == null) {
+            } else if (FlowNodeTypeEnum.fromCode(nodeType) == null && !additionalAllowedNodeTypes.contains(nodeType)) {
                 result.addError("节点 [" + node.getNodeName() + "] 类型 [" + nodeType + "] 不合法");
             }
         }
