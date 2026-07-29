@@ -11,12 +11,20 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.asn1.gm.GMNamedCurves;
+import org.bouncycastle.asn1.x9.X9ECParameters;
+import org.bouncycastle.crypto.engines.SM2Engine;
+import org.bouncycastle.crypto.params.ECDomainParameters;
+import org.bouncycastle.crypto.params.ECPublicKeyParameters;
+import org.bouncycastle.crypto.params.ParametersWithRandom;
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
+import org.bouncycastle.math.ec.ECPoint;
+import org.bouncycastle.util.encoders.Hex;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
+import java.nio.charset.StandardCharsets;
+import java.security.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -648,6 +656,49 @@ public class GroovyUtils {
         }
     }
 
+    /*****
+     * **
+     * SM2util新增
+     * *
+     * **********/
+    public static String encrypt(byte[] data, PublicKey publicKey) {
+        BCECPublicKey key = (BCECPublicKey) publicKey;
+        return encrypt(data, Hex.toHexString(key.getQ().getEncoded(false)));
+    }
 
+    public static String encrypt(String data, String pubKeyHexString) {
+        return encrypt(data.getBytes(StandardCharsets.UTF_8), pubKeyHexString);
+    }
+
+    /**
+     * SM2加密算法
+     *
+     * @param pubKeyHexString 公钥（16进制字符串）
+     * @param data            明文数据
+     * @return hex字符串
+     */
+    public static String encrypt(byte[] data, String pubKeyHexString) {
+        // 获取一条SM2曲线参数
+        X9ECParameters sm2ECParameters = GMNamedCurves.getByName("sm2p256v1");
+        // 构造ECC算法参数，曲线方程、椭圆曲线G点、大整数N
+        ECDomainParameters domainParameters = new ECDomainParameters(sm2ECParameters.getCurve(), sm2ECParameters.getG(), sm2ECParameters.getN());
+        //提取公钥点
+        ECPoint pukPoint = sm2ECParameters.getCurve().decodePoint(Hex.decode(pubKeyHexString));
+        // 公钥前面的02或者03表示是压缩公钥，04表示未压缩公钥, 04的时候，可以去掉前面的04
+        ECPublicKeyParameters publicKeyParameters = new ECPublicKeyParameters(pukPoint, domainParameters);
+
+        SM2Engine sm2Engine = new SM2Engine(SM2Engine.Mode.C1C3C2);
+        // 设置sm2为加密模式
+        sm2Engine.init(true, new ParametersWithRandom(publicKeyParameters, new SecureRandom()));
+
+        byte[] arrayOfBytes = null;
+        try {
+            arrayOfBytes = sm2Engine.processBlock(data, 0, data.length);
+        } catch (Exception e) {
+            System.out.println("SM2加密时出现异常:" + e.getMessage());
+        }
+        return Hex.toHexString(arrayOfBytes);
+
+    }
 
 }

@@ -30,6 +30,7 @@ import com.riverflow.api.entity.FlowNode;
 import com.riverflow.api.entity.FlowTask;
 import com.riverflow.api.enums.FlowNodeTypeEnum;
 import com.riverflow.api.enums.FlowTaskStatusEnum;
+import com.riverflow.api.plugin.FileResponse;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import javax.annotation.PostConstruct;
@@ -39,8 +40,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -330,7 +335,7 @@ public class OpenApiController {
      * 根据用户配置的 open_path + open_method 匹配并执行
      */
     @RequestMapping(value = "/**", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
-    public R<Object> executeDynamic(HttpServletRequest request) {
+    public Object executeDynamic(HttpServletRequest request, HttpServletResponse response) {
         String path = extractOpenPath(request);
         String method = request.getMethod();
 
@@ -346,7 +351,7 @@ public class OpenApiController {
         }
 
         Map<String, Object> params = readRequestParams(request);
-        return execute(api, params);
+        return execute(api, params, response);
     }
 
     private String extractOpenPath(HttpServletRequest request) {
@@ -418,22 +423,69 @@ public class OpenApiController {
         return merged;
     }
 
-    private R<Object> execute(ApiCatalog api, Map<String, Object> params) {
+    private Object execute(ApiCatalog api, Map<String, Object> params, HttpServletResponse response) {
         if (api.getStatus() == null || api.getStatus() != 1) {
             return R.fail("接口未发布: " + api.getApiCode());
         }
 
         String apiType = api.getApiType();
+        Object result;
         if ("sql".equals(apiType)) {
-            return executeSql(api, params);
+            result = executeSql(api, params);
         } else if ("proxy".equals(apiType)) {
-            return executeProxy(api, params);
+            result = executeProxy(api, params);
         } else if ("script".equals(apiType)) {
-            return executeScript(api, params);
+            result = executeScript(api, params);
         } else if ("plugin".equals(apiType)) {
-            return executePlugin(api, params);
+            result = executePlugin(api, params);
         } else {
             return R.fail("不支持的接口类型: " + apiType);
+        }
+        
+        // 处理文件流响应
+        if (result instanceof R) {
+            Object data = ((R<?>) result).getData();
+            if (data instanceof FileResponse) {
+                return writeFileSync((FileResponse) data, response);
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 写入文件流响应
+     */
+    private Object writeFileSync(FileResponse fileResponse, HttpServletResponse response) {
+        try (InputStream is = fileResponse.getInputStream();
+             OutputStream os = response.getOutputStream()) {
+            
+            // 设置响应头
+            response.setContentType(fileResponse.getContentType() != null ? 
+                fileResponse.getContentType() : "application/octet-stream");
+            
+            String fileName = fileResponse.getFileName();
+            if (fileName != null) {
+                String encodedFileName = URLEncoder.encode(fileName, "UTF-8");
+                response.setHeader("Content-Disposition", "attachment; filename=\"" + encodedFileName + "\"");
+            }
+            
+            if (fileResponse.getContentLength() > 0) {
+                response.setContentLengthLong(fileResponse.getContentLength());
+            }
+            
+            // 写入流
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+            os.flush();
+            
+            return null; // 返回 null 表示已直接写入响应
+        } catch (Exception e) {
+            log.error("文件流写入失败", e);
+            return R.fail("文件下载失败: " + e.getMessage());
         }
     }
 
