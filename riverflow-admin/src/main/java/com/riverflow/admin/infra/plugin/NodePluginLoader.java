@@ -82,7 +82,32 @@ public class NodePluginLoader implements SmartInitializingSingleton {
             return;
         }
         log.info("所有Spring Bean初始化完成，开始加载插件...");
+        
+        // 加载内置插件（Spring Bean 形式）
+        loadBuiltInPlugins();
+        
+        // 加载外部插件（JAR 文件形式）
         loadPluginsFromDatabase();
+    }
+    
+    /**
+     * 加载内置插件（通过 @Component 注解的插件）
+     */
+    private void loadBuiltInPlugins() {
+        Map<String, NodePlugin> builtInPlugins = applicationContext.getBeansOfType(NodePlugin.class);
+        for (Map.Entry<String, NodePlugin> entry : builtInPlugins.entrySet()) {
+            NodePlugin plugin = entry.getValue();
+            String nodeType = plugin.getNodeType();
+            
+            if (pluginMap.containsKey(nodeType)) {
+                log.warn("内置插件类型已存在: {}", nodeType);
+                continue;
+            }
+            
+            pluginMap.put(nodeType, plugin);
+            log.info("注册内置插件: type={}, name={}", nodeType, plugin.getNodeName());
+        }
+        log.info("内置插件加载完成，共 {} 个", builtInPlugins.size());
     }
 
     private void loadPluginsFromDatabase() {
