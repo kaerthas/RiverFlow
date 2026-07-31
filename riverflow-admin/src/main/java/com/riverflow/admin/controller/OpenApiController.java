@@ -369,7 +369,33 @@ public class OpenApiController {
         if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
             return NestedParamResolver.resolve(request);
         }
+        // 支持 application/text 类型，直接作为字符串传递
+        if (contentType != null && contentType.contains("text")) {
+            return readBodyAsString(request);
+        }
         return readBodyAsMap(request);
+    }
+
+    /**
+     * 从请求体中读取纯文本内容
+     * 用于 application/text 等非 JSON 格式的请求体
+     */
+    private Map<String, Object> readBodyAsString(HttpServletRequest request) {
+        try (BufferedReader reader = request.getReader()) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
+            String body = sb.toString();
+            
+            Map<String, Object> params = new HashMap<>();
+            params.put("body", body);
+            return params;
+        } catch (IOException e) {
+            log.warn("读取纯文本请求体失败: {}", e.getMessage());
+            return new HashMap<>();
+        }
     }
 
     /**
@@ -581,26 +607,32 @@ public class OpenApiController {
         }
 
         if (params != null && !params.isEmpty()) {
-            for (Map.Entry<String, Object> entry : params.entrySet()) {
-                String key = entry.getKey();
-                if (key.startsWith("header.")) {
-                    headers.put(key.substring(7), String.valueOf(entry.getValue()));
-                } else if (key.startsWith("query.")) {
-                    queryParams.put(key.substring(6), String.valueOf(entry.getValue()));
-                } else if (key.startsWith("body.")) {
-                    if (body == null) body = new JSONObject();
-                    ((JSONObject) body).put(key.substring(5), entry.getValue());
+            // 特殊处理：如果 params 直接包含 "body" 键且值为字符串，说明是纯文本请求
+            if (params.containsKey("body") && params.get("body") instanceof String) {
+                body = params.get("body");
+            } else {
+                // 常规处理：解析 header/query/body. 前缀参数
+                for (Map.Entry<String, Object> entry : params.entrySet()) {
+                    String key = entry.getKey();
+                    if (key.startsWith("header.")) {
+                        headers.put(key.substring(7), String.valueOf(entry.getValue()));
+                    } else if (key.startsWith("query.")) {
+                        queryParams.put(key.substring(6), String.valueOf(entry.getValue()));
+                    } else if (key.startsWith("body.")) {
+                        if (body == null) body = new JSONObject();
+                        ((JSONObject) body).put(key.substring(5), entry.getValue());
+                    }
                 }
-            }
-            boolean hasPrefixed = params.keySet().stream().anyMatch(k ->
-                    k.startsWith("header.") || k.startsWith("query.") || k.startsWith("body."));
-            if (!hasPrefixed) {
-                if (body == null) {
-                    body = new JSONObject(params);
-                } else {
-                    JSONObject bodyJson = (JSONObject) body;
-                    for (Map.Entry<String, Object> entry : params.entrySet()) {
-                        bodyJson.put(entry.getKey(), entry.getValue());
+                boolean hasPrefixed = params.keySet().stream().anyMatch(k ->
+                        k.startsWith("header.") || k.startsWith("query.") || k.startsWith("body."));
+                if (!hasPrefixed) {
+                    if (body == null) {
+                        body = new JSONObject(params);
+                    } else {
+                        JSONObject bodyJson = (JSONObject) body;
+                        for (Map.Entry<String, Object> entry : params.entrySet()) {
+                            bodyJson.put(entry.getKey(), entry.getValue());
+                        }
                     }
                 }
             }

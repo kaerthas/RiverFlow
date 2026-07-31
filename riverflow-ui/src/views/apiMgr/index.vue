@@ -308,6 +308,7 @@
                     <el-option label="application/json" value="application/json" />
                     <el-option label="application/x-www-form-urlencoded" value="application/x-www-form-urlencoded" />
                     <el-option label="multipart/form-data" value="multipart/form-data" />
+                    <el-option label="application/text" value="application/text" />
                     <el-option label="text/xml" value="text/xml" />
                   </el-select>
                 </el-form-item>

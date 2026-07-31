@@ -394,9 +394,50 @@
             </template>
 
             <!-- 输入映射 -->
-            <template v-if="selectedNode?.type === 'api' && currentApiParams.length > 0">
+            <template v-if="selectedNode?.type === 'api' && (currentApiParams.length > 0 || isTextApi)">
               <div class="section-title">接口入参绑定</div>
-              <el-tabs v-model="apiParamActiveTab" class="api-param-tabs">
+
+              <!-- 纯文本接口：请求体内容绑定 -->
+              <template v-if="isTextApi">
+                <div class="mapping-tip">该接口 Content-Type 为纯文本类型，请将完整请求体内容映射到下方</div>
+                <div class="api-param-mapping-list">
+                  <div class="mapping-card api-param-card">
+                    <div class="mapping-row api-param-row">
+                      <span class="param-badge body">BODY</span>
+                      <div class="param-info">
+                        <span class="param-key">请求体内容</span>
+                        <span class="param-name">完整文本内容</span>
+                        <span class="param-required">*</span>
+                      </div>
+                      <el-icon class="mapping-arrow"><Right /></el-icon>
+                      <el-input
+                        :model-value="getInputSource('body')"
+                        @update:model-value="setInputSource('body', $event)"
+                        :placeholder="getInputType('body') === 'var' ? '来源(上下文变量)，如 context.message' : '输入常量文本'"
+                        size="small"
+                        @change="updateNodeProperties"
+                      >
+                        <template #prefix>
+                          <el-button
+                            size="small"
+                            :type="getInputType('body') === 'var' ? 'primary' : ''"
+                            text
+                            style="padding: 0 4px; font-size: 11px; margin-right: 4px;"
+                            @click.stop="toggleInputType('body')"
+                          >
+                            {{ getInputType('body') === 'var' ? '变量' : '常量' }}
+                          </el-button>
+                        </template>
+                        <template #suffix>
+                          <el-icon v-if="getInputType('body') === 'var'" class="var-picker-trigger" @click="openVarPicker('body')"><ArrowDownBold /></el-icon>
+                        </template>
+                      </el-input>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <el-tabs v-if="currentApiParams.length > 0" v-model="apiParamActiveTab" class="api-param-tabs">
                 <el-tab-pane v-for="ptype in ['body','header','query']" :key="ptype" :label="apiParamTypeLabels[ptype]" :name="ptype">
                   <div class="api-param-mapping-list">
                     <div v-for="param in apiParamsByType[ptype]" :key="param.id || param.paramKey" class="mapping-card api-param-card">
@@ -892,6 +933,7 @@ const parsingColumns = ref(false)
 const currentApiParams = ref([])
 const currentResponseParams = ref([])
 const allApiParams = ref([])
+const currentApi = ref(null)
 
 // 变量选择器
 const varPickerVisible = ref(false)
@@ -2188,6 +2230,7 @@ async function loadApiParamsByCode(apiCode) {
     }
   }
   const api = apiCatalogOptions.value.find(a => a.apiCode === apiCode)
+  currentApi.value = api || null
   if (api?.id) {
     try {
       const params = await getApiParams(api.id)
@@ -2271,10 +2314,14 @@ function toggleInputType(target) {
 }
 
 const customInputMappings = computed(() => {
-  if (selectedNode.value?.type !== 'api' || currentApiParams.value.length === 0) {
+  if (selectedNode.value?.type !== 'api') {
     return inputMappings.value
   }
   const apiTargets = new Set(currentApiParams.value.map(p => getApiTarget(p)))
+  // 纯文本接口的请求体内容(target='body')也作为内置映射，不显示在自定义映射中
+  if (isTextApi.value) {
+    apiTargets.add('body')
+  }
   return inputMappings.value.filter(m => !apiTargets.has(m.target))
 })
 
@@ -2289,6 +2336,12 @@ const apiParamsByType = computed(() => {
 
 const apiParamTypeLabels = { header: 'HEADER', query: 'QUERY', body: 'BODY' }
 const apiParamActiveTab = ref('body')
+
+// 判断当前选中的接口是否为纯文本类型（application/text / text/plain 等）
+const isTextApi = computed(() => {
+  const contentType = currentApi.value?.contentType
+  return contentType && contentType.includes('text')
+})
 
 // 获取当前节点的所有上游节点ID（拓扑排序）
 function getUpstreamNodeIds(currentId, graphData) {

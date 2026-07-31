@@ -32,6 +32,7 @@
         <el-radio-group v-model="paramType" size="small">
           <el-radio-button label="json">JSON</el-radio-button>
           <el-radio-button label="form">Form</el-radio-button>
+          <el-radio-button label="text">Text</el-radio-button>
         </el-radio-group>
       </el-form-item>
 
@@ -39,7 +40,7 @@
         <MonacoEditor v-model="bodyJson" language="json" height="160px" />
       </el-form-item>
 
-      <el-form-item v-else>
+      <el-form-item v-else-if="paramType === 'form'">
         <div v-for="(p, idx) in formParams" :key="idx" class="kv-row">
           <el-input v-model="p.key" placeholder="Key" size="small" />
           <el-input v-model="p.value" placeholder="Value" size="small" />
@@ -50,6 +51,16 @@
         <el-button link type="primary" size="small" @click="formParams.push({ key: '', value: '' })">
           <el-icon><Plus /></el-icon> 添加参数
         </el-button>
+      </el-form-item>
+
+      <el-form-item v-else-if="paramType === 'text'">
+        <el-input
+          v-model="bodyText"
+          type="textarea"
+          :rows="6"
+          placeholder="请输入纯文本内容"
+          size="small"
+        />
       </el-form-item>
 
       <el-form-item>
@@ -82,6 +93,7 @@ const debugUrl = ref(props.url)
 const debugMethod = ref(props.method)
 const paramType = ref('json')
 const bodyJson = ref('{}')
+const bodyText = ref('')
 const headers = ref([{ key: 'Content-Type', value: 'application/json' }])
 const formParams = ref([{ key: '', value: '' }])
 const sending = ref(false)
@@ -89,6 +101,21 @@ const response = ref(null)
 
 watch(() => props.url, (v) => { debugUrl.value = v })
 watch(() => props.method, (v) => { debugMethod.value = v })
+
+// 切换参数类型时自动更新默认 Content-Type
+watch(paramType, (v) => {
+  const contentTypeHeader = headers.value.find(h => h.key.toLowerCase() === 'content-type')
+  if (v === 'json') {
+    if (contentTypeHeader) contentTypeHeader.value = 'application/json'
+    else headers.value.push({ key: 'Content-Type', value: 'application/json' })
+  } else if (v === 'form') {
+    if (contentTypeHeader) contentTypeHeader.value = 'application/x-www-form-urlencoded'
+    else headers.value.push({ key: 'Content-Type', value: 'application/x-www-form-urlencoded' })
+  } else if (v === 'text') {
+    if (contentTypeHeader) contentTypeHeader.value = 'application/text'
+    else headers.value.push({ key: 'Content-Type', value: 'application/text' })
+  }
+})
 
 const responseBody = computed(() => {
   if (!response.value) return ''
@@ -114,11 +141,13 @@ async function sendRequest() {
     if (debugMethod.value !== 'GET' && debugMethod.value !== 'DELETE') {
       if (paramType.value === 'json') {
         body = bodyJson.value
-      } else {
+      } else if (paramType.value === 'form') {
         const fd = new URLSearchParams()
         formParams.value.forEach(p => { if (p.key) fd.append(p.key, p.value) })
         body = fd.toString()
         hdr['Content-Type'] = 'application/x-www-form-urlencoded'
+      } else if (paramType.value === 'text') {
+        body = bodyText.value
       }
     }
 

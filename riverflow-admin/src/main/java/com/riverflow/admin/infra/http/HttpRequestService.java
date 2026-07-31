@@ -63,6 +63,9 @@ public class HttpRequestService {
                     } else if (contentType != null && contentType.contains("form")) {
                         result = executorFactory.createFormPostExecutor(useProxy, proxyHost, proxyPort)
                                 .execute(finalUrl, headers, convertToStringMap(body), timeout);
+                    } else if (contentType != null && contentType.contains("text")) {
+                        result = executorFactory.createTextPostExecutor(useProxy, proxyHost, proxyPort)
+                                .execute(finalUrl, headers, body != null ? body.toString() : null, timeout);
                     } else {
                         result = executorFactory.createJsonPostExecutor(useProxy, proxyHost, proxyPort)
                                 .execute(finalUrl, headers, body, timeout);

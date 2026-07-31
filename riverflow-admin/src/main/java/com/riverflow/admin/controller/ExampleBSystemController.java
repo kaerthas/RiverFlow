@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
+import java.io.BufferedReader;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -175,5 +177,101 @@ public class ExampleBSystemController {
 
         log.info("[B系统模拟] 返回完税状态: HTBH={}, Wsbz={}, 查询次数={}", htbh, wsbz, count);
         return R.ok(data);
+    }
+
+    /**
+     * 接收纯文本请求接口（测试 application/text）
+     * 支持任意 Content-Type，将请求体作为纯文本读取
+     *
+     * 测试方式：
+     * curl -X POST -H "Content-Type: application/text" -d "你好，这是一段测试文本" http://localhost:8080/example/b-sys/text/receive
+     *
+     * 返回：接收到的文本内容和元数据
+     */
+    @PostMapping("/text/receive")
+    public R<Map<String, Object>> receiveText(HttpServletRequest request) {
+        try {
+            // 读取请求体内容
+            StringBuilder requestBody = new StringBuilder();
+            BufferedReader reader = request.getReader();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                requestBody.append(line);
+            }
+
+            String content = requestBody.toString();
+            String contentType = request.getContentType();
+            int contentLength = request.getContentLength();
+
+            log.info("[B系统模拟] 接收纯文本请求: Content-Type={}, Length={}, Content={}",
+                    contentType, contentLength, content);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("receivedText", content);
+            data.put("contentType", contentType);
+            data.put("contentLength", contentLength);
+            data.put("timestamp", LocalDateTime.now().toString());
+            data.put("message", "纯文本请求接收成功");
+
+            return R.ok(data);
+        } catch (Exception e) {
+            log.error("[B系统模拟] 读取纯文本请求失败", e);
+            return R.fail("读取请求失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 返回纯文本响应接口（测试 application/text 响应）
+     * 返回格式化的纯文本信息
+     *
+     * 测试方式：
+     * curl -X GET http://localhost:8080/example/b-sys/text/send
+     *
+     * 返回：纯文本格式的响应
+     */
+    @GetMapping(value = "/text/send", produces = "application/text;charset=UTF-8")
+    @ResponseBody
+    public String sendText() {
+        String response = "=== 纯文本响应测试 ===\n" +
+                "时间: " + LocalDateTime.now() + "\n" +
+                "状态: 成功\n" +
+                "消息: 这是来自B系统的纯文本响应\n" +
+                "提示: Content-Type=application/text\n" +
+                "==================";
+
+        log.info("[B系统模拟] 发送纯文本响应: length={}", response.length());
+        return response;
+    }
+
+    /**
+     * 纯文本双向测试接口
+     * 接收纯文本请求并返回纯文本响应
+     *
+     * 测试方式：
+     * curl -X POST -H "Content-Type: application/text" -d "测试数据123" http://localhost:8080/example/b-sys/text/echo
+     *
+     * 返回：将接收到的文本原样返回
+     */
+    @PostMapping(value = "/text/echo", produces = "application/text;charset=UTF-8")
+    @ResponseBody
+    public String echoText(HttpServletRequest request) {
+        try {
+            // 读取请求体
+            StringBuilder requestBody = new StringBuilder();
+            BufferedReader reader = request.getReader();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                requestBody.append(line);
+            }
+
+            String receivedText = requestBody.toString();
+            log.info("[B系统模拟] Echo测试: 接收={}, 返回={}", receivedText, receivedText);
+
+            // 原样返回
+            return receivedText;
+        } catch (Exception e) {
+            log.error("[B系统模拟] Echo测试失败", e);
+            return "错误: " + e.getMessage();
+        }
     }
 }

@@ -92,9 +92,12 @@ public class ApiNodeExecutor implements NodeExecutor {
                 }
                 if (value == null) continue;
 
-                // target 格式：header.xxx / body.xxx / body.xxx.yyy / query.xxx
+                // target 格式：header.xxx / body / body.xxx / body.xxx.yyy / query.xxx
                 if (target.startsWith("header.")) {
                     headers.put(target.substring(7), String.valueOf(value));
+                } else if ("body".equals(target)) {
+                    // 纯文本接口：将整个值作为请求体
+                    body = value;
                 } else if (target.startsWith("body.")) {
                     if (body == null) body = new JSONObject();
                     String bodyPath = target.substring(5);

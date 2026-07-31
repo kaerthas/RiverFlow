@@ -42,6 +42,13 @@ public class HttpRequestExecutorFactory {
         return new XmlPostRequestExecutor(httpClient, createStrategy(useProxy, proxyHost, proxyPort));
     }
 
+    /**
+     * 创建纯文本 POST 执行器
+     */
+    public TextPostRequestExecutor createTextPostExecutor(boolean useProxy, String proxyHost, int proxyPort) {
+        return new TextPostRequestExecutor(httpClient, createStrategy(useProxy, proxyHost, proxyPort));
+    }
+
     private RequestExecutionStrategy createStrategy(boolean useProxy, String proxyHost, int proxyPort) {
         if (useProxy && proxyHost != null && !proxyHost.isEmpty()) {
             return new HttpProxyStrategy(proxyHost, proxyPort);
