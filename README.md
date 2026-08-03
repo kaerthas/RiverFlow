@@ -236,7 +236,7 @@ npm run dev
 
 - 用户名：`admin`
 - 密码：`admin123`
-
+![登录](docs-site/img/1f87d81a-b4aa-4548-a468-a6c8fdc77d64.png)
 ---
 
 ## 🎯 核心功能详解
