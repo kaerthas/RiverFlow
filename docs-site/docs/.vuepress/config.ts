@@ -94,7 +94,7 @@ export default defineUserConfig({
 
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2024-present RiverFlow Team',
+      copyright: 'Copyright © 2026-present RiverFlow Team',
     },
   }),
 })
