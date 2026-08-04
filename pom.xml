@@ -15,9 +15,9 @@
         <module>riverflow-common</module>
         <module>riverflow-api</module>
         <module>riverflow-admin</module>
+        <module>riverflow-gateway</module>
         <module>river-minio</module>
-        <module>river-ixa-gateway</module>
-        <module>river-qrcode-plugin</module>
+
     </modules>
 
     <properties>
@@ -28,6 +28,8 @@
 
         <!-- 核心框架 -->
         <spring-boot.version>2.7.18</spring-boot.version>
+        <!-- Spring Cloud（Gateway）：与 Spring Boot 2.7.x 匹配的 2021.0.x 版本矩阵 -->
+        <spring-cloud.version>2021.0.8</spring-cloud.version>
         <!-- 安全补丁：覆盖 Spring Framework / Security 版本（修复 CVE-2024-38827/22257/38819 等） -->
         <spring-framework.version>5.3.39</spring-framework.version>
         <spring-security.version>5.7.13</spring-security.version>
@@ -63,6 +65,15 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
                 <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Spring Cloud BOM（Gateway / LoadBalancer） -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

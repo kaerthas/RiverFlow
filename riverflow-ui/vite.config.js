@@ -14,10 +14,16 @@ export default defineConfig({
     port: 5173,
     open: true,
     proxy: {
+      // 统一走 Spring Cloud Gateway（8081），与生产 nginx 行为一致；
+      // 不重写路径：网关按 /api/** 匹配动态路由并自行 StripPrefix。
       '^/api/': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        target: 'http://localhost:8081',
+        changeOrigin: true
+      },
+      // 开放接口与规范前缀同样走网关
+      '^/(open|admin)/': {
+        target: 'http://localhost:8081',
+        changeOrigin: true
       }
     }
   },

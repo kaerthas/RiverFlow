@@ -20,14 +20,13 @@ COPY river-apisix-auth/pom.xml river-apisix-auth/
 COPY river-hw-auth/pom.xml river-hw-auth/
 
 # Download dependencies
-RUN mvn dependency:go-offline -pl riverflow-admin -am -q
+RUN mvn dependency:go-offline -pl riverflow-gateway -am -q
 
-# Copy source code and build
+# Copy source code and build（gateway 仅依赖 riverflow-common）
 COPY riverflow-common/src riverflow-common/src
-COPY riverflow-api/src riverflow-api/src
-COPY riverflow-admin/src riverflow-admin/src
+COPY riverflow-gateway/src riverflow-gateway/src
 
-RUN mvn clean package -pl riverflow-admin -am -DskipTests -q
+RUN mvn clean package -pl riverflow-gateway -am -DskipTests -q
 
 # ==========================================
 # Stage 2: Runtime
@@ -35,7 +34,7 @@ RUN mvn clean package -pl riverflow-admin -am -DskipTests -q
 FROM eclipse-temurin:8-jre-alpine
 
 LABEL maintainer="RiverFlow Team"
-LABEL description="RiverFlow Admin Service"
+LABEL description="RiverFlow API Gateway"
 
 WORKDIR /app
 
@@ -44,15 +43,14 @@ RUN apk add --no-cache tzdata \
     && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && echo "Asia/Shanghai" > /etc/timezone
 
-# Create directories for logs and plugins
-RUN mkdir -p /app/logs /app/plugins
+RUN mkdir -p /app/logs
 
 # Copy jar from builder
-COPY --from=builder /build/riverflow-admin/target/riverflow-admin-1.0.0-SNAPSHOT.jar app.jar
+COPY --from=builder /build/riverflow-gateway/target/riverflow-gateway-1.0.0-SNAPSHOT.jar app.jar
 
-ENV JAVA_OPTS="-Xms512m -Xmx1024m -Djava.security.egd=file:/dev/./urandom"
+ENV JAVA_OPTS="-Xms256m -Xmx512m -Djava.security.egd=file:/dev/./urandom"
 ENV TZ=Asia/Shanghai
 
-EXPOSE 8080
+EXPOSE 8081
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

@@ -1,0 +1,70 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: riverflow-gateway
+
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: false          # 关闭服务发现自动路由，全部使用数据库动态路由
+      # routes 不在此配置：全部路由由 DbRouteDefinitionRepository 从 gateway_route 表加载
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 120s
+
+  # Reactive Redis（限流等治理能力的存储）
+  redis:
+    host: ${SPRING_REDIS_HOST:127.0.0.1}
+    port: ${SPRING_REDIS_PORT:6379}
+    password: ${SPRING_REDIS_PASSWORD:}
+    database: ${SPRING_REDIS_DATABASE:0}
+    timeout: 10s
+
+  # 路由表所在数据源（与 riverflow-admin 业务库一致）
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:river_online}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:java}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 10
+      connection-test-query: SELECT 1
+
+# MyBatis Plus（仅用于路由表读写，不配置 XML mapper）
+mybatis-plus:
+  global-config:
+    db-config:
+      id-type: assign_id
+  configuration:
+    map-underscore-to-camel-case: true
+
+# JWT 配置：必须与 riverflow-admin 保持一致，网关仅做解析初筛，不签发 Token
+jwt:
+  secret: ${JWT_SECRET:riverflow-jwt-secret-key-2024-spring-boot}
+  header: Authorization
+  token-prefix: "Bearer "
+
+# 仅暴露健康检查端点，供 Nginx / 监控探活（不暴露 gateway 内置路由端点，路由管理走 /gateway/route/**）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    com.riverflow.gateway: info
+    org.springframework.cloud.gateway: info
