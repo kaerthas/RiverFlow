@@ -21,6 +21,13 @@ export function testConnection(id) {
 }
 
 /**
+ * 重载数据源连接池（重建并注册到动态路由）
+ */
+export function reloadDatasource(id) {
+  return request({ url: `/datasource/${id}/reload`, method: 'post' })
+}
+
+/**
  * 上传 JDBC 驱动 JAR 包
  * @param {FormData} formData 包含 dsCode、driverClass、file
  */

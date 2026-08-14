@@ -23,6 +23,7 @@
             <p class="ds-url" :title="ds.url">{{ ds.url }}</p>
             <div class="ds-actions">
               <el-button link type="primary" size="small" @click="handleTest(ds)">测试连接</el-button>
+              <el-button link type="warning" size="small" @click="handleReload(ds)">重载</el-button>
               <el-button link type="primary" size="small" @click="handleEdit(ds)">编辑</el-button>
               <el-button link type="danger" size="small" @click="handleDelete(ds)">删除</el-button>
             </div>
@@ -107,6 +108,7 @@ import {
   updateDatasource,
   deleteDatasource,
   testConnection,
+  reloadDatasource,
   uploadDriverJar
 } from '@/api/datasource'
 
@@ -314,6 +316,20 @@ async function handleTest(ds) {
     ElMessage.success(`数据源「${ds.dsName}」连接成功`)
   } catch (e) {
     // 失败已由 request 拦截器提示
+  }
+}
+
+async function handleReload(ds) {
+  try {
+    await ElMessageBox.confirm(
+      `重载将重建数据源「${ds.dsName}」的连接池并注册到动态路由，期间该数据源上的查询会短暂中断。是否继续？`,
+      '重载确认',
+      { type: 'warning', confirmButtonText: '重载', cancelButtonText: '取消' }
+    )
+    await reloadDatasource(ds.id)
+    ElMessage.success(`数据源「${ds.dsName}」重载成功`)
+  } catch (e) {
+    // 取消或失败（失败已由 request 拦截器提示）
   }
 }
 
