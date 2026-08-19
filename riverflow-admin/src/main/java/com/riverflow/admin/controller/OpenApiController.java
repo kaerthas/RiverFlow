@@ -532,7 +532,9 @@ public class OpenApiController {
             return R.fail("SQL 安全校验失败: " + checkResult.getMessage());
         }
 
-        PreparedSql prepared = resolvePreparedSql(sql, params);
+        // 按接口参数定义的数据类型转换绑定值（query/form 参数均为字符串，数值型参数不转换会导致 LIMIT 等场景报错）
+        Map<String, String> dataTypes = loadParamDataTypes(api.getId());
+        PreparedSql prepared = resolvePreparedSql(sql, params, dataTypes);
         String resolvedSql = prepared.getSql();
         Object[] args = prepared.getArgs();
         Long dsId = api.getDsId();
@@ -649,8 +651,9 @@ public class OpenApiController {
 
     /**
      * 解析 SQL 中的 #{xxx} 占位符，返回预编译SQL和参数列表
+     * 绑定值按接口参数定义的数据类型转换（见 {@link #convertByDataType}）
      */
-    private PreparedSql resolvePreparedSql(String sql, Map<String, Object> params) {
+    private PreparedSql resolvePreparedSql(String sql, Map<String, Object> params, Map<String, String> dataTypes) {
         if (params == null || params.isEmpty()) {
             return new PreparedSql(sql, new Object[0]);
         }
@@ -665,11 +668,83 @@ public class OpenApiController {
             if (value instanceof Map || value instanceof List) {
                 value = JSON.toJSONString(value);
             }
+            value = convertByDataType(value, lookupDataType(dataTypes, key));
             args.add(value);
             matcher.appendReplacement(sb, "?");
         }
         matcher.appendTail(sb);
         return new PreparedSql(sb.toString(), args.toArray());
+    }
+
+    /**
+     * 加载接口参数定义的数据类型：paramKey -> dataType（小写）
+     */
+    private Map<String, String> loadParamDataTypes(Long apiId) {
+        Map<String, String> dataTypes = new HashMap<>();
+        if (apiId == null) {
+            return dataTypes;
+        }
+        List<ApiParam> apiParams = apiParamService.getParamsByApiId(apiId);
+        if (apiParams == null) {
+            return dataTypes;
+        }
+        for (ApiParam p : apiParams) {
+            if (p.getParamKey() == null || p.getParamKey().isEmpty()
+                    || p.getDataType() == null || p.getDataType().isEmpty()) {
+                continue;
+            }
+            dataTypes.putIfAbsent(p.getParamKey(), p.getDataType().toLowerCase());
+        }
+        return dataTypes;
+    }
+
+    /**
+     * 查找占位符对应的数据类型，嵌套路径（如 baseInfo.page）先按全路径匹配，再按末段键名匹配
+     */
+    private String lookupDataType(Map<String, String> dataTypes, String key) {
+        if (dataTypes == null || dataTypes.isEmpty()) {
+            return null;
+        }
+        String dataType = dataTypes.get(key);
+        if (dataType == null) {
+            int dot = key.lastIndexOf('.');
+            if (dot >= 0) {
+                dataType = dataTypes.get(key.substring(dot + 1));
+            }
+        }
+        return dataType;
+    }
+
+    /**
+     * 按参数定义的数据类型转换字符串值：query/form 传入的参数一律为字符串，
+     * 数值、布尔类型若仍以字符串绑定会导致 LIMIT 等场景报错，这里按声明类型转换；
+     * 未声明类型或非字符串值原样返回，转换失败保留原值
+     */
+    private Object convertByDataType(Object value, String dataType) {
+        if (!(value instanceof String) || dataType == null) {
+            return value;
+        }
+        String str = ((String) value).trim();
+        if (str.isEmpty()) {
+            return null;
+        }
+        try {
+            switch (dataType) {
+                case "int":
+                    return Integer.valueOf(str);
+                case "long":
+                    return Long.valueOf(str);
+                case "double":
+                    return Double.valueOf(str);
+                case "boolean":
+                    return "true".equalsIgnoreCase(str) || "1".equals(str);
+                default:
+                    return value;
+            }
+        } catch (NumberFormatException e) {
+            log.warn("参数值 [{}] 无法转换为 {}，按原字符串绑定", str, dataType);
+            return value;
+        }
     }
 
     private static class PreparedSql {
