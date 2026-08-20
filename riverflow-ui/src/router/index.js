@@ -48,6 +48,12 @@ const routes = [
         meta: { title: '接口注册', icon: 'Link' }
       },
       {
+        path: 'api-call-log',
+        name: 'ApiCallLog',
+        component: () => import('@/views/apiCallLog/index.vue'),
+        meta: { title: '调用日志', icon: 'Tickets' }
+      },
+      {
         path: 'workflow',
         name: 'Workflow',
         redirect: '/workflow/definition',

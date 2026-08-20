@@ -12,6 +12,7 @@ import com.riverflow.admin.infra.openapi.SqlCheckResult;
 import com.riverflow.admin.infra.openapi.SqlSafetyChecker;
 import com.riverflow.admin.infra.plugin.ApiPluginLoader;
 import com.riverflow.admin.modules.workflow.engine.FlowEngine;
+import com.riverflow.admin.service.ApiCallLogService;
 import com.riverflow.admin.service.ApiCatalogService;
 import com.riverflow.admin.service.ApiParamService;
 import com.riverflow.admin.service.ApiScriptService;
@@ -20,6 +21,7 @@ import com.riverflow.admin.service.FlowDefinitionService;
 import com.riverflow.admin.service.FlowInstanceService;
 import com.riverflow.admin.service.FlowNodeService;
 import com.riverflow.admin.service.FlowTaskService;
+import com.riverflow.api.entity.ApiCallLog;
 import com.riverflow.api.entity.ApiCatalog;
 import com.riverflow.api.entity.ApiParam;
 import com.riverflow.api.entity.ApiScript;
@@ -98,6 +100,8 @@ public class OpenApiController {
     private ApiPluginLoader apiPluginLoader;
     @Autowired
     private DynamicRoutingDataSource dynamicRoutingDataSource;
+    @Autowired
+    private ApiCallLogService apiCallLogService;
 
     private JdbcTemplate dynamicJdbcTemplate;
 
@@ -336,6 +340,7 @@ public class OpenApiController {
      */
     @RequestMapping(value = "/**", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
     public Object executeDynamic(HttpServletRequest request, HttpServletResponse response) {
+        long startTime = System.currentTimeMillis();
         String path = extractOpenPath(request);
         String method = request.getMethod();
 
@@ -351,7 +356,82 @@ public class OpenApiController {
         }
 
         Map<String, Object> params = readRequestParams(request);
-        return execute(api, params, response);
+
+        Object result;
+        try {
+            result = execute(api, params, response);
+        } catch (Exception e) {
+            log.error("接口执行异常: apiCode={}", api.getApiCode(), e);
+            saveCallLog(api, request, params, null, null, System.currentTimeMillis() - startTime, 0, e.getMessage());
+            return R.fail("接口执行异常: " + e.getMessage());
+        }
+
+        // 判定调用结果：R 包装按业务码判定，null 表示文件流已直接写出
+        Integer statusCode = null;
+        int callStatus = 1;
+        String errorMsg = null;
+        Object responseForLog = result;
+        if (result instanceof R) {
+            R<?> r = (R<?>) result;
+            statusCode = r.getCode();
+            if (r.getCode() != 200) {
+                callStatus = 0;
+                errorMsg = r.getMsg();
+            }
+        } else if (result == null) {
+            statusCode = response.getStatus();
+            responseForLog = "[文件流响应]";
+        }
+        saveCallLog(api, request, params, responseForLog, statusCode, System.currentTimeMillis() - startTime, callStatus, errorMsg);
+
+        return result;
+    }
+
+    /**
+     * 记录接口调用日志（含入参/出参），异步写入不影响接口响应
+     */
+    private void saveCallLog(ApiCatalog api, HttpServletRequest request, Map<String, Object> params,
+                             Object result, Integer statusCode, long costTime, int callStatus, String errorMsg) {
+        try {
+            ApiCallLog callLog = new ApiCallLog();
+            callLog.setApiId(api.getId());
+            callLog.setApiCode(api.getApiCode());
+            callLog.setRequestUrl(request.getRequestURI());
+            callLog.setRequestMethod(request.getMethod());
+            callLog.setRequestHeaders(truncate(extractHeaders(request), 4000));
+            callLog.setRequestBody(truncate(params != null && !params.isEmpty() ? JSON.toJSONString(params) : null, 8000));
+            callLog.setResponseBody(truncate(result != null ? JSON.toJSONString(result) : null, 8000));
+            callLog.setStatusCode(statusCode);
+            callLog.setCostTime((int) Math.min(costTime, Integer.MAX_VALUE));
+            callLog.setCallStatus(callStatus);
+            callLog.setErrorMsg(truncate(errorMsg, 2000));
+            apiCallLogService.saveAsync(callLog);
+        } catch (Exception e) {
+            log.error("记录接口调用日志失败: apiCode={}, error={}", api.getApiCode(), e.getMessage());
+        }
+    }
+
+    /**
+     * 提取请求头为 JSON（排除签名密钥类敏感头）
+     */
+    private String extractHeaders(HttpServletRequest request) {
+        Map<String, String> headers = new HashMap<>();
+        java.util.Enumeration<String> names = request.getHeaderNames();
+        while (names != null && names.hasMoreElements()) {
+            String name = names.nextElement();
+            if ("appsecret".equalsIgnoreCase(name) || "app-secret".equalsIgnoreCase(name)) {
+                continue;
+            }
+            headers.put(name, request.getHeader(name));
+        }
+        return JSON.toJSONString(headers);
+    }
+
+    private String truncate(String str, int maxLength) {
+        if (str != null && str.length() > maxLength) {
+            return str.substring(0, maxLength) + "...[截断]";
+        }
+        return str;
     }
 
     private String extractOpenPath(HttpServletRequest request) {
