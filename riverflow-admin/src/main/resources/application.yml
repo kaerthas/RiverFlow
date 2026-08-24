@@ -25,7 +25,7 @@ spring:
       strict: false
       datasource:
         master:
-          url: jdbc:mysql://127.0.0.1:3306/riverflow?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+          url: jdbc:mysql://localhost:3306/river_online?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
           username: root
           password: java # 本地开发使用明文，生产环境请使用Jasypt加密
           driver-class-name: com.mysql.cj.jdbc.Driver

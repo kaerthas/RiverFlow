@@ -40,6 +40,10 @@
         <oracle-jdbc.version>23.5.0.24.07</oracle-jdbc.version>
         <postgresql.version>42.7.4</postgresql.version>
 
+        <!-- 分布式协调 -->
+        <redisson.version>3.23.4</redisson.version>
+        <shedlock.version>4.42.0</shedlock.version>
+
         <!-- 工具库 -->
         <hutool.version>5.8.25</hutool.version>
         <fastjson2.version>2.0.43</fastjson2.version>
@@ -176,6 +180,25 @@
                 <groupId>com.github.xiaoymin</groupId>
                 <artifactId>knife4j-openapi3-spring-boot-starter</artifactId>
                 <version>${knife4j.version}</version>
+            </dependency>
+
+            <!-- Redisson：分布式锁（看门狗自动续期、安全释放） -->
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+
+            <!-- ShedLock：分布式调度锁 -->
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-spring</artifactId>
+                <version>${shedlock.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-provider-redis-spring</artifactId>
+                <version>${shedlock.version}</version>
             </dependency>
 
             <!-- 内部模块依赖管理 -->

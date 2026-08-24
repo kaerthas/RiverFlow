@@ -13,6 +13,7 @@ import com.riverflow.api.entity.FlowTask;
 import com.riverflow.api.enums.FlowInstanceStatusEnum;
 import com.riverflow.api.enums.FlowTaskTypeEnum;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -47,9 +48,12 @@ public class FlowScheduler {
     private FlowEngine flowEngine;
 
     /**
-     * 每10秒扫描一次待执行任务，提交到线程池异步执行
+     * 每10秒扫描一次待执行任务，提交到线程池异步执行。
+     * ShedLock 保证多节点部署时同一时刻只有一个节点执行扫描，
+     * 避免每个节点重复扫描数据库造成压力。
      */
     @Scheduled(fixedRate = 10000)
+    @SchedulerLock(name = "FlowScheduler_scanPendingTasks", lockAtMostFor = "PT9S", lockAtLeastFor = "PT1S")
     public void scanPendingTasks() {
         try {
             List<FlowTask> pendingTasks = flowTaskService.getPendingTasks(LocalDateTime.now());

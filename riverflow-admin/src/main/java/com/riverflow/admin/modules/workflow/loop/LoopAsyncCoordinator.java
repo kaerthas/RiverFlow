@@ -239,7 +239,7 @@ public class LoopAsyncCoordinator {
                     aggregateValue = evaluateExpression(aggregateExpr, iterationContext);
                 }
                 // 结果写入 Redis（按 index 分片）
-                boolean saved = saveIterationResult(instance.getId(), state.getLoopNodeId(), index, aggregateValue);
+                boolean saved = saveIterationResult(instance.getId(), state, index, aggregateValue);
                 if (!saved) {
                     throw new RuntimeException("迭代结果写入 Redis 失败，触发重试: index=" + index);
                 }
@@ -500,49 +500,119 @@ public class LoopAsyncCoordinator {
 
     /**
      * 保存单次迭代结果到 Redis
+     * <p>
+     * TTL 按循环超时时间动态计算（下限30分钟，外加10分钟缓冲），
+     * 避免长时间运行的循环在汇聚前结果提前过期。
      *
      * @return 是否保存成功
      */
-    private boolean saveIterationResult(Long instanceId, String loopNodeId, int index, Object value) {
+    private boolean saveIterationResult(Long instanceId, LoopState state, int index, Object value) {
         try {
+            String loopNodeId = state.getLoopNodeId();
             String resultKey = resultKey(instanceId, loopNodeId, index);
             String statusKey = statusKey(instanceId, loopNodeId, index);
             String jsonValue = value != null ? JSON.toJSONString(value) : "null";
-            redisTemplate.opsForValue().set(resultKey, jsonValue, 30, TimeUnit.MINUTES);
-            redisTemplate.opsForValue().set(statusKey, "SUCCESS", 30, TimeUnit.MINUTES);
+            long ttlMillis = Math.max(state.getTimeout(), TimeUnit.MINUTES.toMillis(30))
+                    + TimeUnit.MINUTES.toMillis(10);
+            redisTemplate.opsForValue().set(resultKey, jsonValue, ttlMillis, TimeUnit.MILLISECONDS);
+            redisTemplate.opsForValue().set(statusKey, "SUCCESS", ttlMillis, TimeUnit.MILLISECONDS);
             return true;
         } catch (Exception e) {
             log.error("[流程实例:{}] 保存迭代结果到 Redis 失败: loopNodeId={}, index={}",
-                    instanceId, loopNodeId, index, e);
+                    instanceId, state.getLoopNodeId(), index, e);
             return false;
         }
     }
 
     /**
-     * 从 Redis 收集所有迭代结果
+     * 收集所有迭代结果
+     * <p>
+     * 主路径从 Redis 按 index 收集（快，且能精确定位到每一项）；
+     * Redis key 过期或异常时，降级为从批次任务的 resultJson 重建——
+     * 批次结果在 LOOP_ITERATION 任务完成时已持久化到数据库，不受 Redis TTL 限制，
+     * 因此执行时长超过 TTL 的长跑循环也能正确汇聚。
      *
-     * @return 结果列表；如果有任一迭代未完成或 Redis 异常，返回 null 以触发降级
+     * @return 结果列表；两条路径都失败时返回 null，由调用方降级到内存 results
      */
     private List<Object> collectIterationResults(Long instanceId, LoopState state) {
         if (state == null || !state.isForeach() || state.getTotal() <= 0) {
             return null;
         }
+        List<Object> results = collectFromRedis(instanceId, state);
+        if (results != null) {
+            return results;
+        }
+        return collectFromTaskRecords(instanceId, state);
+    }
+
+    /**
+     * 从 Redis 按 index 收集迭代结果
+     *
+     * @return 结果列表；任一迭代未就绪或 Redis 异常时返回 null
+     */
+    private List<Object> collectFromRedis(Long instanceId, LoopState state) {
         try {
             List<Object> results = new ArrayList<>(state.getTotal());
             for (int i = 0; i < state.getTotal(); i++) {
-                String statusKey = statusKey(instanceId, state.getLoopNodeId(), i);
-                String status = redisTemplate.opsForValue().get(statusKey);
+                String status = redisTemplate.opsForValue().get(statusKey(instanceId, state.getLoopNodeId(), i));
                 if (!"SUCCESS".equals(status)) {
-                    log.warn("[流程实例:{}] 迭代 {} 状态未就绪，暂不汇聚", instanceId, i);
+                    log.warn("[流程实例:{}] 迭代 {} 状态未就绪，尝试从任务记录重建", instanceId, i);
                     return null;
                 }
-                String resultKey = resultKey(instanceId, state.getLoopNodeId(), i);
-                String value = redisTemplate.opsForValue().get(resultKey);
+                String value = redisTemplate.opsForValue().get(resultKey(instanceId, state.getLoopNodeId(), i));
                 results.add("null".equals(value) ? null : JSON.parse(value));
             }
             return results;
         } catch (Exception e) {
-            log.error("[流程实例:{}] 从 Redis 收集迭代结果失败，降级到内存 results", instanceId, e);
+            log.error("[流程实例:{}] 从 Redis 收集迭代结果失败，尝试从任务记录重建", instanceId, e);
+            return null;
+        }
+    }
+
+    /**
+     * 从批次任务记录（wf_flow_task.result_json）重建迭代结果。
+     * 批次划分算法与 executeIterationTask 保持一致。
+     * 注意：批次内部分元素失败（continueOnFail）时 resultJson 与 index 可能错位，
+     * 该场景结果本就残缺，按顺序映射并告警。
+     */
+    private List<Object> collectFromTaskRecords(Long instanceId, LoopState state) {
+        try {
+            List<FlowTask> batchTasks = flowTaskService.listByInstanceIdAndBatchNo(instanceId, state.getBatchNo());
+            if (batchTasks == null || batchTasks.isEmpty()) {
+                return null;
+            }
+            int total = state.getTotal();
+            int parallelLimit = state.getParallelLimit() > 0 ? state.getParallelLimit() : 5;
+            int batchSize = total / parallelLimit;
+            if (batchSize == 0) {
+                batchSize = 1;
+            }
+            List<Object> results = new ArrayList<>(java.util.Collections.nCopies(total, (Object) null));
+            boolean any = false;
+            for (FlowTask t : batchTasks) {
+                if (!FlowTaskTypeEnum.LOOP_ITERATION.getCode().equals(t.getTaskType())) {
+                    continue;
+                }
+                if (!FlowTaskStatusEnum.SUCCESS.getCode().equals(t.getStatus())) {
+                    continue; // 失败批次结果本就残缺，对应区间保持 null
+                }
+                if (t.getResultJson() == null || t.getResultJson().isEmpty()) {
+                    continue;
+                }
+                int startIndex = (t.getIterationIndex() != null ? t.getIterationIndex() : 0) * batchSize;
+                List<Object> batchResults = JSON.parseArray(t.getResultJson());
+                for (int i = 0; i < batchResults.size() && startIndex + i < total; i++) {
+                    results.set(startIndex + i, batchResults.get(i));
+                }
+                any = true;
+            }
+            if (any) {
+                log.info("[流程实例:{}] 已从任务记录重建迭代结果: loopNodeId={}, total={}",
+                        instanceId, state.getLoopNodeId(), total);
+            }
+            return any ? results : null;
+        } catch (Exception e) {
+            log.error("[流程实例:{}] 从任务记录重建迭代结果失败，降级到内存 results", instanceId, e);
             return null;
         }
     }

@@ -27,6 +27,8 @@ import com.riverflow.api.enums.FlowTaskStatusEnum;
 import com.riverflow.api.enums.FlowTaskTypeEnum;
 import com.riverflow.common.constant.CommonConstant;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -69,6 +71,8 @@ public class FlowEngine {
     private AsyncLogService asyncLogService;
     @Autowired
     private StringRedisTemplate redisTemplate;
+    @Autowired
+    private RedissonClient redissonClient;
     @Autowired
     private FlowNodeService flowNodeService;
     @Autowired
@@ -235,14 +239,22 @@ public class FlowEngine {
         currentTaskHolder.set(task);
         String lockKey = CommonConstant.FLOW_LOCK_PREFIX + instance.getId();
         Set<Long> heldLocks = holdingInstanceLocks.get();
+        RLock lock = redissonClient.getLock(lockKey);
         boolean lockAcquired = false;
 
         // 同线程锁重入：已在执行链中则不再重复获取
         if (!heldLocks.contains(instance.getId())) {
-            int nodeTimeout = node.getTimeout() != null ? node.getTimeout() : 30000;
-            int lockSeconds = Math.max(30, nodeTimeout / 1000 + 10);
-            Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", lockSeconds, TimeUnit.SECONDS);
-            if (!Boolean.TRUE.equals(locked)) {
+            // 非阻塞获取锁；不指定租约时间，由 Redisson 看门狗自动续期（默认30s周期），
+            // 避免节点执行耗时超过锁过期时间后被其他节点重复执行
+            boolean locked;
+            try {
+                locked = lock.tryLock(0, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("[流程实例:{}] 获取分布式锁被中断，跳过本次执行", instance.getId());
+                return;
+            }
+            if (!locked) {
                 log.warn("[流程实例:{}] 获取分布式锁失败，跳过本次执行", instance.getId());
                 return;
             }
@@ -261,9 +273,15 @@ public class FlowEngine {
             instance.setCurrentNodeId(freshInstance.getCurrentNodeId());
             instance.setContextJson(freshInstance.getContextJson());
 
-            // 幂等校验：按具体任务状态
-            if (!FlowTaskStatusEnum.PENDING.getCode().equals(task.getStatus())
-                    && !FlowTaskStatusEnum.WAITING.getCode().equals(task.getStatus())) {
+            // 原子抢占任务：仅当任务仍处于 pending/waiting 时才置为 running，
+            // 防止锁失效或异常窗口内同一任务被多个线程/节点并发执行。
+            // 注意：内存中的 task 对象状态保持原值，后续 executeSingleNode 的分支判断不受影响。
+            boolean acquired = flowTaskService.update(
+                    new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<FlowTask>()
+                            .eq("id", task.getId())
+                            .in("status", FlowTaskStatusEnum.PENDING.getCode(), FlowTaskStatusEnum.WAITING.getCode())
+                            .set("status", FlowTaskStatusEnum.RUNNING.getCode()));
+            if (!acquired) {
                 log.warn("[流程实例:{}] 任务已被其他线程执行（taskId={}, status={}），跳过",
                         instance.getId(), task.getId(), task.getStatus());
                 return;
@@ -276,7 +294,10 @@ public class FlowEngine {
         } finally {
             currentTaskHolder.remove();
             if (lockAcquired) {
-                redisTemplate.delete(lockKey);
+                // 仅释放当前线程持有的锁，防止误删其他节点已获取的锁
+                if (lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
                 heldLocks.remove(instance.getId());
             }
         }
@@ -640,10 +661,20 @@ public class FlowEngine {
                                          List<FlowNode> nodes, List<FlowEdge> edges) {
         String lockKey = CommonConstant.FLOW_LOCK_PREFIX + instance.getId();
         Set<Long> heldLocks = holdingInstanceLocks.get();
+        RLock lock = redissonClient.getLock(lockKey);
         boolean lockAcquired = false;
         if (!heldLocks.contains(instance.getId())) {
-            Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", 30, TimeUnit.SECONDS);
-            if (!Boolean.TRUE.equals(locked)) {
+            // 非阻塞获取锁；不指定租约时间，由 Redisson 看门狗自动续期
+            boolean locked;
+            try {
+                locked = lock.tryLock(0, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("[流程实例:{}] LOOP_AGGREGATE 获取分布式锁被中断，跳过: taskId={}",
+                        instance.getId(), task.getId());
+                return;
+            }
+            if (!locked) {
                 log.warn("[流程实例:{}] LOOP_AGGREGATE 获取分布式锁失败，跳过: taskId={}",
                         instance.getId(), task.getId());
                 return;
@@ -658,7 +689,10 @@ public class FlowEngine {
                     instance.getId(), task.getId(), e);
         } finally {
             if (lockAcquired) {
-                redisTemplate.delete(lockKey);
+                // 仅释放当前线程持有的锁，防止误删其他节点已获取的锁
+                if (lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
                 heldLocks.remove(instance.getId());
             }
         }
