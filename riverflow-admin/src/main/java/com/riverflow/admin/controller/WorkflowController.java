@@ -61,14 +61,14 @@ public class WorkflowController {
 
     @GetMapping("/definition/list")
     public R<Page<FlowDefinition>> listDefinitions(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String flowCode,
-            @RequestParam(required = false) String flowName,
-            @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) String triggerType,
-            @RequestParam(required = false) String executionMode,
-            @RequestParam(required = false) Boolean showAllVersions) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
+            @RequestParam(value = "flowCode", required = false) String flowCode,
+            @RequestParam(value = "flowName", required = false) String flowName,
+            @RequestParam(value = "status", required = false) Integer status,
+            @RequestParam(value = "triggerType", required = false) String triggerType,
+            @RequestParam(value = "executionMode", required = false) String executionMode,
+            @RequestParam(value = "showAllVersions", required = false) Boolean showAllVersions) {
 
         boolean allVersions = showAllVersions != null && showAllVersions;
 
@@ -429,10 +429,10 @@ public class WorkflowController {
 
     @GetMapping("/instance/list")
     public R<Page<FlowInstance>> listInstances(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String flowCode,
-            @RequestParam(required = false) String status) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
+            @RequestParam(value = "flowCode", required = false) String flowCode,
+            @RequestParam(value = "status", required = false) String status) {
         Page<FlowInstance> pageParam = new Page<>(page, size);
         QueryWrapper<FlowInstance> qw = new QueryWrapper<>();
         if (flowCode != null && !flowCode.isEmpty()) qw.eq("flow_code", flowCode);
@@ -448,8 +448,8 @@ public class WorkflowController {
 
     @PostMapping("/instance/{flowId}/start")
     public R<String> startInstance(@PathVariable Long flowId,
-                                  @RequestParam(required = false) String businessKey,
-                                  @RequestParam(required = false) String itemCode) {
+                                  @RequestParam(value = "businessKey", required = false) String businessKey,
+                                  @RequestParam(value = "itemCode", required = false) String itemCode) {
         FlowDefinition def = flowDefinitionService.getById(flowId);
         if (def == null) return R.fail("流程定义不存在");
         if (def.getStatus() != 1) return R.fail("流程未发布，无法启动");
@@ -694,8 +694,8 @@ public class WorkflowController {
     @GetMapping("/instance/{instanceId}/logs")
     public R<Page<FlowLog>> getInstanceLogs(
             @PathVariable Long instanceId,
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "5") Integer size) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "5") Integer size) {
         Page<FlowLog> pageParam = new Page<>(page, size);
         QueryWrapper<FlowLog> qw = new QueryWrapper<>();
         qw.eq("instance_id", instanceId);

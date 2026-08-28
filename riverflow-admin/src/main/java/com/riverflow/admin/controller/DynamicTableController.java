@@ -49,12 +49,12 @@ public class DynamicTableController {
 
     @GetMapping("/list")
     public R<Page<DynamicTable>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String tableCode,
-            @RequestParam(required = false) String tableName,
-            @RequestParam(required = false) Long dsId,
-            @RequestParam(required = false) Integer status) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
+            @RequestParam(value = "tableCode", required = false) String tableCode,
+            @RequestParam(value = "tableName", required = false) String tableName,
+            @RequestParam(value = "dsId", required = false) Long dsId,
+            @RequestParam(value = "status", required = false) Integer status) {
         Page<DynamicTable> pageParam = new Page<>(page, size);
         QueryWrapper<DynamicTable> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);
@@ -154,7 +154,7 @@ public class DynamicTableController {
      */
     @PostMapping("/{id}/gen-api")
     public R<Map<String, Object>> generateApi(@PathVariable Long id,
-                                              @RequestParam(defaultValue = "application/json") String contentType) {
+                                              @RequestParam(value = "contentType", defaultValue = "application/json") String contentType) {
         DynamicTable table = dynamicTableService.getById(id);
         if (table == null) {
             return R.fail("表不存在");

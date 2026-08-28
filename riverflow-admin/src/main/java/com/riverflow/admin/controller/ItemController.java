@@ -22,11 +22,11 @@ public class ItemController {
 
     @GetMapping("/list")
     public R<Page<Item>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String regionCode,
-            @RequestParam(required = false) String itemCode,
-            @RequestParam(required = false) String itemName) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
+            @RequestParam(value = "regionCode", required = false) String regionCode,
+            @RequestParam(value = "itemCode", required = false) String itemCode,
+            @RequestParam(value = "itemName", required = false) String itemName) {
         Page<Item> pageParam = new Page<>(page, size);
         QueryWrapper<Item> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);

@@ -24,11 +24,11 @@ public class FlowLogController {
 
     @GetMapping("/list")
     public R<Page<FlowLog>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) Long instanceId,
-            @RequestParam(required = false) String logType,
-            @RequestParam(required = false) String nodeId) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
+            @RequestParam(value = "instanceId", required = false) Long instanceId,
+            @RequestParam(value = "logType", required = false) String logType,
+            @RequestParam(value = "nodeId", required = false) String nodeId) {
         Page<FlowLog> pageParam = new Page<>(page, size);
         QueryWrapper<FlowLog> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);

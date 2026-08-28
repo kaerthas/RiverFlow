@@ -38,9 +38,9 @@ public class ApiAppController {
 
     @GetMapping("/list")
     public R<Page<ApiApp>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "100") Integer size,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "100") Integer size,
+            @RequestParam(value = "keyword", required = false) String keyword) {
         Page<ApiApp> pageParam = new Page<>(page, size);
         QueryWrapper<ApiApp> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);
@@ -58,7 +58,7 @@ public class ApiAppController {
     }
 
     @GetMapping("/list-all")
-    public R<List<ApiApp>> listAll(@RequestParam(required = false) Integer status) {
+    public R<List<ApiApp>> listAll(@RequestParam(value = "status", required = false) Integer status) {
         QueryWrapper<ApiApp> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);
         if (status != null) {

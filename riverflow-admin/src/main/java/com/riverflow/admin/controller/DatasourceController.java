@@ -48,8 +48,8 @@ public class DatasourceController {
 
     @GetMapping("/list")
     public R<Page<Datasource>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size) {
         Page<Datasource> pageParam = new Page<>(page, size);
         QueryWrapper<Datasource> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);

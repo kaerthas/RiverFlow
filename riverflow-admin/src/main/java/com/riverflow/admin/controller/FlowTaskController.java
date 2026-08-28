@@ -24,11 +24,11 @@ public class FlowTaskController {
 
     @GetMapping("/list")
     public R<Page<FlowTask>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) Long instanceId,
-            @RequestParam(required = false) String nodeName,
-            @RequestParam(required = false) String status) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
+            @RequestParam(value = "instanceId", required = false) Long instanceId,
+            @RequestParam(value = "nodeName", required = false) String nodeName,
+            @RequestParam(value = "status", required = false) String status) {
         Page<FlowTask> pageParam = new Page<>(page, size);
         QueryWrapper<FlowTask> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);

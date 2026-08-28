@@ -22,11 +22,11 @@ public class ApiScriptController {
 
     @GetMapping("/list")
     public R<Page<ApiScript>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String scriptType,
-            @RequestParam(required = false) String scriptCode,
-            @RequestParam(required = false) String scriptName) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
+            @RequestParam(value = "scriptType", required = false) String scriptType,
+            @RequestParam(value = "scriptCode", required = false) String scriptCode,
+            @RequestParam(value = "scriptName", required = false) String scriptName) {
         Page<ApiScript> pageParam = new Page<>(page, size);
         QueryWrapper<ApiScript> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);

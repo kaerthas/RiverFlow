@@ -24,11 +24,11 @@ public class FlowNodeController {
 
     @GetMapping("/list")
     public R<Page<FlowNode>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) Long flowId,
-            @RequestParam(required = false) String nodeType,
-            @RequestParam(required = false) String nodeName) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
+            @RequestParam(value = "flowId", required = false) Long flowId,
+            @RequestParam(value = "nodeType", required = false) String nodeType,
+            @RequestParam(value = "nodeName", required = false) String nodeName) {
         Page<FlowNode> pageParam = new Page<>(page, size);
         QueryWrapper<FlowNode> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);

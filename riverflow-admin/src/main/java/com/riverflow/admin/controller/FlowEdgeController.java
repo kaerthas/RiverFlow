@@ -24,10 +24,10 @@ public class FlowEdgeController {
 
     @GetMapping("/list")
     public R<Page<FlowEdge>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) Long flowId,
-            @RequestParam(required = false) String conditionType) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
+            @RequestParam(value = "flowId", required = false) Long flowId,
+            @RequestParam(value = "conditionType", required = false) String conditionType) {
         Page<FlowEdge> pageParam = new Page<>(page, size);
         QueryWrapper<FlowEdge> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);

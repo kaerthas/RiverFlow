@@ -22,12 +22,12 @@ public class ApiCallLogController {
 
     @GetMapping("/list")
     public R<Page<ApiCallLog>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String apiCode,
-            @RequestParam(required = false) Integer callStatus,
-            @RequestParam(required = false) String startTime,
-            @RequestParam(required = false) String endTime) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
+            @RequestParam(value = "apiCode", required = false) String apiCode,
+            @RequestParam(value = "callStatus", required = false) Integer callStatus,
+            @RequestParam(value = "startTime", required = false) String startTime,
+            @RequestParam(value = "endTime", required = false) String endTime) {
         Page<ApiCallLog> pageParam = new Page<>(page, size);
         QueryWrapper<ApiCallLog> qw = new QueryWrapper<>();
         // 列表页不查询大文本字段，详情接口单独获取

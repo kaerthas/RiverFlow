@@ -69,7 +69,7 @@ public class MonitorController {
      * 最近日志
      */
     @GetMapping("/recent-logs")
-    public R<List<FlowLog>> recentLogs(@RequestParam(defaultValue = "20") Integer limit) {
+    public R<List<FlowLog>> recentLogs(@RequestParam(value = "limit", defaultValue = "20") Integer limit) {
         List<FlowLog> logs = flowLogService.list(
                 new QueryWrapper<FlowLog>()
                         .eq("del_flag", 0)
@@ -142,7 +142,7 @@ public class MonitorController {
      * 最新接口调用记录
      */
     @GetMapping("/recent-calls")
-    public R<List<ApiCallLog>> recentCalls(@RequestParam(defaultValue = "10") Integer limit) {
+    public R<List<ApiCallLog>> recentCalls(@RequestParam(value = "limit", defaultValue = "10") Integer limit) {
         List<ApiCallLog> logs = apiCallLogService.list(
                 new QueryWrapper<ApiCallLog>()
                         .select(ApiCallLog.class, field -> !"request_headers".equals(field.getColumn())

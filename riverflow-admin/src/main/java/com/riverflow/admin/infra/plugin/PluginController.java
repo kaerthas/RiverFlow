@@ -168,11 +168,11 @@ public class PluginController {
 
     @GetMapping("/list")
     public R<Page<SysPlugin>> listPlugins(
-            @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String pluginName,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String status) {
+            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
+            @RequestParam(value = "pluginName", required = false) String pluginName,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "status", required = false) String status) {
 
         Page<SysPlugin> page = new Page<>(pageNum, pageSize);
         QueryWrapper<SysPlugin> wrapper = new QueryWrapper<>();

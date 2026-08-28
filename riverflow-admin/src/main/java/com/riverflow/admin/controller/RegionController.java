@@ -27,7 +27,7 @@ public class RegionController {
     }
 
     @GetMapping("/list")
-    public R<List<Region>> list(@RequestParam(required = false) String parentCode) {
+    public R<List<Region>> list(@RequestParam(value = "parentCode", required = false) String parentCode) {
         QueryWrapper<Region> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);
         if (parentCode != null) qw.eq("parent_code", parentCode);

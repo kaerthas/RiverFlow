@@ -38,11 +38,11 @@ public class ApiCatalogController {
 
     @GetMapping("/list")
     public R<Page<ApiCatalog>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String apiCode,
-            @RequestParam(required = false) String apiName,
-            @RequestParam(required = false) Long appId) {
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
+            @RequestParam(value = "apiCode", required = false) String apiCode,
+            @RequestParam(value = "apiName", required = false) String apiName,
+            @RequestParam(value = "appId", required = false) Long appId) {
         Page<ApiCatalog> pageParam = new Page<>(page, size);
         QueryWrapper<ApiCatalog> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);

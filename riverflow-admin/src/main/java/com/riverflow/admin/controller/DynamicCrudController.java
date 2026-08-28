@@ -62,8 +62,8 @@ public class DynamicCrudController {
     @GetMapping("/{tableId}/data")
     public R<Map<String, Object>> listData(
             @PathVariable Long tableId,
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
             @RequestParam Map<String, String> allParams) {
 
         DynamicTable table = dynamicTableService.getById(tableId);
