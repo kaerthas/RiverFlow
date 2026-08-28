@@ -17,6 +17,7 @@ import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -49,10 +50,18 @@ public class DynamicTableController {
     @GetMapping("/list")
     public R<Page<DynamicTable>> list(
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String tableCode,
+            @RequestParam(required = false) String tableName,
+            @RequestParam(required = false) Long dsId,
+            @RequestParam(required = false) Integer status) {
         Page<DynamicTable> pageParam = new Page<>(page, size);
         QueryWrapper<DynamicTable> qw = new QueryWrapper<>();
         qw.eq("del_flag", 0);
+        qw.like(StringUtils.hasText(tableCode), "table_code", tableCode);
+        qw.like(StringUtils.hasText(tableName), "table_name", tableName);
+        qw.eq(dsId != null, "ds_id", dsId);
+        qw.eq(status != null, "status", status);
         qw.orderByDesc("create_time");
         Page<DynamicTable> result = dynamicTableService.page(pageParam, qw);
 

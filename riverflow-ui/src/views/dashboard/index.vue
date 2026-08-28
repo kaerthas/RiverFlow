@@ -4,7 +4,7 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">数据大盘</h1>
-        <p class="page-subtitle">实时监控流程实例运行状态与系统健康度</p>
+        <p class="page-subtitle">接口、应用与调用量实时总览</p>
       </div>
       <div class="header-actions">
         <div class="live-indicator">
@@ -14,70 +14,54 @@
       </div>
     </div>
 
-    <!-- Bento 统计卡片：非对称布局 -->
-    <div class="bento-grid">
-      <!-- 主卡片：总数 -->
-      <div class="bento-card bento-card--primary">
-        <div class="card-bg-glow"></div>
+    <!-- 接口服务统计 -->
+    <h3 class="section-title">接口服务</h3>
+    <div class="stats-grid">
+      <div class="bento-card">
         <div class="card-content">
           <div class="card-meta">
             <div class="meta-icon blue">
-              <el-icon :size="20"><Document /></el-icon>
+              <el-icon :size="20"><Connection /></el-icon>
             </div>
-            <span class="meta-label">流程实例总数</span>
+            <span class="meta-label">注册接口数</span>
           </div>
-          <div class="card-value rf-mono">{{ stats.total }}</div>
-          <div class="card-trend">
-            <span class="trend-badge up">
-              <el-icon><ArrowUp /></el-icon> 12.5%
-            </span>
-            <span class="trend-label">较上月</span>
-          </div>
+          <div class="card-value rf-mono">{{ apiStats.apiCount }}</div>
         </div>
       </div>
 
-      <!-- 次卡片：已完成 -->
-      <div class="bento-card bento-card--success">
+      <div class="bento-card">
         <div class="card-content">
           <div class="card-meta">
             <div class="meta-icon green">
-              <el-icon :size="20"><CircleCheck /></el-icon>
+              <el-icon :size="20"><Grid /></el-icon>
             </div>
-            <span class="meta-label">已完成</span>
+            <span class="meta-label">接入应用数</span>
           </div>
-          <div class="card-value rf-mono">{{ stats.completed }}</div>
-          <div class="card-trend">
-            <span class="trend-badge up">
-              <el-icon><ArrowUp /></el-icon> 8.3%
-            </span>
-            <span class="trend-label">较上月</span>
-          </div>
+          <div class="card-value rf-mono">{{ apiStats.appCount }}</div>
         </div>
       </div>
 
-      <!-- 小卡片：运行中 -->
-      <div class="bento-card bento-card--small">
+      <div class="bento-card">
+        <div class="card-content">
+          <div class="card-meta">
+            <div class="meta-icon purple">
+              <el-icon :size="20"><DataAnalysis /></el-icon>
+            </div>
+            <span class="meta-label">接口调用总量</span>
+          </div>
+          <div class="card-value rf-mono">{{ apiStats.callTotal }}</div>
+        </div>
+      </div>
+
+      <div class="bento-card">
         <div class="card-content">
           <div class="card-meta">
             <div class="meta-icon orange">
-              <el-icon :size="18"><Loading /></el-icon>
+              <el-icon :size="20"><TrendCharts /></el-icon>
             </div>
-            <span class="meta-label">运行中</span>
+            <span class="meta-label">今日调用量</span>
           </div>
-          <div class="card-value rf-mono" style="font-size: 28px;">{{ stats.running }}</div>
-        </div>
-      </div>
-
-      <!-- 小卡片：失败 -->
-      <div class="bento-card bento-card--small">
-        <div class="card-content">
-          <div class="card-meta">
-            <div class="meta-icon red">
-              <el-icon :size="18"><Warning /></el-icon>
-            </div>
-            <span class="meta-label">失败/异常</span>
-          </div>
-          <div class="card-value rf-mono" style="font-size: 28px;">{{ stats.failed }}</div>
+          <div class="card-value rf-mono">{{ apiStats.callToday }}</div>
         </div>
       </div>
     </div>
@@ -87,13 +71,11 @@
       <div class="chart-card chart-card--wide">
         <div class="chart-header">
           <div>
-            <h3 class="chart-title">流程实例状态分布</h3>
-            <p class="chart-desc">近30天实例创建与完成趋势</p>
+            <h3 class="chart-title">接口调用趋势</h3>
+            <p class="chart-desc">近7天接口调用量</p>
           </div>
           <div class="chart-legend">
-            <span class="legend-item"><span class="dot blue"></span>总数</span>
-            <span class="legend-item"><span class="dot green"></span>已完成</span>
-            <span class="legend-item"><span class="dot orange"></span>运行中</span>
+            <span class="legend-item"><span class="dot blue"></span>调用量</span>
           </div>
         </div>
         <div ref="barChartRef" class="chart-body"></div>
@@ -102,43 +84,59 @@
       <div class="chart-card">
         <div class="chart-header">
           <div>
-            <h3 class="chart-title">实例状态占比</h3>
-            <p class="chart-desc">当前实例分布</p>
+            <h3 class="chart-title">调用结果占比</h3>
+            <p class="chart-desc">接口调用成功/失败分布</p>
           </div>
         </div>
         <div ref="pieChartRef" class="chart-body"></div>
       </div>
     </div>
 
-    <!-- 最近日志 -->
+    <!-- 最新接口调用记录 -->
     <div class="log-card">
       <div class="log-header">
         <div>
-          <h3 class="log-title">最近运行日志</h3>
-          <p class="log-desc">系统最近执行的流程节点记录</p>
+          <h3 class="log-title">最新接口调用记录</h3>
+          <p class="log-desc">系统最近接收的接口调用请求</p>
         </div>
-        <el-button type="primary" text size="small" class="view-all-btn" @click="$router.push('/workflow/instance')">
+        <el-button type="primary" text size="small" class="view-all-btn" @click="$router.push('/api-call-log')">
           查看全部 <el-icon><ArrowRight /></el-icon>
         </el-button>
       </div>
-      <el-table :data="recentLogs" size="default" v-loading="logLoading" class="rf-table">
-        <el-table-column prop="instanceId" label="实例ID" width="160">
+      <el-table :data="recentCalls" size="default" v-loading="callLoading" class="rf-table" empty-text="暂无数据">
+        <el-table-column prop="apiCode" label="接口编码" width="200">
           <template #default="{ row }">
-            <span class="id-badge">{{ row.instanceId }}</span>
+            <span class="id-badge">{{ row.apiCode }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="nodeName" label="节点名称" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="logType" label="类型" width="90">
+        <el-table-column prop="requestMethod" label="方式" width="90" align="center">
           <template #default="{ row }">
-            <span :class="['type-tag', row.logType || 'info']">
-              {{ row.logType || 'info' }}
+            <span :class="['method-tag', (row.requestMethod || '').toLowerCase()]">
+              {{ row.requestMethod || '-' }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="message" label="日志内容" min-width="240" show-overflow-tooltip />
-        <el-table-column prop="createTime" label="时间" width="160">
+        <el-table-column prop="requestUrl" label="请求地址" min-width="240" show-overflow-tooltip />
+        <el-table-column prop="statusCode" label="状态码" width="90" align="center">
           <template #default="{ row }">
-            <span class="time-text">{{ row.createTime }}</span>
+            <span class="rf-mono">{{ row.statusCode || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="costTime" label="耗时" width="100" align="center">
+          <template #default="{ row }">
+            <span class="rf-mono">{{ row.costTime != null ? row.costTime + ' ms' : '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="callStatus" label="结果" width="90" align="center">
+          <template #default="{ row }">
+            <span :class="['type-tag', row.callStatus === 1 ? 'success' : 'error']">
+              {{ row.callStatus === 1 ? '成功' : '失败' }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="时间" width="170">
+          <template #default="{ row }">
+            <span class="time-text">{{ formatTime(row.createTime) }}</span>
           </template>
         </el-table-column>
       </el-table>
@@ -149,23 +147,26 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
-import { getMonitorStats, getRecentLogs } from '@/api/monitor'
+import { getOverview, getCallTrend, getRecentCalls } from '@/api/monitor'
 
-const stats = reactive({
-  total: 1247,
-  running: 23,
-  completed: 1189,
-  failed: 35
+const apiStats = reactive({
+  apiCount: 0,
+  appCount: 0,
+  callTotal: 0,
+  callToday: 0,
+  callFailed: 0
 })
-const recentLogs = ref([])
-const logLoading = ref(false)
+const recentCalls = ref([])
+const callLoading = ref(false)
 
 const barChartRef = ref(null)
 const pieChartRef = ref(null)
 let barChart = null
 let pieChart = null
 
-function initBarChart() {
+const formatTime = (time) => time ? String(time).replace('T', ' ').substring(0, 19) : '-'
+
+function initBarChart(trend) {
   if (!barChartRef.value) return
   barChart = echarts.init(barChartRef.value)
   const option = {
@@ -181,20 +182,22 @@ function initBarChart() {
     grid: { left: '2%', right: '4%', bottom: '3%', top: '8%', containLabel: true },
     xAxis: {
       type: 'category',
-      data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+      data: trend.map(t => t.date),
       axisLine: { lineStyle: { color: '#e5e7eb' } },
       axisTick: { show: false },
       axisLabel: { color: '#9ca3af', fontSize: 11 }
     },
     yAxis: {
       type: 'value',
+      minInterval: 1,
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } },
       axisLabel: { color: '#9ca3af', fontSize: 11 }
     },
     series: [{
-      data: [120, 182, 151, 194, 230, 180, 210],
+      name: '调用量',
+      data: trend.map(t => t.count),
       type: 'bar',
       barWidth: '36%',
       itemStyle: {
@@ -239,7 +242,7 @@ function initPieChart() {
       textStyle: { color: '#6b7280', fontSize: 11 }
     },
     series: [{
-      name: '实例状态',
+      name: '调用结果',
       type: 'pie',
       radius: ['44%', '72%'],
       center: ['50%', '46%'],
@@ -262,37 +265,44 @@ function initPieChart() {
         scaleSize: 8
       },
       data: [
-        { value: stats.completed, name: '已完成', itemStyle: { color: '#10b981' } },
-        { value: stats.running, name: '运行中', itemStyle: { color: '#f59e0b' } },
-        { value: stats.failed, name: '失败', itemStyle: { color: '#ef4444' } }
+        { value: Math.max(apiStats.callTotal - apiStats.callFailed, 0), name: '成功', itemStyle: { color: '#10b981' } },
+        { value: apiStats.callFailed, name: '失败', itemStyle: { color: '#ef4444' } }
       ].filter(d => d.value > 0)
     }]
   }
   pieChart.setOption(option)
 }
 
-async function loadStats() {
+async function loadOverview() {
   try {
-    const res = await getMonitorStats()
-    Object.assign(stats, res)
-    await nextTick()
-    initBarChart()
-    initPieChart()
+    const res = await getOverview()
+    Object.assign(apiStats, res)
   } catch (e) {
-    // 静默忽略，保持默认演示数据
-    await nextTick()
-    initBarChart()
-    initPieChart()
+    // 静默忽略，保持默认值
   }
+  await nextTick()
+  initPieChart()
 }
 
-async function loadLogs() {
-  logLoading.value = true
+async function loadTrend() {
+  let trend = []
   try {
-    const res = await getRecentLogs(10)
-    recentLogs.value = Array.isArray(res) ? res : []
+    const res = await getCallTrend()
+    trend = Array.isArray(res) ? res : []
+  } catch (e) {
+    // 静默忽略，展示空图表
+  }
+  await nextTick()
+  initBarChart(trend)
+}
+
+async function loadRecentCalls() {
+  callLoading.value = true
+  try {
+    const res = await getRecentCalls(10)
+    recentCalls.value = Array.isArray(res) ? res : []
   } finally {
-    logLoading.value = false
+    callLoading.value = false
   }
 }
 
@@ -302,8 +312,9 @@ function handleResize() {
 }
 
 onMounted(() => {
-  loadStats()
-  loadLogs()
+  loadOverview()
+  loadTrend()
+  loadRecentCalls()
   window.addEventListener('resize', handleResize)
 })
 
@@ -326,7 +337,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 
   .page-title {
     font-size: 26px;
@@ -387,14 +398,21 @@ onUnmounted(() => {
   100% { transform: scale(2.2); opacity: 0; }
 }
 
-// -------- Bento 网格 --------
-.bento-grid {
+// -------- 分区标题 --------
+.section-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--rf-text-secondary);
+  letter-spacing: -0.01em;
+}
+
+// -------- 统计卡片网格 --------
+.stats-grid {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-bottom: 24px;
-  height: 220px;
 }
 
 .bento-card {
@@ -415,26 +433,13 @@ onUnmounted(() => {
     transform: scale(0.99);
   }
 
-  .card-bg-glow {
-    position: absolute;
-    top: -60%;
-    right: -20%;
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    filter: blur(60px);
-    opacity: 0.15;
-    pointer-events: none;
-  }
-
   .card-content {
     position: relative;
     z-index: 1;
     padding: 20px;
-    height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    gap: 16px;
   }
 
   .card-meta {
@@ -454,6 +459,7 @@ onUnmounted(() => {
       &.green { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #10b981; }
       &.orange { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #f59e0b; }
       &.red { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #ef4444; }
+      &.purple { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #7c3aed; }
     }
 
     .meta-label {
@@ -464,70 +470,11 @@ onUnmounted(() => {
   }
 
   .card-value {
-    font-size: 36px;
+    font-size: 32px;
     font-weight: 700;
     color: var(--rf-text-main);
     letter-spacing: -0.03em;
     line-height: 1;
-    margin: 8px 0;
-  }
-
-  .card-trend {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    .trend-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 6px;
-
-      &.up {
-        background: #d1fae5;
-        color: #059669;
-      }
-    }
-
-    .trend-label {
-      font-size: 12px;
-      color: var(--rf-text-muted);
-    }
-  }
-}
-
-.bento-card--primary {
-  grid-row: 1 / 3;
-
-  .card-bg-glow {
-    background: #3b82f6;
-  }
-
-  .card-value {
-    font-size: 44px;
-  }
-}
-
-.bento-card--success {
-  grid-row: 1 / 3;
-
-  .card-bg-glow {
-    background: #10b981;
-  }
-}
-
-.bento-card--small {
-  .card-content {
-    padding: 16px;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  .card-meta {
-    margin-bottom: 4px;
   }
 }
 
@@ -672,7 +619,7 @@ onUnmounted(() => {
   border-radius: 6px;
 }
 
-.type-tag {
+.method-tag {
   display: inline-flex;
   align-items: center;
   padding: 3px 10px;
@@ -680,6 +627,38 @@ onUnmounted(() => {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--rf-neutral-100);
+  color: var(--rf-text-secondary);
+
+  &.get {
+    background: #d1fae5;
+    color: #059669;
+  }
+
+  &.post {
+    background: #dbeafe;
+    color: #2563eb;
+  }
+
+  &.put {
+    background: #fef3c7;
+    color: #d97706;
+  }
+
+  &.delete {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+}
+
+.type-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
   letter-spacing: 0.03em;
 
   &.info {
@@ -711,15 +690,8 @@ onUnmounted(() => {
 
 // 响应式
 @media (max-width: 1200px) {
-  .bento-grid {
+  .stats-grid {
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto;
-    height: auto;
-
-    .bento-card--primary,
-    .bento-card--success {
-      grid-row: auto;
-    }
   }
 
   .charts-section {
@@ -732,7 +704,7 @@ onUnmounted(() => {
     padding: 16px;
   }
 
-  .bento-grid {
+  .stats-grid {
     grid-template-columns: 1fr;
   }
 

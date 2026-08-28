@@ -10,10 +10,33 @@
 
     <div class="rf-search-bar">
       <div class="search-fields">
-        <!-- 暂无搜索条件 -->
+        <el-form :model="queryForm" inline>
+          <el-form-item label="表编码">
+            <el-input v-model="queryForm.tableCode" placeholder="请输入表编码" clearable />
+          </el-form-item>
+          <el-form-item label="表名称">
+            <el-input v-model="queryForm.tableName" placeholder="请输入表名称" clearable />
+          </el-form-item>
+          <el-form-item label="所属数据源">
+            <el-select v-model="queryForm.dsId" placeholder="全部" clearable style="width: 180px">
+              <el-option
+                v-for="ds in datasourceOptions"
+                :key="ds.id"
+                :label="ds.dsName"
+                :value="ds.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="queryForm.status" placeholder="全部" clearable style="width: 120px">
+              <el-option label="已生成" :value="1" />
+              <el-option label="草稿" :value="0" />
+            </el-select>
+          </el-form-item>
+        </el-form>
       </div>
       <div class="search-actions">
-        <button class="btn-search" @click="loadList">查询</button>
+        <button class="btn-search" @click="handleSearch">查询</button>
         <button class="btn-reset" @click="handleReset">重置</button>
       </div>
     </div>
@@ -176,6 +199,13 @@ const currentCrudTable = reactive({
 const tableList = ref([])
 const datasourceOptions = ref([])
 
+const queryForm = reactive({
+  tableCode: '',
+  tableName: '',
+  dsId: null,
+  status: null
+})
+
 const pagination = reactive({
   page: 1,
   size: 10,
@@ -204,7 +234,12 @@ const formatTime = (time) => time ? time.replace('T', ' ').substring(0, 19) : '-
 async function loadList() {
   loading.value = true
   try {
-    const res = await getTableList({ page: pagination.page, size: pagination.size })
+    const params = { page: pagination.page, size: pagination.size }
+    if (queryForm.tableCode) params.tableCode = queryForm.tableCode
+    if (queryForm.tableName) params.tableName = queryForm.tableName
+    if (queryForm.dsId !== null && queryForm.dsId !== undefined && queryForm.dsId !== '') params.dsId = queryForm.dsId
+    if (queryForm.status !== null && queryForm.status !== undefined && queryForm.status !== '') params.status = queryForm.status
+    const res = await getTableList(params)
     tableList.value = res.list || res.records || res || []
     pagination.total = Number(res.total) || 0
   } finally {
@@ -221,7 +256,16 @@ async function loadDatasourceOptions() {
   }
 }
 
+function handleSearch() {
+  pagination.page = 1
+  loadList()
+}
+
 function handleReset() {
+  queryForm.tableCode = ''
+  queryForm.tableName = ''
+  queryForm.dsId = null
+  queryForm.status = null
   pagination.page = 1
   loadList()
 }
