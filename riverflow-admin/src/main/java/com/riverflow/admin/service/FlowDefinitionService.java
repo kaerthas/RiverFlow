@@ -24,4 +24,13 @@ public interface FlowDefinitionService extends IService<FlowDefinition> {
      * @return 新流程定义ID
      */
     Long copyAsNewVersion(Long id);
+
+    /**
+     * 复制指定流程定义为全新流程（新流程编码，草稿状态）
+     * @param id 源流程定义ID
+     * @param newFlowCode 新流程编码（必须唯一）
+     * @param newFlowName 新流程名称
+     * @return 新流程定义ID
+     */
+    Long duplicateAsNewFlow(Long id, String newFlowCode, String newFlowName);
 }

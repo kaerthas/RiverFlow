@@ -1,71 +1,11 @@
 <template>
-  <div class="api-mgr-page" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
-    <!-- 左侧面板：应用目录 -->
-    <Transition name="sidebar">
-      <div v-show="!sidebarCollapsed" class="app-sidebar">
-        <div class="sidebar-header">
-          <div class="sidebar-title">
-            <el-icon :size="18"><FolderOpened /></el-icon>
-            <span>应用目录</span>
-          </div>
-          <div class="sidebar-actions">
-            <el-button type="primary" size="small" circle @click="handleAddApp">
-              <el-icon><Plus /></el-icon>
-            </el-button>
-            <el-button size="small" text circle @click="sidebarCollapsed = true">
-              <el-icon><Fold /></el-icon>
-            </el-button>
-          </div>
-        </div>
-        <div class="app-search">
-          <el-input v-model="appKeyword" placeholder="搜索应用" clearable prefix-icon="Search" size="small" />
-        </div>
-        <div v-loading="appLoading" class="app-list">
-          <div class="app-item all-apps" :class="{ active: !selectedAppId }" @click="selectApp(null)">
-            <div class="app-icon all">
-              <el-icon :size="20"><Grid /></el-icon>
-            </div>
-            <div class="app-info">
-              <div class="app-name">全部接口</div>
-              <div class="app-meta">{{ totalApiCount }} 个接口</div>
-            </div>
-          </div>
-          <div
-            v-for="app in filteredApps"
-            :key="app.id"
-            class="app-item"
-            :class="{ active: selectedAppId === app.id }"
-            @click="selectApp(app)"
-          >
-            <div class="app-icon">
-              <el-icon :size="18"><Folder /></el-icon>
-            </div>
-            <div class="app-info">
-              <div class="app-name">{{ app.appName }}</div>
-              <div class="app-meta">{{ app.appCode }} · {{ app.apiCount || 0 }} 个接口</div>
-            </div>
-            <div class="app-actions">
-              <el-button link type="primary" size="small" @click.stop="handleEditApp(app)">
-                <el-icon><Edit /></el-icon>
-              </el-button>
-              <el-button link type="danger" size="small" @click.stop="handleDeleteApp(app)">
-                <el-icon><Delete /></el-icon>
-              </el-button>
-            </div>
-          </div>
-          <div v-if="filteredApps.length === 0" class="app-empty">
-            暂无应用
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <!-- 右侧面板：API 列表 -->
+  <div class="api-mgr-page">
+    <!-- API 列表 -->
     <div class="api-main">
       <div class="rf-list-header">
         <div class="header-left">
-          <el-button v-if="sidebarCollapsed" class="expand-btn" size="small" text circle @click="sidebarCollapsed = false">
-            <el-icon><Expand /></el-icon>
+          <el-button class="back-btn" size="small" text circle @click="goBack">
+            <el-icon><Back /></el-icon>
           </el-button>
           <div>
             <h1 class="title">{{ currentAppName }}</h1>
@@ -86,6 +26,11 @@
             </el-form-item>
             <el-form-item label="接口名称">
               <el-input v-model="queryForm.apiName" placeholder="请输入接口名称" clearable />
+            </el-form-item>
+            <el-form-item v-if="!selectedAppId" label="所属应用">
+              <el-select v-model="filterAppId" placeholder="全部应用" clearable style="width: 180px">
+                <el-option v-for="app in appList" :key="app.id" :label="app.appName" :value="app.id" />
+              </el-select>
             </el-form-item>
           </el-form>
         </div>
@@ -176,51 +121,6 @@
         </div>
       </div>
     </div>
-
-    <!-- 应用编辑弹窗 -->
-    <el-dialog v-model="appDialogVisible" :title="appDialogTitle" width="520px" top="20vh" destroy-on-close :close-on-click-modal="false">
-      <el-form ref="appFormRef" :model="appForm" :rules="appFormRules" label-width="90px">
-        <el-form-item label="应用编码" prop="appCode">
-          <el-input v-model="appForm.appCode" placeholder="如 user-center" :disabled="!!appForm.id" />
-        </el-form-item>
-        <el-form-item label="应用名称" prop="appName">
-          <el-input v-model="appForm.appName" placeholder="如 用户中心" />
-        </el-form-item>
-        <el-form-item label="应用图标" prop="icon">
-          <el-input v-model="appForm.icon" placeholder="Element Plus 图标名，如 Folder" />
-        </el-form-item>
-        <el-form-item label="AppKey">
-          <el-input v-model="appForm.appKey" placeholder="应用标识">
-            <template #append>
-              <el-button @click="generateAppKey">生成</el-button>
-            </template>
-          </el-input>
-        </el-form-item>
-        <el-form-item label="AppSecret">
-          <el-input v-model="appForm.appSecret" type="password" show-password placeholder="应用密钥">
-            <template #append>
-              <el-button @click="generateAppSecret">生成</el-button>
-            </template>
-          </el-input>
-        </el-form-item>
-        <el-form-item label="排序号" prop="sortNo">
-          <el-input-number v-model="appForm.sortNo" :min="0" :max="9999" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="appForm.status">
-            <el-radio :label="1">启用</el-radio>
-            <el-radio :label="0">禁用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="应用描述" prop="description">
-          <el-input v-model="appForm.description" type="textarea" :rows="3" placeholder="请输入应用描述" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="appDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="appSubmitLoading" @click="handleSubmitApp">保存</el-button>
-      </template>
-    </el-dialog>
 
     <!-- 注册/编辑弹窗 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="780px" top="5vh" destroy-on-close :close-on-click-modal="false" class="edit-dialog">
@@ -481,6 +381,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getApiCatalogList,
@@ -492,27 +393,18 @@ import {
   getApiScriptList,
   getApiPluginList
 } from '@/api/apiMgr'
-import { getApiAppList, getApiAppListAll, saveApiApp, updateApiApp, deleteApiApp, getApiAppCounts } from '@/api/apiApp'
+import { getApiAppList } from '@/api/apiApp'
 import { getDatasourceList } from '@/api/datasource'
 import { getFlowDefinitionList } from '@/api/workflow'
 import ApiDebugger from '@/components/ApiDebugger/index.vue'
 
-/* ========== 应用目录相关 ========== */
-const sidebarCollapsed = ref(false)
-const appLoading = ref(false)
+/* ========== 应用上下文（从应用管理页跳转进入） ========== */
+const route = useRoute()
+const router = useRouter()
 const appList = ref([])
-const appKeyword = ref('')
 const selectedAppId = ref(null)
+const filterAppId = ref(null)
 const totalApiCount = ref(0)
-
-const filteredApps = computed(() => {
-  if (!appKeyword.value) return appList.value
-  const kw = appKeyword.value.toLowerCase()
-  return appList.value.filter(app =>
-    (app.appName && app.appName.toLowerCase().includes(kw)) ||
-    (app.appCode && app.appCode.toLowerCase().includes(kw))
-  )
-})
 
 const currentAppName = computed(() => {
   if (!selectedAppId.value) return '全部接口'
@@ -533,138 +425,16 @@ function getAppName(appId) {
 }
 
 async function loadAppList() {
-  appLoading.value = true
   try {
     const res = await getApiAppList({ page: 1, size: 999, status: 1 })
-    const list = res.list || res.records || res || []
-    // 批量获取 API 数量
-    const appIds = list.map(a => a.id).filter(Boolean)
-    if (appIds.length > 0) {
-      try {
-        const countRes = await getApiAppCounts(appIds)
-        const counts = countRes || {}
-        list.forEach(app => {
-          app.apiCount = counts[app.id] || 0
-        })
-      } catch (e) {
-        // 忽略统计错误
-      }
-    }
-    appList.value = list
-  } finally {
-    appLoading.value = false
-  }
-}
-
-function selectApp(app) {
-  selectedAppId.value = app ? app.id : null
-  pagination.page = 1
-  loadList()
-}
-
-/* 应用弹窗 */
-const appDialogVisible = ref(false)
-const appDialogTitle = ref('新增应用')
-const appFormRef = ref(null)
-const appSubmitLoading = ref(false)
-const appForm = reactive({
-  id: null,
-  appCode: '',
-  appName: '',
-  appKey: '',
-  appSecret: '',
-  description: '',
-  icon: '',
-  sortNo: 0,
-  status: 1
-})
-const appFormRules = {
-  appCode: [{ required: true, message: '请输入应用编码', trigger: 'blur' }],
-  appName: [{ required: true, message: '请输入应用名称', trigger: 'blur' }]
-}
-
-function handleAddApp() {
-  appDialogTitle.value = '新增应用'
-  Object.assign(appForm, {
-    id: null,
-    appCode: '',
-    appName: '',
-    appKey: '',
-    appSecret: '',
-    description: '',
-    icon: '',
-    sortNo: 0,
-    status: 1
-  })
-  appDialogVisible.value = true
-}
-
-function handleEditApp(app) {
-  appDialogTitle.value = '编辑应用'
-  Object.assign(appForm, {
-    id: app.id,
-    appCode: app.appCode,
-    appName: app.appName,
-    appKey: app.appKey || '',
-    appSecret: app.appSecret || '',
-    description: app.description,
-    icon: app.icon,
-    sortNo: app.sortNo,
-    status: app.status
-  })
-  appDialogVisible.value = true
-}
-
-async function handleDeleteApp(app) {
-  try {
-    await ElMessageBox.confirm(`确认删除应用「${app.appName}」？`, '删除确认', { type: 'warning' })
-    await deleteApiApp(app.id)
-    ElMessage.success('删除成功')
-    if (selectedAppId.value === app.id) {
-      selectedAppId.value = null
-    }
-    loadAppList()
-    loadList()
+    appList.value = res.list || res.records || res || []
   } catch (e) {
-    // 取消或失败
+    // 忽略加载错误
   }
 }
 
-function generateRandomString(length = 16) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  let result = ''
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return result
-}
-
-function generateAppKey() {
-  appForm.appKey = 'ak_' + generateRandomString(16)
-}
-
-function generateAppSecret() {
-  appForm.appSecret = generateRandomString(32)
-}
-
-async function handleSubmitApp() {
-  const valid = await appFormRef.value.validate().catch(() => false)
-  if (!valid) return
-  appSubmitLoading.value = true
-  try {
-    if (appForm.id) {
-      await updateApiApp(appForm)
-    } else {
-      await saveApiApp(appForm)
-    }
-    ElMessage.success('保存成功')
-    appDialogVisible.value = false
-    loadAppList()
-  } catch (e) {
-    // 错误已由 request 拦截器提示
-  } finally {
-    appSubmitLoading.value = false
-  }
+function goBack() {
+  router.push('/app-mgr')
 }
 
 /* ========== 接口列表相关（保留原有逻辑） ========== */
@@ -831,12 +601,13 @@ async function loadList() {
   try {
     const params = { page: pagination.page, size: pagination.size }
     if (selectedAppId.value) params.appId = selectedAppId.value
+    else if (filterAppId.value) params.appId = filterAppId.value
     if (queryForm.apiCode) params.apiCode = queryForm.apiCode
     if (queryForm.apiName) params.apiName = queryForm.apiName
     const res = await getApiCatalogList(params)
     apiList.value = res.list || res.records || res || []
     pagination.total = Number(res.total) || 0
-    // 同时更新全部接口计数（用于左侧"全部接口"卡片）
+    // 全局视图下同步接口总数
     if (!selectedAppId.value) {
       totalApiCount.value = pagination.total
     }
@@ -857,6 +628,7 @@ function handlePageChange() {
 function handleReset() {
   queryForm.apiCode = ''
   queryForm.apiName = ''
+  filterAppId.value = null
   pagination.page = 1
   loadList()
 }
@@ -1096,9 +868,18 @@ onMounted(() => {
   loadFlowDefinitionOptions()
   loadScriptOptions()
   loadPluginOptions()
-  loadAppList()
+  const qAppId = route.query.appId
+  if (qAppId) {
+    loadAppList().then(() => {
+      const app = appList.value.find(a => String(a.id) === String(qAppId))
+      if (app) selectedAppId.value = app.id
+      loadList()
+    })
+  } else {
+    loadAppList()
+    loadList()
+  }
   loadTotalApiCount()
-  loadList()
 })
 </script>
 
@@ -1108,169 +889,6 @@ onMounted(() => {
   height: calc(100vh - 100px);
   gap: 16px;
   position: relative;
-}
-
-/* 左侧面板 */
-.app-sidebar {
-  width: 280px;
-  flex-shrink: 0;
-  background: #fff;
-  border-radius: 12px;
-  border: 1px solid #e4e7ed;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-}
-
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 16px 12px;
-  border-bottom: 1px solid #f0f0f0;
-
-  .sidebar-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #1f2937;
-  }
-
-  .sidebar-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-}
-
-.app-search {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f5f5f5;
-}
-
-.app-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px;
-}
-
-.app-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-bottom: 4px;
-  position: relative;
-
-  &:hover {
-    background: #f5f7fa;
-
-    .app-actions {
-      opacity: 1;
-    }
-  }
-
-  &.active {
-    background: #ecf5ff;
-    border-left: 3px solid #409eff;
-
-    .app-icon {
-      color: #409eff;
-    }
-
-    .app-name {
-      color: #409eff;
-      font-weight: 600;
-    }
-  }
-
-  &.all-apps {
-    .app-icon.all {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      background: #f0f9ff;
-      color: #409eff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-  }
-}
-
-.app-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: #f3f4f6;
-  color: #6b7280;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.app-info {
-  flex: 1;
-  min-width: 0;
-
-  .app-name {
-    font-size: 14px;
-    color: #1f2937;
-    line-height: 1.4;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .app-meta {
-    font-size: 12px;
-    color: #9ca3af;
-    margin-top: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-.app-actions {
-  opacity: 0;
-  transition: opacity 0.2s;
-  display: flex;
-  gap: 2px;
-}
-
-.app-empty {
-  text-align: center;
-  color: #9ca3af;
-  font-size: 13px;
-  padding: 40px 0;
-}
-
-/* 左侧过渡动画 */
-.sidebar-enter-active,
-.sidebar-leave-active {
-  transition: transform 0.25s ease, opacity 0.25s ease;
-}
-
-.sidebar-enter-from,
-.sidebar-leave-to {
-  transform: translateX(-100%);
-  opacity: 0;
-}
-
-.sidebar-leave-active {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 10;
 }
 
 /* 右侧面板 */
@@ -1294,7 +912,7 @@ onMounted(() => {
       align-items: center;
       gap: 12px;
 
-      .expand-btn {
+      .back-btn {
         flex-shrink: 0;
       }
     }

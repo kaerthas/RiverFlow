@@ -42,10 +42,16 @@ const routes = [
         meta: { title: '动态表设计', icon: 'Grid' }
       },
       {
+        path: 'app-mgr',
+        name: 'AppMgr',
+        component: () => import('@/views/appMgr/index.vue'),
+        meta: { title: '应用管理', icon: 'Platform' }
+      },
+      {
         path: 'api-mgr',
         name: 'ApiMgr',
         component: () => import('@/views/apiMgr/index.vue'),
-        meta: { title: '接口注册', icon: 'Link' }
+        meta: { title: '接口注册', icon: 'Link', hidden: true }
       },
       {
         path: 'api-call-log',

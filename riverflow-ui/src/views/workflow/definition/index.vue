@@ -110,7 +110,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="200" fixed="right" align="center">
+        <el-table-column label="操作" width="230" fixed="right" align="center">
           <template #default="{ row }">
             <div class="rf-actions">
               <el-tooltip content="设计" placement="top">
@@ -131,6 +131,11 @@
               <el-tooltip content="创建新版本" placement="top">
                 <button class="action-btn info" @click="handleCopyVersion(row)">
                   <el-icon><CopyDocument /></el-icon>
+                </button>
+              </el-tooltip>
+              <el-tooltip content="复制为新流程" placement="top">
+                <button class="action-btn info" @click="handleDuplicate(row)">
+                  <el-icon><Files /></el-icon>
                 </button>
               </el-tooltip>
               <el-tooltip v-if="row.status === 1 && row.executionMode === 'SYNC'" content="同步调试" placement="top">
@@ -387,6 +392,27 @@
         </el-table-column>
       </el-table>
     </el-dialog>
+
+    <!-- 复制为全新流程弹窗 -->
+    <el-dialog v-model="duplicateVisible" title="复制为新流程" width="480px" destroy-on-close>
+      <el-form :model="duplicateForm" label-width="90px">
+        <el-form-item label="流程名称" required>
+          <el-input v-model="duplicateForm.flowName" placeholder="请输入新流程名称" maxlength="50" show-word-limit />
+        </el-form-item>
+        <el-form-item label="流程编码" required>
+          <el-input v-model="duplicateForm.flowCode" placeholder="请输入新流程编码（唯一）" maxlength="100" />
+        </el-form-item>
+        <el-form-item>
+          <span style="color: var(--rf-text-muted); font-size: 12px">
+            将复制该流程的节点、连线和全部配置，生成草稿状态的新流程
+          </span>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="duplicateVisible = false">取消</el-button>
+        <el-button type="primary" :loading="duplicateLoading" @click="submitDuplicate">确认复制</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -401,6 +427,7 @@ import {
   deleteFlowDefinition,
   saveFlowDefinition,
   copyFlowDefinition,
+  duplicateFlowDefinition,
   getFlowVersions,
   executeSyncFlow
 } from '@/api/workflow'
@@ -539,6 +566,43 @@ async function handleCopyVersion(row) {
     router.push({ path: '/workflow/designer', query: { id: newId } })
   } catch (e) {
     if (e !== 'cancel') ElMessage.error('创建失败: ' + (e.message || e))
+  }
+}
+
+// 复制为全新流程
+const duplicateVisible = ref(false)
+const duplicateLoading = ref(false)
+const duplicateForm = reactive({ id: null, flowName: '', flowCode: '' })
+
+function handleDuplicate(row) {
+  duplicateForm.id = row.id
+  duplicateForm.flowName = row.flowName + '-副本'
+  duplicateForm.flowCode = ''
+  duplicateVisible.value = true
+}
+
+async function submitDuplicate() {
+  if (!duplicateForm.flowName || !duplicateForm.flowName.trim()) {
+    ElMessage.warning('请输入新流程名称')
+    return
+  }
+  if (!duplicateForm.flowCode || !duplicateForm.flowCode.trim()) {
+    ElMessage.warning('请输入新流程编码')
+    return
+  }
+  duplicateLoading.value = true
+  try {
+    const newId = await duplicateFlowDefinition(duplicateForm.id, {
+      flowName: duplicateForm.flowName.trim(),
+      flowCode: duplicateForm.flowCode.trim()
+    })
+    ElMessage.success('流程复制成功')
+    duplicateVisible.value = false
+    router.push({ path: '/workflow/designer', query: { id: newId } })
+  } catch (e) {
+    ElMessage.error('复制失败: ' + (e.message || e))
+  } finally {
+    duplicateLoading.value = false
   }
 }
 

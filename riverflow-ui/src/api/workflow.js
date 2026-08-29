@@ -59,6 +59,15 @@ export function copyFlowDefinition(id) {
   })
 }
 
+/** 复制为全新流程 */
+export function duplicateFlowDefinition(id, data) {
+  return request({
+    url: `/workflow/definition/${id}/duplicate`,
+    method: 'post',
+    data
+  })
+}
+
 export function getFlowVersions(flowCode) {
   return request({
     url: '/workflow/definition/versions',

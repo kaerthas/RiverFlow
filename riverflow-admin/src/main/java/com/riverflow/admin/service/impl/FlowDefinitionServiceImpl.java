@@ -105,4 +105,73 @@ public class FlowDefinitionServiceImpl extends ServiceImpl<FlowDefinitionMapper,
 
         return target.getId();
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long duplicateAsNewFlow(Long id, String newFlowCode, String newFlowName) {
+        FlowDefinition source = getById(id);
+        if (source == null) {
+            throw new RuntimeException("流程定义不存在");
+        }
+        if (newFlowCode == null || newFlowCode.trim().isEmpty()) {
+            throw new RuntimeException("新流程编码不能为空");
+        }
+        if (newFlowName == null || newFlowName.trim().isEmpty()) {
+            throw new RuntimeException("新流程名称不能为空");
+        }
+        Long count = getCount(
+                new QueryWrapper<FlowDefinition>()
+                        .eq("flow_code", newFlowCode.trim())
+                        .eq("del_flag", 0)
+        );
+        if (count != null && count > 0) {
+            throw new RuntimeException("流程编码已存在: " + newFlowCode);
+        }
+
+        // 1. 复制流程定义为全新流程（草稿状态，版本从1开始）
+        FlowDefinition target = new FlowDefinition();
+        target.setFlowCode(newFlowCode.trim());
+        target.setFlowName(newFlowName.trim());
+        target.setVersion(1);
+        target.setItemCode(source.getItemCode());
+        target.setTriggerType(source.getTriggerType());
+        target.setTriggerConfig(source.getTriggerConfig());
+        target.setStatus(0);
+        target.setExecutionMode(source.getExecutionMode());
+        target.setInputParams(source.getInputParams());
+        target.setOutputParams(source.getOutputParams());
+        target.setGraphJson(source.getGraphJson());
+        target.setCreateTime(LocalDateTime.now());
+        target.setUpdateTime(LocalDateTime.now());
+        target.setDelFlag(0);
+        save(target);
+
+        // 2. 复制节点
+        List<FlowNode> nodes = flowNodeService.getNodesByFlowId(id);
+        if (nodes != null && !nodes.isEmpty()) {
+            for (FlowNode node : nodes) {
+                node.setId(null);
+                node.setFlowId(target.getId());
+                node.setCreateTime(LocalDateTime.now());
+                node.setUpdateTime(LocalDateTime.now());
+                node.setDelFlag(0);
+            }
+            flowNodeService.saveBatch(nodes);
+        }
+
+        // 3. 复制边
+        List<FlowEdge> edges = flowEdgeService.getEdgesByFlowId(id);
+        if (edges != null && !edges.isEmpty()) {
+            for (FlowEdge edge : edges) {
+                edge.setId(null);
+                edge.setFlowId(target.getId());
+                edge.setCreateTime(LocalDateTime.now());
+                edge.setUpdateTime(LocalDateTime.now());
+                edge.setDelFlag(0);
+            }
+            flowEdgeService.saveBatch(edges);
+        }
+
+        return target.getId();
+    }
 }

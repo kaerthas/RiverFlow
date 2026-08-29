@@ -283,6 +283,20 @@ public class WorkflowController {
         return R.ok(String.valueOf(newId));
     }
 
+    /**
+     * 复制指定流程为全新流程（新流程编码，草稿状态）
+     */
+    @PostMapping("/definition/{id}/duplicate")
+    public R<String> duplicateDefinition(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        try {
+            Long newId = flowDefinitionService.duplicateAsNewFlow(id,
+                    body.get("flowCode"), body.get("flowName"));
+            return R.ok(String.valueOf(newId));
+        } catch (RuntimeException e) {
+            return R.fail(e.getMessage());
+        }
+    }
+
     // ==================== 流程节点与边 ====================
 
     @GetMapping("/definition/{flowId}/nodes")
