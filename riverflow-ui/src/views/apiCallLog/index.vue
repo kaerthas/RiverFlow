@@ -68,9 +68,17 @@
             <span class="rf-mono">{{ row.costTime != null ? row.costTime + ' ms' : '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="错误信息" min-width="180" show-overflow-tooltip>
+        <el-table-column label="错误信息" min-width="180">
           <template #default="{ row }">
-            <span v-if="row.errorMsg" style="color: var(--el-color-danger)">{{ row.errorMsg }}</span>
+            <el-tooltip
+              v-if="row.errorMsg"
+              :content="row.errorMsg"
+              placement="top"
+              :show-after="200"
+              popper-class="error-msg-tooltip"
+            >
+              <div class="error-msg-cell">{{ row.errorMsg }}</div>
+            </el-tooltip>
             <span v-else>-</span>
           </template>
         </el-table-column>
@@ -245,6 +253,15 @@ handleSearch()
 </script>
 
 <style scoped lang="scss">
+// 错误信息单元格截断（公共样式强制 .cell overflow:visible，需在内部 div 上截断）
+.error-msg-cell {
+  color: var(--el-color-danger);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .log-detail {
   .info-row {
     margin-bottom: 12px;
@@ -267,5 +284,15 @@ handleSearch()
     white-space: pre-wrap;
     word-break: break-all;
   }
+}
+</style>
+
+<style lang="scss">
+// 错误信息悬停 tooltip（popper 挂载在 body，不能用 scoped）
+.error-msg-tooltip {
+  max-width: 480px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 </style>
