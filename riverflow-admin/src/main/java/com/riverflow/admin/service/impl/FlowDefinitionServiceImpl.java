@@ -119,12 +119,12 @@ public class FlowDefinitionServiceImpl extends ServiceImpl<FlowDefinitionMapper,
         if (newFlowName == null || newFlowName.trim().isEmpty()) {
             throw new RuntimeException("新流程名称不能为空");
         }
-        Long count = getCount(
+        long count = count(
                 new QueryWrapper<FlowDefinition>()
                         .eq("flow_code", newFlowCode.trim())
                         .eq("del_flag", 0)
         );
-        if (count != null && count > 0) {
+        if (count > 0) {
             throw new RuntimeException("流程编码已存在: " + newFlowCode);
         }
 
