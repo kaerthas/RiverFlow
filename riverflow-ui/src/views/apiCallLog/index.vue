@@ -19,6 +19,12 @@
               <el-option label="失败" :value="0" />
             </el-select>
           </el-form-item>
+          <el-form-item label="来源">
+            <el-select v-model="queryForm.source" placeholder="全部来源" clearable style="width: 130px">
+              <el-option label="开放接口" value="openapi" />
+              <el-option label="流程节点" value="flow" />
+            </el-select>
+          </el-form-item>
           <el-form-item label="调用时间">
             <el-date-picker
               v-model="timeRange"
@@ -52,12 +58,25 @@
             <span class="rf-code">{{ row.apiCode }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="来源" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.source === 'flow' ? 'warning' : 'info'" effect="plain">
+              {{ row.source === 'flow' ? '流程节点' : '开放接口' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="请求方式" width="100" align="center">
           <template #default="{ row }">
             <el-tag size="small" :type="methodTagType(row.requestMethod)" effect="plain">{{ row.requestMethod }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="requestUrl" label="请求地址" min-width="240" show-overflow-tooltip />
+        <el-table-column label="请求地址" min-width="240">
+          <template #default="{ row }">
+            <el-tooltip :content="row.requestUrl" placement="top" :show-after="200" :disabled="!row.requestUrl">
+              <div class="ellipsis-cell">{{ row.requestUrl || '-' }}</div>
+            </el-tooltip>
+          </template>
+        </el-table-column>
         <el-table-column label="状态码" width="90" align="center">
           <template #default="{ row }">
             <span class="rf-mono">{{ row.statusCode ?? '-' }}</span>
@@ -77,7 +96,7 @@
               :show-after="200"
               popper-class="error-msg-tooltip"
             >
-              <div class="error-msg-cell">{{ row.errorMsg }}</div>
+              <div class="ellipsis-cell danger">{{ row.errorMsg }}</div>
             </el-tooltip>
             <span v-else>-</span>
           </template>
@@ -171,7 +190,8 @@ const timeRange = ref([])
 
 const queryForm = reactive({
   apiCode: '',
-  callStatus: null
+  callStatus: null,
+  source: null
 })
 
 const pagination = reactive({ page: 1, size: 10, total: 0 })
@@ -184,7 +204,8 @@ async function handleSearch() {
       page: pagination.page,
       size: pagination.size,
       apiCode: queryForm.apiCode,
-      callStatus: queryForm.callStatus
+      callStatus: queryForm.callStatus,
+      source: queryForm.source
     }
     if (timeRange.value && timeRange.value.length === 2) {
       params.startTime = timeRange.value[0]
@@ -205,6 +226,7 @@ async function handleSearch() {
 function handleReset() {
   queryForm.apiCode = ''
   queryForm.callStatus = null
+  queryForm.source = null
   timeRange.value = []
   handleSearch()
 }
@@ -253,13 +275,16 @@ handleSearch()
 </script>
 
 <style scoped lang="scss">
-// 错误信息单元格截断（公共样式强制 .cell overflow:visible，需在内部 div 上截断）
-.error-msg-cell {
-  color: var(--el-color-danger);
+// 长文本单元格截断（公共样式强制 .cell overflow:visible，需在内部 div 上截断）
+.ellipsis-cell {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  &.danger {
+    color: var(--el-color-danger);
+  }
 }
 
 .log-detail {

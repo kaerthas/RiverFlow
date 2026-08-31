@@ -44,6 +44,21 @@
       <div class="bento-card">
         <div class="card-content">
           <div class="card-meta">
+            <div class="meta-icon blue">
+              <el-icon :size="20"><Share /></el-icon>
+            </div>
+            <span class="meta-label">流程总数</span>
+          </div>
+          <div class="card-value rf-mono">
+            {{ apiStats.flowCount }}
+            <span class="flow-sub">同步 {{ apiStats.syncFlowCount }} · 异步 {{ apiStats.asyncFlowCount }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bento-card">
+        <div class="card-content">
+          <div class="card-meta">
             <div class="meta-icon purple">
               <el-icon :size="20"><DataAnalysis /></el-icon>
             </div>
@@ -154,7 +169,10 @@ const apiStats = reactive({
   appCount: 0,
   callTotal: 0,
   callToday: 0,
-  callFailed: 0
+  callFailed: 0,
+  flowCount: 0,
+  syncFlowCount: 0,
+  asyncFlowCount: 0
 })
 const recentCalls = ref([])
 const callLoading = ref(false)
@@ -410,9 +428,19 @@ onUnmounted(() => {
 // -------- 统计卡片网格 --------
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
   margin-bottom: 24px;
+}
+
+// 流程卡片内联小字：同步/异步分布
+.flow-sub {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--rf-text-muted);
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .bento-card {

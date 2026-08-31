@@ -218,7 +218,7 @@ public class OpenApiController {
      * @param params flowCode-流程编码（必填）, businessKey-业务主键（可选）,
      *               variables-初始上下文变量（可选）, timeoutMs-超时毫秒（可选，默认30000）
      */
-    @PostMapping("/flow/executeSync")
+      @PostMapping("/flow/executeSync")
     public R<Map<String, Object>> executeSync(@RequestBody(required = false) Map<String, Object> params) {
         if (params == null) {
             params = new HashMap<>();
@@ -332,7 +332,7 @@ public class OpenApiController {
             log.error("同步流程执行异常: flowCode={}", flowCode, e);
             return R.fail("同步流程执行异常: " + e.getMessage());
         }
-    }
+  }
 
     /**
      * 动态开放接口执行器
@@ -396,6 +396,7 @@ public class OpenApiController {
             ApiCallLog callLog = new ApiCallLog();
             callLog.setApiId(api.getId());
             callLog.setApiCode(api.getApiCode());
+            callLog.setSource("openapi");
             callLog.setRequestUrl(request.getRequestURI());
             callLog.setRequestMethod(request.getMethod());
             callLog.setRequestHeaders(truncate(extractHeaders(request), 4000));

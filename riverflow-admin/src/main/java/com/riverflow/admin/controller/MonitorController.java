@@ -5,6 +5,7 @@ import com.riverflow.admin.service.*;
 import com.riverflow.api.entity.ApiApp;
 import com.riverflow.api.entity.ApiCallLog;
 import com.riverflow.api.entity.ApiCatalog;
+import com.riverflow.api.entity.FlowDefinition;
 import com.riverflow.api.entity.FlowInstance;
 import com.riverflow.api.entity.FlowLog;
 import com.riverflow.api.entity.FlowTask;
@@ -44,6 +45,8 @@ public class MonitorController {
     private ApiAppService apiAppService;
     @Autowired
     private ApiCallLogService apiCallLogService;
+    @Autowired
+    private FlowDefinitionService flowDefinitionService;
 
     /**
      * 实例统计
@@ -112,6 +115,22 @@ public class MonitorController {
         result.put("callTotal", callTotal);
         result.put("callToday", callToday);
         result.put("callFailed", callFailed);
+
+        // 流程统计：按 flow_code 去重（与流程列表口径一致，每个流程只算最新版本）
+        long flowCount = flowDefinitionService.count(new QueryWrapper<FlowDefinition>()
+                .select("DISTINCT flow_code")
+                .eq("del_flag", 0));
+        long syncFlowCount = flowDefinitionService.count(new QueryWrapper<FlowDefinition>()
+                .select("DISTINCT flow_code")
+                .eq("del_flag", 0)
+                .eq("execution_mode", "SYNC"));
+        long asyncFlowCount = flowDefinitionService.count(new QueryWrapper<FlowDefinition>()
+                .select("DISTINCT flow_code")
+                .eq("del_flag", 0)
+                .eq("execution_mode", "ASYNC"));
+        result.put("flowCount", flowCount);
+        result.put("syncFlowCount", syncFlowCount);
+        result.put("asyncFlowCount", asyncFlowCount);
 
         return R.ok(result);
     }

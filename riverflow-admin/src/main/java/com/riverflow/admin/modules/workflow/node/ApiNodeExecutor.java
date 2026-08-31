@@ -7,8 +7,10 @@ import com.riverflow.admin.infra.http.HttpRequestService;
 import com.riverflow.admin.infra.plugin.ApiPluginLoader;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
 import com.riverflow.admin.modules.workflow.engine.NodeExecuteResult;
+import com.riverflow.admin.service.ApiCallLogService;
 import com.riverflow.admin.service.ApiCatalogService;
 import com.riverflow.admin.service.ApiParamService;
+import com.riverflow.api.entity.ApiCallLog;
 import com.riverflow.api.entity.ApiCatalog;
 import com.riverflow.api.entity.ApiParam;
 import com.riverflow.api.entity.FlowNode;
@@ -36,6 +38,8 @@ public class ApiNodeExecutor implements NodeExecutor {
     private ApiParamService apiParamService;
     @Autowired
     private ApiPluginLoader apiPluginLoader;
+    @Autowired
+    private ApiCallLogService apiCallLogService;
 
     @Override
     public String getNodeType() {
@@ -110,9 +114,9 @@ public class ApiNodeExecutor implements NodeExecutor {
         log.info("[流程实例:{}] 组装请求参数: headers={}, body={}, queryParams={}",
                 context.getInstanceId(), headers, body, queryParams);
 
+        long startTime = System.currentTimeMillis();
+        JSONObject result = null;
         try {
-            JSONObject result;
-
             if ("plugin".equals(apiCatalog.getApiType())) {
                 // 插件类型接口（SDK 调用）
                 String pluginType = apiCatalog.getPluginType();
@@ -137,8 +141,9 @@ public class ApiNodeExecutor implements NodeExecutor {
 
                 // 检查 HTTP 状态码，非 2xx 视为失败
                 if (statusCode < 200 || statusCode >= 300) {
-                    String errorMsg = result.getString("body");
-                    return NodeExecuteResult.fail("接口调用失败, HTTP状态码: " + statusCode + ", 响应: " + errorMsg);
+                    String errorMsg = "接口调用失败, HTTP状态码: " + statusCode + ", 响应: " + result.getString("body");
+                    saveApiCallLog(node, apiCatalog, headers, body, queryParams, result, 0, errorMsg, startTime);
+                    return NodeExecuteResult.fail(errorMsg);
                 }
             }
 
@@ -174,7 +179,9 @@ public class ApiNodeExecutor implements NodeExecutor {
                 String bizCode = responseBody.getString("code");
                 if (!isSuccessCode(apiCatalog, bizCode)) {
                     String bizMsg = responseBody.getString("msg");
-                    return NodeExecuteResult.fail("接口调用失败, 业务码: " + bizCode + ", 错误: " + bizMsg);
+                    String errorMsg = "接口调用失败, 业务码: " + bizCode + ", 错误: " + bizMsg;
+                    saveApiCallLog(node, apiCatalog, headers, body, queryParams, result, 0, errorMsg, startTime);
+                    return NodeExecuteResult.fail(errorMsg);
                 }
             }
 
@@ -211,11 +218,71 @@ public class ApiNodeExecutor implements NodeExecutor {
                 }
             }
 
+            saveApiCallLog(node, apiCatalog, headers, body, queryParams, result, 1, null, startTime);
             return NodeExecuteResult.success(result);
         } catch (Exception e) {
             log.error("[流程实例:{}] 接口调用失败: {}", context.getInstanceId(), apiCode, e);
+            saveApiCallLog(node, apiCatalog, headers, body, queryParams, result, 0, e.getMessage(), startTime);
             return NodeExecuteResult.fail("接口调用失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 异步记录接口调用日志（流程内 API 节点调用，source=flow），失败仅打印日志不影响流程
+     */
+    private void saveApiCallLog(FlowNode node, ApiCatalog apiCatalog,
+                                Map<String, String> headers, Object body, Map<String, String> queryParams,
+                                JSONObject result, int callStatus, String errorMsg, long startTime) {
+        try {
+            ApiCallLog callLog = new ApiCallLog();
+            callLog.setApiId(apiCatalog.getId());
+            callLog.setApiCode(apiCatalog.getApiCode());
+            callLog.setSource("flow");
+            callLog.setRequestUrl(truncate(buildFullUrl(apiCatalog.getUrl(), queryParams), 1000));
+            callLog.setRequestMethod(apiCatalog.getMethod());
+            callLog.setRequestHeaders(truncate(headers != null && !headers.isEmpty() ? JSON.toJSONString(headers) : null, 4000));
+            callLog.setRequestBody(truncate(body != null ? (body instanceof String ? (String) body : JSON.toJSONString(body)) : null, 8000));
+            if (result != null) {
+                callLog.setResponseBody(truncate(result.getString("body"), 8000));
+                callLog.setStatusCode(result.getInteger("statusCode"));
+                long cost = result.getLongValue("cost");
+                callLog.setCostTime((int) Math.min(cost > 0 ? cost : System.currentTimeMillis() - startTime, Integer.MAX_VALUE));
+            } else {
+                callLog.setCostTime((int) Math.min(System.currentTimeMillis() - startTime, Integer.MAX_VALUE));
+            }
+            callLog.setCallStatus(callStatus);
+            callLog.setErrorMsg(truncate(errorMsg, 2000));
+            apiCallLogService.saveAsync(callLog);
+        } catch (Exception e) {
+            log.error("[流程实例:{}] 记录接口调用日志失败: {}", contextSafeId(node), e.getMessage());
+        }
+    }
+
+    private String contextSafeId(FlowNode node) {
+        return node != null ? String.valueOf(node.getId()) : "-";
+    }
+
+    /**
+     * 将 query 参数拼接到 URL 用于日志展示
+     */
+    private String buildFullUrl(String url, Map<String, String> queryParams) {
+        if (url == null || queryParams == null || queryParams.isEmpty()) {
+            return url;
+        }
+        StringBuilder sb = new StringBuilder(url);
+        String sep = url.contains("?") ? "&" : "?";
+        for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+            sb.append(sep).append(entry.getKey()).append("=").append(entry.getValue());
+            sep = "&";
+        }
+        return sb.toString();
+    }
+
+    private String truncate(String str, int maxLen) {
+        if (str == null) {
+            return null;
+        }
+        return str.length() <= maxLen ? str : str.substring(0, maxLen);
     }
 
     /**

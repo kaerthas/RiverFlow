@@ -26,6 +26,11 @@ public class ApiCallLog extends BaseEntity {
     private String apiCode;
 
     /**
+     * 日志来源：openapi-开放接口调用，flow-流程API节点调用
+     */
+    private String source;
+
+    /**
      * 请求URL
      */
     private String requestUrl;

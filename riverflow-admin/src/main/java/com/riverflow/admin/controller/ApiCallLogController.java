@@ -26,6 +26,7 @@ public class ApiCallLogController {
             @RequestParam(value = "size", defaultValue = "10") Integer size,
             @RequestParam(value = "apiCode", required = false) String apiCode,
             @RequestParam(value = "callStatus", required = false) Integer callStatus,
+            @RequestParam(value = "source", required = false) String source,
             @RequestParam(value = "startTime", required = false) String startTime,
             @RequestParam(value = "endTime", required = false) String endTime) {
         Page<ApiCallLog> pageParam = new Page<>(page, size);
@@ -37,6 +38,7 @@ public class ApiCallLogController {
         qw.eq("del_flag", 0);
         if (apiCode != null && !apiCode.isEmpty()) qw.like("api_code", apiCode);
         if (callStatus != null) qw.eq("call_status", callStatus);
+        if (source != null && !source.isEmpty()) qw.eq("source", source);
         if (startTime != null && !startTime.isEmpty()) qw.ge("create_time", startTime);
         if (endTime != null && !endTime.isEmpty()) qw.le("create_time", endTime);
         qw.orderByDesc("create_time");
