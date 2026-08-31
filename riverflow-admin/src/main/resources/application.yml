@@ -49,7 +49,7 @@ spring:
   redis:
     host: 127.0.0.1
     port: 6379
-    password:
+#    password:
     database: 0
     timeout: 10s
     lettuce:
@@ -142,6 +142,10 @@ riverflow:
   sync:
     persist-instance: false
     save-log: true
+  http:
+    # 调用外部接口时是否信任所有 HTTPS 证书（跳过证书链与主机名校验）
+    # 内网/自签名证书场景保持 true；仅对接公网可信证书时可改为 false
+    trust-all-ssl: true
   datasource:
     driver:
       # 自定义 JDBC 驱动 JAR 包存储目录

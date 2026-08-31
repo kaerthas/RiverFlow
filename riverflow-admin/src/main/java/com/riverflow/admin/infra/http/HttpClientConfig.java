@@ -1,12 +1,25 @@
 package com.riverflow.admin.infra.http;
 
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.TrustAllStrategy;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.ssl.SSLContexts;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.net.ssl.SSLContext;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -47,9 +60,30 @@ public class HttpClientConfig {
      */
     private static final int IDLE_EVICT_SECONDS = 30;
 
+    /**
+     * 是否信任所有 HTTPS 证书（跳过证书链与主机名校验）。
+     * 平台常需对接内网/自签名证书系统，默认开启；仅对接公网可信证书时可关闭。
+     */
+    @Value("${riverflow.http.trust-all-ssl:true}")
+    private boolean trustAllSsl;
+
     @Bean
-    public CloseableHttpClient closeableHttpClient() {
-        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+    public CloseableHttpClient closeableHttpClient() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        PoolingHttpClientConnectionManager connectionManager;
+        if (trustAllSsl) {
+            SSLContext sslContext = SSLContexts.custom()
+                    .loadTrustMaterial(null, TrustAllStrategy.INSTANCE)
+                    .build();
+            SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(
+                    sslContext, NoopHostnameVerifier.INSTANCE);
+            Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
+                    .register("http", PlainConnectionSocketFactory.getSocketFactory())
+                    .register("https", sslSocketFactory)
+                    .build();
+            connectionManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+        } else {
+            connectionManager = new PoolingHttpClientConnectionManager();
+        }
         connectionManager.setMaxTotal(MAX_TOTAL);
         connectionManager.setDefaultMaxPerRoute(MAX_PER_ROUTE);
 
