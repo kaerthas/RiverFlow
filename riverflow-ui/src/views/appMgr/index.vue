@@ -50,7 +50,7 @@
             <el-icon :size="22"><component :is="app.icon || 'Folder'" /></el-icon>
           </div>
           <span :class="['status-dot', app.status === 1 ? 'on' : 'off']">
-            {{ app.status === 1 ? '启用' : '停用' }}
+            <i class="dot" />{{ app.status === 1 ? '启用' : '停用' }}
           </span>
         </div>
         <div class="app-name">{{ app.appName }}</div>
@@ -68,8 +68,8 @@
       <el-empty v-if="!loading && filteredApps.length === 0" description="暂无应用，点击右上角新建" style="grid-column: 1 / -1" />
     </div>
 
-    <!-- 网格模式分页 -->
-    <div v-if="viewMode === 'grid' && pagination.total > 0" class="grid-pagination">
+    <!-- 网格模式分页：仅当超过一页时显示，避免单页时的视觉噪音 -->
+    <div v-if="viewMode === 'grid' && pagination.total > pagination.size" class="grid-pagination">
       <el-pagination
         v-model:current-page="pagination.page"
         v-model:page-size="pagination.size"
@@ -442,6 +442,11 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform var(--duration-base) var(--ease-out-quart);
+  }
+
+  &:hover .app-icon {
+    transform: scale(1.06);
   }
 
   .all-icon {
@@ -452,21 +457,43 @@ onMounted(() => {
   .go-icon {
     color: var(--rf-text-muted);
     margin-top: 4px;
+    transition: transform var(--duration-base) var(--ease-out-quart),
+      color var(--duration-base) var(--ease-out-quart);
+  }
+
+  &:hover .go-icon {
+    transform: translateX(3px);
+    color: var(--rf-primary);
   }
 
   .status-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     font-size: 12px;
-    padding: 2px 10px;
-    border-radius: 999px;
+    margin-top: 4px;
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
 
     &.on {
-      background: #d1fae5;
       color: #059669;
+
+      .dot {
+        background: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+      }
     }
 
     &.off {
-      background: var(--rf-neutral-100);
       color: var(--rf-text-muted);
+
+      .dot {
+        background: #cbd5e1;
+      }
     }
   }
 
@@ -492,12 +519,19 @@ onMounted(() => {
     color: var(--rf-text-muted);
     line-height: 1.6;
     min-height: 38px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .app-card-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--rf-border-light);
   }
 
   .api-count {
@@ -510,6 +544,10 @@ onMounted(() => {
 .all-card {
   border-style: dashed;
   border-color: var(--rf-primary);
+
+  &:hover {
+    background: var(--rf-primary-light);
+  }
 }
 
 .app-cell {
