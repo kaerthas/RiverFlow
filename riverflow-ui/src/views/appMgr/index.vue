@@ -83,7 +83,7 @@
     </div>
 
     <!-- 列表视图 -->
-    <div v-else class="rf-table-card app-table-card">
+    <div v-if="viewMode === 'list'" class="rf-table-card app-table-card">
       <el-table :data="filteredApps" stripe v-loading="loading" class="rf-data-table" style="width: 100%" empty-text="暂无应用">
         <el-table-column type="index" label="#" width="52" align="center" />
         <el-table-column label="应用" min-width="200">
