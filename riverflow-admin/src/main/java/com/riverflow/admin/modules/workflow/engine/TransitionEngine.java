@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
 import com.riverflow.admin.modules.workflow.loop.LoopTaskHelper;
+import com.riverflow.admin.modules.workflow.loop.LoopUtils;
 import com.riverflow.admin.modules.workflow.node.NodeExecutor;
 import com.riverflow.admin.modules.workflow.node.NodeExecutorFactory;
 import com.riverflow.admin.service.FlowInstanceService;
@@ -94,6 +95,29 @@ public class TransitionEngine {
             saveLog(instance.getId(), newTask.getId(), entryNodeId, "transition",
                     String.format("循环回跳到 [%s]", entryNode.getNodeName()));
             return;
+        }
+
+        // ==================== 循环提前退出处理（空集合跳过/while 条件不满足）====================
+        // foreach/while 节点在图上的出边指向循环体入口，exitLoop 时按出边流转会错误地进入循环体；
+        // 需要先跳到对应的循环结束节点，再沿结束节点的出边继续
+        if (result != null && result.isExitLoop()
+                && (FlowNodeTypeEnum.FOREACH.getCode().equals(currentNode.getNodeType())
+                    || FlowNodeTypeEnum.WHILE.getCode().equals(currentNode.getNodeType()))) {
+            String endLoopNodeId = LoopUtils.resolveEndLoopNodeId(
+                    currentNode.getNodeId(), currentNode.getNodeType(), nodes, edges);
+            FlowNode endLoopNode = endLoopNodeId == null ? null : nodes.stream()
+                    .filter(n -> n.getNodeId().equals(endLoopNodeId))
+                    .findFirst().orElse(null);
+            if (endLoopNode != null) {
+                log.info("[流程实例:{}] 循环节点 [{}] 退出循环（空集合/条件不满足），跳到 [{}] 后继续流转",
+                        instance.getId(), currentNode.getNodeName(), endLoopNode.getNodeName());
+                saveLog(instance.getId(), null, currentNode.getNodeId(), "transition",
+                        String.format("循环 [%s] 为空或条件不满足，跳过循环体", currentNode.getNodeName()));
+                transition(instance, endLoopNode, edges, nodes, context, NodeExecuteResult.success());
+                return;
+            }
+            log.warn("[流程实例:{}] 循环节点 [{}] 未找到对应的循环结束节点，按普通出边流转",
+                    instance.getId(), currentNode.getNodeName());
         }
 
         String currentNodeId = currentNode.getNodeId();
