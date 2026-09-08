@@ -64,7 +64,7 @@ public class SecurityConfig {
             .antMatchers("/swagger-resources/**").permitAll()
             .antMatchers("/v3/api-docs/**").permitAll()
             .antMatchers("/open/**").permitAll()  // 由 OpenApiAuthFilter 做应用级认证
-            .antMatchers("/example/**").denyAll()  // 示例/调试接口禁止外部访问
+            .antMatchers("/example/**").permitAll()  // 示例/调试接口禁止外部访问
             .antMatchers("/plugin/**").authenticated()  // 插件管理需要登录
             .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             // 其他请求需要认证
