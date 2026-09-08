@@ -77,8 +77,47 @@ public class MonitorController {
                 new QueryWrapper<FlowLog>()
                         .eq("del_flag", 0)
                         .orderByDesc("create_time")
+                        .orderByDesc("id")
                         .last("LIMIT " + limit));
+        fillFlowInfo(logs);
         return R.ok(logs);
+    }
+
+    /**
+     * 按 instanceId 批量补充流程编码与名称，避免逐条查询
+     */
+    private void fillFlowInfo(List<FlowLog> logs) {
+        if (logs == null || logs.isEmpty()) {
+            return;
+        }
+        java.util.Set<Long> instanceIds = logs.stream()
+                .map(FlowLog::getInstanceId)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        if (instanceIds.isEmpty()) {
+            return;
+        }
+        Map<Long, String> instanceToFlowCode = new HashMap<>();
+        for (FlowInstance inst : flowInstanceService.listByIds(instanceIds)) {
+            instanceToFlowCode.put(inst.getId(), inst.getFlowCode());
+        }
+        java.util.Set<String> flowCodes = new java.util.HashSet<>(instanceToFlowCode.values());
+        flowCodes.remove(null);
+        Map<String, String> flowCodeToName = new HashMap<>();
+        if (!flowCodes.isEmpty()) {
+            // 同一 flow_code 可能存在多个版本，名称一致，任取其一
+            for (FlowDefinition def : flowDefinitionService.list(new QueryWrapper<FlowDefinition>()
+                    .select("flow_code", "flow_name")
+                    .in("flow_code", flowCodes)
+                    .eq("del_flag", 0))) {
+                flowCodeToName.putIfAbsent(def.getFlowCode(), def.getFlowName());
+            }
+        }
+        for (FlowLog flowLog : logs) {
+            String flowCode = instanceToFlowCode.get(flowLog.getInstanceId());
+            flowLog.setFlowCode(flowCode);
+            flowLog.setFlowName(flowCodeToName.get(flowCode));
+        }
     }
 
     /**

@@ -132,6 +132,7 @@ public class ApiNodeExecutor implements NodeExecutor {
                 result.put("statusCode", 200);
                 log.info("[流程实例:{}] 插件接口调用完成: pluginType={}",
                         context.getInstanceId(), pluginType);
+
             } else {
                 // 执行 HTTP 请求
                 result = httpRequestService.execute(apiCatalog, headers, body, queryParams);

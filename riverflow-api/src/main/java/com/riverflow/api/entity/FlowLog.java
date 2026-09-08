@@ -39,4 +39,16 @@ public class FlowLog extends BaseEntity {
      * 日志内容
      */
     private String logContent;
+
+    /**
+     * 流程编码（非表字段，查询展示用）
+     */
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String flowCode;
+
+    /**
+     * 流程名称（非表字段，查询展示用）
+     */
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String flowName;
 }

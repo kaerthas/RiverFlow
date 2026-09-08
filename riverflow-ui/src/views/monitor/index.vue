@@ -87,7 +87,8 @@
         <div v-for="(log, idx) in logs" :key="idx" class="log-line">
           <span class="log-time">{{ formatTime(log.createTime) }}</span>
           <span class="log-level" :class="log.logType?.toUpperCase()">{{ log.logType?.toUpperCase() || 'INFO' }}</span>
-          <span class="log-msg">{{ log.logContent }}</span>
+          <span v-if="log.flowName || log.flowCode" class="log-flow">[{{ log.flowName || log.flowCode }}]</span>
+          <span class="log-msg">{{ formatLogContent(log.logContent) }}</span>
         </div>
         <div v-if="logs.length === 0" class="empty-logs">暂无日志</div>
       </div>
@@ -96,7 +97,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import request from '@/utils/request'
 
 const stats = ref({ total: 0, running: 0, completed: 0, failed: 0 })
@@ -125,7 +126,16 @@ const topApis = ref([
 
 function formatTime(time) {
   if (!time) return '--'
-  return time.substring(11, 19)
+  // 兼容 'yyyy-MM-dd HH:mm:ss' 与 ISO 'yyyy-MM-ddTHH:mm:ss'，完整显示年月日时分秒
+  return String(time).replace('T', ' ').substring(0, 19)
+}
+
+// 历史日志中节点名被存成了 LogicFlow 的 text 对象 JSON，展示时提取 value
+const NODE_TEXT_JSON_RE = /\{"x":\s*-?[\d.]+,\s*"y":\s*-?[\d.]+,\s*"value":"([^"]*)"\}/g
+
+function formatLogContent(content) {
+  if (!content) return ''
+  return content.replace(NODE_TEXT_JSON_RE, '$1')
 }
 
 async function loadStats() {
@@ -141,11 +151,6 @@ async function loadRecentLogs() {
     if (res) {
       logs.value = res
       recentErrors.value = res.filter(l => l.logType === 'error').slice(0, 10)
-      nextTick(() => {
-        if (logConsoleRef.value) {
-          logConsoleRef.value.scrollTop = logConsoleRef.value.scrollHeight
-        }
-      })
     }
   } catch (e) { /* ignore */ }
 }
@@ -270,6 +275,7 @@ onUnmounted(() => {
     font-size: 13px;
 
     .log-time { color: #6B7280; margin-right: 12px; }
+    .log-flow { color: #22D3EE; margin-right: 12px; }
     .log-level {
       display: inline-block;
       width: 48px;

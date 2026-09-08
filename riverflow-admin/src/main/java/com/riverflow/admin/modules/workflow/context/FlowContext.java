@@ -307,7 +307,17 @@ public class FlowContext implements Serializable {
                 } else if (bracket != -1) {
                     end = bracket;
                 }
-                sb.append("['").append(path, i, end).append("']");
+                String segment = path.substring(i, end);
+                // 兼容带引号的字段名段（如 item."sys_flow_targets"，源自 DB 节点带引号的列名）
+                if (segment.length() >= 2 && segment.startsWith("\"") && segment.endsWith("\"")) {
+                    segment = segment.substring(1, segment.length() - 1);
+                }
+                // 段内含单引号/反斜杠时改用双引号 bracket，避免 JSONPath 语法错误
+                if (segment.contains("'") || segment.contains("\\")) {
+                    sb.append("[\"").append(segment.replace("\"", "\\\"")).append("\"]");
+                } else {
+                    sb.append("['").append(segment).append("']");
+                }
                 i = end;
             }
         }

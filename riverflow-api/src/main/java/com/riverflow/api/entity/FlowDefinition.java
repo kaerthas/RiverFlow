@@ -46,6 +46,12 @@ public class FlowDefinition extends BaseEntity {
     private String triggerConfig;
 
     /**
+     * 定时触发开关：0-停用(默认) 1-启用
+     * 仅 triggerType=cron 且已发布时生效；发布后默认停用，需手动启动
+     */
+    private Integer cronEnabled;
+
+    /**
      * 状态：0-草稿，1-已发布，2-下线
      */
     private Integer status;

@@ -856,6 +856,8 @@ function extractSqlSelectColumns(sql) {
       alias = dotParts[dotParts.length - 1]
       alias = alias.replace(/[()]/g, '').trim()
     }
+    // 去掉 SQL 标识符包裹符（"col"、`col`、[col]），避免生成的变量路径带引号
+    alias = alias.replace(/^["'`[]+|["'`\]]+$/g, '')
     if (alias) columns.push(alias)
   }
   return columns
