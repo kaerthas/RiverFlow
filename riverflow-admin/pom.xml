@@ -97,6 +97,12 @@
             <artifactId>postgresql</artifactId>
         </dependency>
 
+        <!-- 达梦 DM8（可选主库，驱动安装见 lib/README.txt） -->
+        <dependency>
+            <groupId>com.dameng</groupId>
+            <artifactId>DmJdbcDriver18</artifactId>
+        </dependency>
+
         <!-- Redis -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

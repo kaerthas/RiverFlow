@@ -14,12 +14,14 @@ import com.riverflow.api.entity.ApiCatalog;
 import com.riverflow.api.entity.DynamicTable;
 import com.riverflow.api.entity.DynamicTableColumn;
 import com.riverflow.common.result.R;
+import com.baomidou.dynamic.datasource.DynamicRoutingDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.PostConstruct;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -41,11 +43,22 @@ public class DynamicTableController {
     @Autowired
     private ApiCatalogService apiCatalogService;
     @Autowired
-    private JdbcTemplate jdbcTemplate;
-    @Autowired
     private DynamicDataSourceService dynamicDataSourceService;
     @Autowired
     private DatasourceService datasourceService;
+    @Autowired
+    private DynamicRoutingDataSource dynamicRoutingDataSource;
+
+    /**
+     * 必须绑定动态路由数据源，@Autowired 直接注入的 JdbcTemplate 绑死主库，
+     * DynamicDataSourceContextHolder 的数据源切换对其无效
+     */
+    private JdbcTemplate jdbcTemplate;
+
+    @PostConstruct
+    public void init() {
+        this.jdbcTemplate = new JdbcTemplate(dynamicRoutingDataSource);
+    }
 
     @GetMapping("/list")
     public R<Page<DynamicTable>> list(
@@ -264,22 +277,19 @@ public class DynamicTableController {
             return R.fail("表字段未配置，无法创建物理表");
         }
 
-        String ddl = buildDdl(table, columns);
         Long dsId = table.getDsId();
 
         try {
+            List<String> ddls;
             if (dsId == null || dsId == 0) {
-                jdbcTemplate.execute(ddl);
+                ddls = executeDdls(table, columns);
             } else {
-                dynamicDataSourceService.executeWithDsById(dsId, () -> {
-                    jdbcTemplate.execute(ddl);
-                    return null;
-                });
+                ddls = (List<String>) dynamicDataSourceService.executeWithDsById(dsId, () -> executeDdls(table, columns));
             }
             log.info("动态表 [{}] 物理表创建成功", table.getTableCode());
-            Map<String, String> result = new HashMap<>();
+            Map<String, Object> result = new HashMap<>();
             result.put("msg", "物理表创建成功: " + table.getTableCode());
-            result.put("ddl", ddl);
+            result.put("ddl", String.join("\n", ddls));
             return R.ok(result);
         } catch (Exception e) {
             log.error("动态表 [{}] 物理表创建失败", table.getTableCode(), e);
@@ -288,9 +298,29 @@ public class DynamicTableController {
     }
 
     /**
-     * 根据元数据构建 CREATE TABLE DDL
+     * 按目标库方言生成 DDL 并在当前连接上依次执行
      */
-    private String buildDdl(DynamicTable table, List<DynamicTableColumn> columns) {
+    private List<String> executeDdls(DynamicTable table, List<DynamicTableColumn> columns) {
+        return jdbcTemplate.execute((org.springframework.jdbc.core.ConnectionCallback<List<String>>) con -> {
+            String product = con.getMetaData().getDatabaseProductName();
+            boolean dm = product != null && product.toUpperCase().contains("DM");
+            List<String> ddls = buildDdl(table, columns, dm);
+            try (java.sql.Statement st = con.createStatement()) {
+                for (String ddl : ddls) {
+                    st.execute(ddl);
+                }
+            }
+            return ddls;
+        });
+    }
+
+    /**
+     * 根据元数据构建 CREATE TABLE DDL
+     * <p>
+     * 达梦：保留 IF NOT EXISTS 与列级 COMMENT（compatibleMode=mysql 已验证可解析），
+     * 去掉 ENGINE/CHARSET/COLLATE 表级选项，表注释改为独立的 COMMENT ON TABLE 语句
+     */
+    private List<String> buildDdl(DynamicTable table, List<DynamicTableColumn> columns, boolean dm) {
         StringBuilder ddl = new StringBuilder();
         ddl.append("CREATE TABLE IF NOT EXISTS ").append(table.getTableCode()).append(" (\n");
 
@@ -319,7 +349,7 @@ public class DynamicTableController {
                 ddl.append(" PRIMARY KEY");
             }
             if (col.getColumnName() != null && !col.getColumnName().isEmpty()) {
-                ddl.append(" COMMENT '").append(col.getColumnName()).append("'");
+                ddl.append(" COMMENT '").append(col.getColumnName().replace("'", "''")).append("'");
             }
             if (i < sortedCols.size() - 1) {
                 ddl.append(",");
@@ -327,10 +357,20 @@ public class DynamicTableController {
             ddl.append("\n");
         }
 
+        if (dm) {
+            ddl.append(")");
+            List<String> ddls = new ArrayList<>();
+            ddls.add(ddl.toString());
+            if (table.getTableName() != null && !table.getTableName().isEmpty()) {
+                ddls.add("COMMENT ON TABLE " + table.getTableCode()
+                        + " IS '" + table.getTableName().replace("'", "''") + "'");
+            }
+            return ddls;
+        }
+
         ddl.append(") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci")
            .append(" COMMENT '").append(table.getTableName()).append("';");
-
-        return ddl.toString();
+        return Collections.singletonList(ddl.toString());
     }
 
     /**

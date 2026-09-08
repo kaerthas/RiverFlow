@@ -1,0 +1,18 @@
+# 达梦 DM8 主库配置（Profile: dm）
+# 启用方式：启动参数 --spring.profiles.active=dm 或环境变量 SPRING_PROFILES_ACTIVE=dm
+# 建库脚本：db/dm/riverflow_init_dm.sql + db/dm/init_data_dm.sql（详见 docs/达梦数据库适配指南.md）
+spring:
+  datasource:
+    dynamic:
+      primary: master
+      strict: false
+      datasource:
+        master:
+          # compatibleMode=mysql 让达梦以 MySQL 兼容模式工作（分页/LIMIT 等语法兼容性更好）
+          # RIVERFLOW 为达梦模式名（schema），请先在达梦中创建同名用户/模式
+          # socketTimeout：驱动默认约 10 秒，达梦服务端卡顿（检查点/刷盘）时会误报"网络通信异常"，调大到 60 秒
+          url: jdbc:dm://localhost:5236/RIVERFLOW?compatibleMode=mysql&characterEncoding=utf-8&socketTimeout=60000
+          username: RIVERFLOW
+          password: Riverflow@123 # 与 db/dm/create_user_dm.sql 保持一致；生产环境请使用Jasypt加密（同 application.yml 规则）
+          driver-class-name: dm.jdbc.driver.DmDriver
+          type: com.alibaba.druid.pool.DruidDataSource

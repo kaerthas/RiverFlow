@@ -33,13 +33,13 @@ public enum DbTypeEnum {
     }
 
     /**
-     * 是否为内置驱动类型（无需用户上传 JAR）
+     * 是否为内置驱动类型（无需用户上传 JAR）。
+     * 口径 = 应用 classpath 自带驱动的类型（见 riverflow-admin/pom.xml），
+     * 达梦/SQL Server 不在其列，需用户上传驱动 JAR。
      */
     public static boolean isBuiltIn(String code) {
         return MYSQL.getCode().equalsIgnoreCase(code)
                 || ORACLE.getCode().equalsIgnoreCase(code)
-                || POSTGRESQL.getCode().equalsIgnoreCase(code)
-                || SQLSERVER.getCode().equalsIgnoreCase(code)
-                || DM.getCode().equalsIgnoreCase(code);
+                || POSTGRESQL.getCode().equalsIgnoreCase(code);
     }
 }

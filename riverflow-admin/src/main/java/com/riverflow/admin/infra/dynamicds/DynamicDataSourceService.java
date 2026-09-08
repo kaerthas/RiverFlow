@@ -112,6 +112,18 @@ public class DynamicDataSourceService {
         return ds != null ? ds : dynamicRoutingDataSource;
     }
 
+    /**
+     * 判断数据源是否已注册到动态路由。
+     * 用于在执行前显式校验，避免 dynamic-datasource 非严格模式下
+     * 找不到数据源时静默回退到主库，把 SQL 打到错误的库。
+     */
+    public boolean hasDataSource(String dsCode) {
+        if (dsCode == null || dsCode.isEmpty() || "master".equals(dsCode)) {
+            return true;
+        }
+        return dynamicRoutingDataSource.getDataSource(dsCode) != null;
+    }
+
     @FunctionalInterface
     public interface SqlExecutor {
         Object execute() throws Exception;

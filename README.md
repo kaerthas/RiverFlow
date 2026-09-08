@@ -50,7 +50,7 @@
 │  HTTP 执行器 │ Groovy 沙箱 │ 动态数据源 (dynamic-datasource) │ Redis 缓存   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                              数据层                                           │
-│                         MySQL 8.0 (主库)  +  Redis                            │
+│                  MySQL 8.0 / 达梦 DM8 (主库，可切换)  +  Redis                  │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -180,8 +180,9 @@ riverflow/
 │   └── vite.config.js
 │
 └── 📁 db/                                # 数据库脚本
-    ├── riverflow_init.sql                # 初始化表结构
-    └── riverflow_data.sql                # 初始数据
+    ├── riverflow_init.sql                # 初始化表结构（MySQL）
+    ├── riverflow_data.sql                # 初始数据（MySQL）
+    └── dm/                               # 达梦 DM8 版脚本（参见 docs/达梦数据库适配指南.md）
 ```
 
 ---
@@ -192,7 +193,7 @@ riverflow/
 
 - JDK 1.8+
 - Maven 3.8+
-- MySQL 8.0+
+- MySQL 8.0+（或达梦 DM8，见 [达梦数据库适配指南](docs/达梦数据库适配指南.md)）
 - Redis 6.0+
 - Node.js 18+
 
@@ -209,6 +210,8 @@ cd riverflow
 mysql -u root -p < db/riverflow_init.sql
 mysql -u root -p < db/riverflow_data.sql
 ```
+
+> 使用达梦 DM8 作为主库时，请按 [达梦数据库适配指南](docs/达梦数据库适配指南.md) 完成驱动安装、建库与 profile 切换。
 
 ### 3. 启动后端
 

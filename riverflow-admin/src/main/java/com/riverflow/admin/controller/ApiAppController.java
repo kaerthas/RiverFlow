@@ -183,19 +183,31 @@ public class ApiAppController {
             return R.ok(new HashMap<>());
         }
         List<Long> idList = Arrays.stream(appIds.split(","))
+                .map(String::trim)
+                .filter(s -> s.matches("\\d+"))
                 .map(Long::valueOf)
                 .collect(Collectors.toList());
+        if (idList.isEmpty()) {
+            return R.ok(new HashMap<>());
+        }
         List<Map<String, Object>> list = apiCatalogService.listMaps(
                 new QueryWrapper<com.riverflow.api.entity.ApiCatalog>()
                         .select("app_id, count(*) as cnt")
                         .in("app_id", idList)
                         .eq("del_flag", 0)
                         .groupBy("app_id"));
-        Map<Long, Long> result = list.stream()
-                .collect(Collectors.toMap(
-                        m -> Long.valueOf(String.valueOf(m.get("app_id"))),
-                        m -> Long.valueOf(String.valueOf(m.get("cnt"))),
-                        (a, b) -> a));
+        Map<Long, Long> result = new HashMap<>();
+        for (Map<String, Object> row : list) {
+            try {
+                result.put(Long.valueOf(String.valueOf(row.get("app_id"))),
+                        new java.math.BigDecimal(String.valueOf(row.get("cnt"))).longValue());
+            } catch (RuntimeException e) {
+                // 达梦/Oracle 列名大写兼容排查：打印 Map 实现类与全部 key，便于确认 ObjectFactory 是否生效
+                log.error("[api-counts] 行解析失败, mapClass={}, keySet={}, row={}",
+                        row.getClass().getName(), row.keySet(), row, e);
+                throw e;
+            }
+        }
         return R.ok(result);
     }
 }

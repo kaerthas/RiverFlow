@@ -9,11 +9,13 @@ import com.riverflow.admin.service.DynamicTableService;
 import com.riverflow.api.entity.DynamicTable;
 import com.riverflow.api.entity.DynamicTableColumn;
 import com.riverflow.common.result.R;
+import com.baomidou.dynamic.datasource.DynamicRoutingDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.PostConstruct;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,9 +34,20 @@ public class DynamicCrudController {
     @Autowired
     private DynamicTableColumnService dynamicTableColumnService;
     @Autowired
-    private JdbcTemplate jdbcTemplate;
-    @Autowired
     private DynamicDataSourceService dynamicDataSourceService;
+    @Autowired
+    private DynamicRoutingDataSource dynamicRoutingDataSource;
+
+    /**
+     * 必须绑定动态路由数据源，@Autowired 直接注入的 JdbcTemplate 绑死主库，
+     * DynamicDataSourceContextHolder 的数据源切换对其无效
+     */
+    private JdbcTemplate jdbcTemplate;
+
+    @PostConstruct
+    public void init() {
+        this.jdbcTemplate = new JdbcTemplate(dynamicRoutingDataSource);
+    }
 
     /**
      * 获取动态表的列定义

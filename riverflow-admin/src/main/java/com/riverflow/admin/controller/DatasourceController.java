@@ -7,6 +7,7 @@ import com.riverflow.admin.infra.dynamicds.JdbcDriverJarLoader;
 import com.riverflow.admin.infra.dynamicds.JdbcDriverJarValidator;
 import com.riverflow.admin.service.DatasourceService;
 import com.riverflow.api.entity.Datasource;
+import com.riverflow.api.enums.DbTypeEnum;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.jasypt.encryption.StringEncryptor;
@@ -268,17 +269,19 @@ public class DatasourceController {
     }
 
     /**
-     * 校验自定义数据库类型的驱动信息是否完整
+     * 校验非内置驱动类型的驱动信息是否完整。
+     * 内置驱动类型（应用 classpath 自带驱动）见 {@link DbTypeEnum#isBuiltIn(String)}，
+     * 其余类型（达梦/SQL Server/其他）必须由用户上传驱动 JAR。
      */
     private R<Long> validateCustomDriver(Datasource datasource) {
-        if (!"other".equalsIgnoreCase(datasource.getDbType())) {
+        if (DbTypeEnum.isBuiltIn(datasource.getDbType())) {
             return null;
         }
         if (!StringUtils.hasText(datasource.getDriverClass())) {
-            return R.fail("自定义数据库类型必须填写驱动类名");
+            return R.fail("该数据库类型必须填写驱动类名");
         }
         if (!StringUtils.hasText(datasource.getDriverJarPath())) {
-            return R.fail("自定义数据库类型必须上传驱动 JAR 包");
+            return R.fail("该数据库类型必须上传驱动 JAR 包");
         }
         return null;
     }

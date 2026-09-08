@@ -87,7 +87,7 @@
             <span class="jar-name">已上传: {{ jarFileName }}</span>
             <el-button link type="danger" size="small" @click="removeDriverJar">移除</el-button>
           </div>
-          <div class="upload-tip">请上传对应数据库的 JDBC 驱动 JAR 包（最大 50MB）</div>
+          <div class="upload-tip">{{ uploadTip }}</div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -137,22 +137,30 @@ const form = reactive({
 const dbTypeDriverMap = {
   mysql: 'com.mysql.cj.jdbc.Driver',
   oracle: 'oracle.jdbc.driver.OracleDriver',
-  postgresql: 'org.postgresql.Driver'
+  postgresql: 'org.postgresql.Driver',
+  sqlserver: 'com.microsoft.sqlserver.jdbc.SQLServerDriver',
+  dm: 'dm.jdbc.driver.DmDriver'
 }
 
 const dbTypeUrlPlaceholderMap = {
   mysql: 'jdbc:mysql://host:port/db',
   oracle: 'jdbc:oracle:thin:@host:port:SID',
   postgresql: 'jdbc:postgresql://host:port/db',
+  sqlserver: 'jdbc:sqlserver://host:1433;databaseName=db',
+  dm: 'jdbc:dm://host:5236',
   other: 'jdbc:xxx://host:port/db'
 }
 
+// 平台 classpath 内置驱动的类型（与 riverflow-admin/pom.xml 中的驱动依赖保持一致）
+const BUILTIN_DRIVER_TYPES = ['mysql', 'oracle', 'postgresql']
+
 const isBuiltInType = computed(() => {
-  return form.dbType && form.dbType !== 'other'
+  return BUILTIN_DRIVER_TYPES.includes(form.dbType)
 })
 
+// 非内置驱动类型（达梦/SQL Server/其他）需要上传驱动 JAR
 const isCustomType = computed(() => {
-  return form.dbType === 'other'
+  return !!form.dbType && !isBuiltInType.value
 })
 
 const urlPlaceholder = computed(() => {
@@ -163,6 +171,15 @@ const jarFileName = computed(() => {
   if (!form.driverJarPath) return ''
   const parts = form.driverJarPath.split(/[/\\]/)
   return parts[parts.length - 1] || form.driverJarPath
+})
+
+// 驱动 JAR 上传提示（按数据库类型给出建议的驱动包）
+const uploadTip = computed(() => {
+  const tips = {
+    dm: '请上传达梦 JDBC 驱动（如 DmJdbcDriver18.jar，最大 50MB）',
+    sqlserver: '请上传 Microsoft JDBC Driver for SQL Server（如 mssql-jdbc.jar，最大 50MB）'
+  }
+  return tips[form.dbType] || '请上传对应数据库的 JDBC 驱动 JAR 包（最大 50MB）'
 })
 
 const formRules = computed(() => ({

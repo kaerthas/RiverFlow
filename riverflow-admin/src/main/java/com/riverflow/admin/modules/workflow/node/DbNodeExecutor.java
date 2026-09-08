@@ -3,6 +3,7 @@ package com.riverflow.admin.modules.workflow.node;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.baomidou.dynamic.datasource.DynamicRoutingDataSource;
 import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
 import com.riverflow.admin.modules.workflow.engine.NodeExecuteResult;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,7 +33,18 @@ public class DbNodeExecutor implements NodeExecutor {
     @Autowired
     private DynamicDataSourceService dynamicDataSourceService;
     @Autowired
+    private DynamicRoutingDataSource dynamicRoutingDataSource;
+
+    /**
+     * 必须绑定动态路由数据源，@Autowired 直接注入的 JdbcTemplate 绑死主库，
+     * DynamicDataSourceContextHolder 的数据源切换对其无效
+     */
     private JdbcTemplate jdbcTemplate;
+
+    @PostConstruct
+    public void init() {
+        this.jdbcTemplate = new JdbcTemplate(dynamicRoutingDataSource);
+    }
 
     private static final Pattern SPEL_PATTERN = Pattern.compile("#\\{([^}]+)}");
 
@@ -67,13 +80,17 @@ public class DbNodeExecutor implements NodeExecutor {
         try {
             Object result;
             if (dsCode == null || dsCode.isEmpty() || "master".equals(dsCode)) {
-                // 使用默认数据源
+                // 使用默认数据源（参与流程事务）
                 result = executeSql(operation, resolvedSql, args);
             } else {
-                // 切换到动态数据源
-                final String execSql = resolvedSql;
-                final Object[] execArgs = args;
-                result = dynamicDataSourceService.executeWithDs(dsCode, () -> executeSql(operation, execSql, execArgs));
+                // 显式校验数据源已注册，防止路由不到时静默回退主库，把 SQL 打到错误的库
+                if (!dynamicDataSourceService.hasDataSource(dsCode)) {
+                    return NodeExecuteResult.fail("数据源未注册或不在线: " + dsCode
+                            + "（请检查数据源状态、驱动JAR与连接URL，或到数据源管理页测试连接）");
+                }
+                // 外层流程事务已绑定主库连接，JdbcTemplate 会优先复用该连接导致路由失效，
+                // 故外部数据源使用裸连接执行，绕开事务上下文
+                result = executeSqlOnExternalDs(dsCode, operation, resolvedSql, args);
             }
 
             log.info("[流程实例:{}] SQL执行完成: op={}, result={}",
@@ -196,6 +213,42 @@ public class DbNodeExecutor implements NodeExecutor {
                 return jdbcTemplate.update(sql, args);
             default:
                 throw new IllegalArgumentException("不支持的操作类型: " + operation);
+        }
+    }
+
+    /**
+     * 在外部数据源上执行 SQL：使用目标数据源的裸连接。
+     * 外层流程事务（@Transactional）开启时已把主库连接绑定到线程，
+     * JdbcTemplate 会优先复用该绑定连接导致数据源切换失效，故这里绕开事务上下文。
+     * 外部数据源操作独立提交，不随流程事务回滚（跨库本地事务本就无法保证原子性）。
+     */
+    private Object executeSqlOnExternalDs(String dsCode, String operation, String sql, Object[] args) throws Exception {
+        javax.sql.DataSource ds = dynamicRoutingDataSource.getDataSource(dsCode);
+        String op = operation != null ? operation.toLowerCase() : "select";
+        try (java.sql.Connection conn = ds.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < args.length; i++) {
+                ps.setObject(i + 1, args[i]);
+            }
+            if ("select".equals(op)) {
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    java.sql.ResultSetMetaData md = rs.getMetaData();
+                    int cols = md.getColumnCount();
+                    List<Map<String, Object>> rows = new ArrayList<>();
+                    while (rs.next()) {
+                        Map<String, Object> row = new java.util.LinkedHashMap<>();
+                        for (int c = 1; c <= cols; c++) {
+                            row.put(md.getColumnLabel(c), rs.getObject(c));
+                        }
+                        rows.add(row);
+                    }
+                    return rows;
+                }
+            } else if ("insert".equals(op) || "update".equals(op) || "delete".equals(op)) {
+                return ps.executeUpdate();
+            } else {
+                throw new IllegalArgumentException("不支持的操作类型: " + operation);
+            }
         }
     }
 
