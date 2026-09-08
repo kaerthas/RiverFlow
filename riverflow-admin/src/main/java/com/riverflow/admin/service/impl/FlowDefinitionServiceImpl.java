@@ -67,6 +67,8 @@ public class FlowDefinitionServiceImpl extends ServiceImpl<FlowDefinitionMapper,
         target.setItemCode(source.getItemCode());
         target.setTriggerType(source.getTriggerType());
         target.setTriggerConfig(source.getTriggerConfig());
+        // 继承定时开关状态，避免发布新版本后定时任务意外停止
+        target.setCronEnabled(source.getCronEnabled());
         target.setStatus(0); // 草稿
         target.setExecutionMode(source.getExecutionMode());
         target.setInputParams(source.getInputParams());
@@ -136,6 +138,8 @@ public class FlowDefinitionServiceImpl extends ServiceImpl<FlowDefinitionMapper,
         target.setItemCode(source.getItemCode());
         target.setTriggerType(source.getTriggerType());
         target.setTriggerConfig(source.getTriggerConfig());
+        // 全新流程的定时任务默认停用，发布后需手动启动
+        target.setCronEnabled(0);
         target.setStatus(0);
         target.setExecutionMode(source.getExecutionMode());
         target.setInputParams(source.getInputParams());

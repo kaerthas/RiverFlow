@@ -81,6 +81,22 @@
           </template>
         </el-table-column>
 
+        <el-table-column label="定时任务" width="110" align="center">
+          <template #default="{ row }">
+            <el-switch
+              v-if="row.triggerType === 'cron' && row.status === 1"
+              :model-value="row.cronEnabled === 1"
+              :loading="cronSwitchLoading === row.id"
+              inline-prompt
+              active-text="运行"
+              inactive-text="停止"
+              @change="handleCronToggle(row, $event)"
+            />
+            <span v-else-if="row.triggerType === 'cron'" class="rf-mono" style="font-size: 12px; color: var(--rf-text-muted)">未发布</span>
+            <span v-else class="rf-mono" style="font-size: 12px; color: var(--rf-text-muted)">-</span>
+          </template>
+        </el-table-column>
+
         <el-table-column prop="executionMode" label="执行模式" width="100" align="center">
           <template #default="{ row }">
             <span :class="['rf-tag', row.executionMode === 'SYNC' ? 'sync' : 'async']">
@@ -110,7 +126,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="230" fixed="right" align="center">
+        <el-table-column label="操作" width="262" fixed="right" align="center">
           <template #default="{ row }">
             <div class="rf-actions">
               <el-tooltip content="设计" placement="top">
@@ -136,6 +152,11 @@
               <el-tooltip content="复制为新流程" placement="top">
                 <button class="action-btn info" @click="handleDuplicate(row)">
                   <el-icon><Files /></el-icon>
+                </button>
+              </el-tooltip>
+              <el-tooltip v-if="row.status === 1" content="手动执行一次（不影响定时任务开关）" placement="top">
+                <button class="action-btn success" @click="handleRunOnce(row)">
+                  <el-icon><CaretRight /></el-icon>
                 </button>
               </el-tooltip>
               <el-tooltip v-if="row.status === 1 && row.executionMode === 'SYNC'" content="同步调试" placement="top">
@@ -209,11 +230,29 @@
           </el-select>
         </el-form-item>
         <el-form-item label="触发方式">
-          <el-select v-model="editForm.triggerType" style="width: 100%">
+          <el-select v-model="editForm.triggerType" style="width: 100%" @change="handleTriggerTypeChange">
             <el-option label="手动触发" value="manual" />
             <el-option label="定时触发" value="cron" />
             <el-option label="事件触发" value="event" />
           </el-select>
+        </el-form-item>
+        <el-form-item v-if="editForm.triggerType === 'cron'" label="Cron表达式">
+          <el-input
+            v-model="editForm.triggerConfig"
+            placeholder="6段表达式，如：0 0 2 * * ? （每天凌晨2点）"
+            clearable
+            @blur="handleCronPreview"
+          />
+          <div class="cron-preview">
+            <el-button link type="primary" size="small" :loading="cronPreviewLoading" @click="handleCronPreview">
+              预览执行时间
+            </el-button>
+            <span v-if="cronPreviewError" class="cron-error">{{ cronPreviewError }}</span>
+            <template v-if="cronPreviewTimes.length > 0">
+              <span class="cron-tip">最近 {{ cronPreviewTimes.length }} 次执行时间：</span>
+              <div v-for="(t, i) in cronPreviewTimes" :key="i" class="cron-time-item">{{ t }}</div>
+            </template>
+          </div>
         </el-form-item>
         <el-form-item label="流程入参">
           <div class="param-table-wrapper">
@@ -429,14 +468,42 @@ import {
   copyFlowDefinition,
   duplicateFlowDefinition,
   getFlowVersions,
-  executeSyncFlow
+  executeSyncFlow,
+  previewCronTimes,
+  updateCronStatus,
+  startFlowInstance
 } from '@/api/workflow'
 
 const router = useRouter()
 const loading = ref(false)
 const editVisible = ref(false)
 const editLoading = ref(false)
-const editForm = reactive({ id: null, flowCode: '', flowName: '', itemCode: '', executionMode: 'ASYNC', triggerType: 'manual', inputParams: '', outputParams: '' })
+const editForm = reactive({ id: null, flowCode: '', flowName: '', itemCode: '', executionMode: 'ASYNC', triggerType: 'manual', triggerConfig: '', inputParams: '', outputParams: '' })
+
+// cron 表达式预览
+const cronPreviewTimes = ref([])
+const cronPreviewError = ref('')
+const cronPreviewLoading = ref(false)
+
+async function handleCronPreview() {
+  cronPreviewTimes.value = []
+  cronPreviewError.value = ''
+  const expression = (editForm.triggerConfig || '').trim()
+  if (!expression) return
+  cronPreviewLoading.value = true
+  try {
+    cronPreviewTimes.value = await previewCronTimes(expression, 5) || []
+  } catch (e) {
+    cronPreviewError.value = e.message || 'cron 表达式不合法'
+  } finally {
+    cronPreviewLoading.value = false
+  }
+}
+
+function handleTriggerTypeChange() {
+  cronPreviewTimes.value = []
+  cronPreviewError.value = ''
+}
 
 // 流程入参表格数据（与 editForm.inputParams 双向转换）
 const flowParams = ref([])
@@ -558,6 +625,53 @@ async function handleOffline(row) {
   }
 }
 
+// 定时任务启停（:model-value 单向绑定，确认后才改数据，取消则开关自动回弹）
+const cronSwitchLoading = ref(null)
+
+async function handleCronToggle(row, enabled) {
+  const action = enabled ? '启动' : '停止'
+  try {
+    await ElMessageBox.confirm(
+      enabled
+        ? `确认启动流程「${row.flowName}」的定时任务？启动后将按 cron 表达式 [${row.triggerConfig}] 触发。`
+        : `确认停止流程「${row.flowName}」的定时任务？停止后将不再定时触发。`,
+      `定时任务${action}确认`,
+      { type: 'warning' }
+    )
+  } catch (e) {
+    return
+  }
+  cronSwitchLoading.value = row.id
+  try {
+    await updateCronStatus(row.id, enabled)
+    row.cronEnabled = enabled ? 1 : 0
+    ElMessage.success(`定时任务已${action}`)
+  } catch (e) {
+    ElMessage.error(`${action}失败: ` + (e.message || e))
+  } finally {
+    cronSwitchLoading.value = null
+  }
+}
+
+// 手动执行一次：已发布的流程随时可触发，与定时任务开关无关（定时停止≠不能手动跑）
+async function handleRunOnce(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确认手动执行一次流程「${row.flowName}」v${row.version}？将立即创建一个流程实例，不影响定时任务开关状态。`,
+      '执行确认',
+      { type: 'info' }
+    )
+  } catch (e) {
+    return
+  }
+  try {
+    await startFlowInstance(row.id)
+    ElMessage.success('流程实例已启动，可到「流程实例」页查看执行情况')
+  } catch (e) {
+    ElMessage.error('执行失败: ' + (e.message || e))
+  }
+}
+
 async function handleCopyVersion(row) {
   try {
     await ElMessageBox.confirm(`基于「${row.flowName}」v${row.version} 创建新版本？`, '创建新版本', { type: 'info' })
@@ -628,10 +742,13 @@ function handleEdit(row) {
     itemCode: row.itemCode,
     executionMode: row.executionMode || 'ASYNC',
     triggerType: row.triggerType || 'manual',
+    triggerConfig: row.triggerConfig || '',
     version: row.version,
     inputParams: row.inputParams || '',
     outputParams: row.outputParams || ''
   })
+  cronPreviewTimes.value = []
+  cronPreviewError.value = ''
   flowParams.value = parseInputParamsToTable(row.inputParams)
   flowOutputParams.value = parseInputParamsToTable(row.outputParams)
   editVisible.value = true
@@ -846,6 +963,10 @@ function removeFlowOutputParam(index) {
 }
 
 async function confirmEdit() {
+  if (editForm.triggerType === 'cron' && !(editForm.triggerConfig || '').trim()) {
+    ElMessage.warning('定时触发必须配置 cron 表达式')
+    return
+  }
   editLoading.value = true
   try {
     // 将参数表格组装为 JSON
@@ -863,6 +984,7 @@ async function confirmEdit() {
       itemCode: editForm.itemCode,
       executionMode: editForm.executionMode,
       triggerType: editForm.triggerType,
+      triggerConfig: editForm.triggerType === 'cron' ? (editForm.triggerConfig || '').trim() : undefined,
       version: editForm.version,
       inputParams: editForm.inputParams || undefined,
       outputParams: editForm.outputParams || undefined
@@ -980,6 +1102,29 @@ onMounted(() => {
     font-size: 13px;
     font-weight: 500;
     color: var(--rf-text-secondary);
+  }
+}
+
+.cron-preview {
+  width: 100%;
+  margin-top: 4px;
+
+  .cron-tip {
+    font-size: 12px;
+    color: var(--rf-text-muted);
+  }
+
+  .cron-time-item {
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--rf-text-secondary);
+    line-height: 20px;
+  }
+
+  .cron-error {
+    font-size: 12px;
+    color: #f56c6c;
+    margin-left: 8px;
   }
 }
 

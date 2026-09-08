@@ -38,6 +38,15 @@ export function validateFlowDefinition(id) {
   })
 }
 
+/** 预览 cron 表达式未来的执行时间 */
+export function previewCronTimes(expression, count = 5) {
+  return request({
+    url: '/workflow/definition/cron/preview',
+    method: 'get',
+    params: { expression, count }
+  })
+}
+
 export function deleteFlowDefinition(id) {
   return request({
     url: `/workflow/definition/${id}`,
@@ -81,6 +90,15 @@ export function saveFlowGraph(flowId, data) {
     url: `/workflow/definition/${flowId}/save-graph`,
     method: 'post',
     data
+  })
+}
+
+// 定时任务启停：enabled=true 启动，false 停止
+export function updateCronStatus(flowId, enabled) {
+  return request({
+    url: `/workflow/definition/${flowId}/cron-status`,
+    method: 'put',
+    params: { enabled }
   })
 }
 

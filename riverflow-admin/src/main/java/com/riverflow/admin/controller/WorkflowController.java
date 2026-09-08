@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.riverflow.admin.infra.dynamicds.DynamicDataSourceService;
 import com.riverflow.admin.modules.workflow.context.FlowContext;
 import com.riverflow.admin.modules.workflow.engine.FlowEngine;
+import com.riverflow.admin.modules.workflow.engine.FlowInstanceStarter;
 import com.riverflow.admin.modules.workflow.loop.LoopState;
 import com.riverflow.admin.service.*;
 import com.riverflow.api.entity.*;
@@ -16,6 +17,7 @@ import com.riverflow.api.enums.FlowTaskTypeEnum;
 import com.riverflow.common.result.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +27,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -50,6 +53,10 @@ public class WorkflowController {
     private FlowLogService flowLogService;
     @Autowired
     private FlowEngine flowEngine;
+    @Autowired
+    private FlowInstanceStarter flowInstanceStarter;
+    @Autowired
+    private com.riverflow.admin.modules.workflow.scheduler.FlowCronScheduler flowCronScheduler;
     @Autowired
     private com.riverflow.admin.modules.workflow.loop.LoopValidator loopValidator;
     @Autowired
@@ -153,6 +160,9 @@ public class WorkflowController {
                 if (definition.getTriggerType() == null || definition.getTriggerType().isEmpty()) {
                     definition.setTriggerType(exist.getTriggerType());
                 }
+                if (definition.getTriggerConfig() == null || definition.getTriggerConfig().isEmpty()) {
+                    definition.setTriggerConfig(exist.getTriggerConfig());
+                }
                 if (definition.getItemCode() == null || definition.getItemCode().isEmpty()) {
                     definition.setItemCode(exist.getItemCode());
                 }
@@ -168,8 +178,56 @@ public class WorkflowController {
         if (!"ASYNC".equals(definition.getExecutionMode()) && !"SYNC".equals(definition.getExecutionMode())) {
             return R.fail("执行模式只能是 ASYNC 或 SYNC");
         }
+        String cronError = validateCronConfig(definition);
+        if (cronError != null) {
+            return R.fail(cronError);
+        }
         flowDefinitionService.saveOrUpdate(definition);
         return R.ok(String.valueOf(definition.getId()));
+    }
+
+    /**
+     * 定时触发的 cron 表达式校验：triggerType=cron 时必须配置合法的 cron 表达式
+     */
+    private String validateCronConfig(FlowDefinition definition) {
+        if (!"cron".equals(definition.getTriggerType())) {
+            return null;
+        }
+        String cron = definition.getTriggerConfig();
+        if (cron == null || cron.trim().isEmpty()) {
+            return "定时触发必须配置 cron 表达式";
+        }
+        if (!CronExpression.isValidExpression(cron.trim())) {
+            return "cron 表达式不合法: " + cron;
+        }
+        definition.setTriggerConfig(cron.trim());
+        return null;
+    }
+
+    /**
+     * 预览 cron 表达式未来几次的执行时间（支持 6 段 Quartz 风格表达式）
+     */
+    @GetMapping("/definition/cron/preview")
+    public R<List<String>> previewCron(@RequestParam String expression,
+                                       @RequestParam(value = "count", defaultValue = "5") Integer count) {
+        if (expression == null || expression.trim().isEmpty()) {
+            return R.fail("cron 表达式不能为空");
+        }
+        if (!CronExpression.isValidExpression(expression.trim())) {
+            return R.fail("cron 表达式不合法: " + expression);
+        }
+        CronExpression cron = CronExpression.parse(expression.trim());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        List<String> times = new ArrayList<>();
+        LocalDateTime next = LocalDateTime.now();
+        int limit = Math.min(Math.max(count, 1), 20);
+        for (int i = 0; i < limit && next != null; i++) {
+            next = cron.next(next);
+            if (next != null) {
+                times.add(next.format(formatter));
+            }
+        }
+        return R.ok(times);
     }
 
     @PostMapping("/definition/{id}/validate")
@@ -189,6 +247,9 @@ public class WorkflowController {
     public R<String> publishDefinition(@PathVariable Long id) {
         FlowDefinition def = flowDefinitionService.getById(id);
         if (def == null) return R.fail("流程定义不存在");
+
+        String cronError = validateCronConfig(def);
+        if (cronError != null) return R.fail(cronError);
 
         List<FlowNode> nodes = flowNodeService.getNodesByFlowId(id);
 
@@ -219,6 +280,13 @@ public class WorkflowController {
                 Integer maxVersion = flowDefinitionService.getMaxVersion(def.getFlowCode());
                 def.setVersion((maxVersion == null ? 0 : maxVersion) + 1);
             }
+            // 继承当前已发布版本的定时开关状态，避免发布新版本后定时任务意外停止
+            if ("cron".equals(def.getTriggerType())) {
+                FlowDefinition published = flowDefinitionService.getLatestPublished(def.getFlowCode());
+                if (published != null && !published.getId().equals(def.getId())) {
+                    def.setCronEnabled(published.getCronEnabled());
+                }
+            }
             def.setStatus(1);
             def.setUpdateTime(LocalDateTime.now());
             flowDefinitionService.updateById(def);
@@ -244,6 +312,27 @@ public class WorkflowController {
         if (def == null) return R.fail("流程定义不存在");
         def.setStatus(2);
         flowDefinitionService.updateById(def);
+        return R.ok();
+    }
+
+    /**
+     * 定时任务启停：仅对已发布的 cron 流程生效。
+     * 启用时校验 cron 表达式；切换后立即刷新本节点调度注册（其他节点最迟 30 秒下一轮刷新生效）。
+     */
+    @PutMapping("/definition/{id}/cron-status")
+    public R<Void> updateCronStatus(@PathVariable Long id, @RequestParam("enabled") boolean enabled) {
+        FlowDefinition def = flowDefinitionService.getById(id);
+        if (def == null) return R.fail("流程定义不存在");
+        if (!"cron".equals(def.getTriggerType())) return R.fail("仅定时触发的流程支持启停控制");
+        if (def.getStatus() == null || def.getStatus() != 1) return R.fail("流程未发布，无法操作定时任务");
+        if (enabled) {
+            String cronError = validateCronConfig(def);
+            if (cronError != null) return R.fail(cronError);
+        }
+        def.setCronEnabled(enabled ? 1 : 0);
+        def.setUpdateTime(LocalDateTime.now());
+        flowDefinitionService.updateById(def);
+        flowCronScheduler.refreshCronTasks();
         return R.ok();
     }
 
@@ -328,7 +417,7 @@ public class WorkflowController {
                 com.alibaba.fastjson2.JSONObject nodeJson = nodes.getJSONObject(i);
                 FlowNode node = new FlowNode();
                 node.setNodeId(nodeJson.getString("id"));
-                node.setNodeName(nodeJson.getString("text"));
+                node.setNodeName(extractNodeName(nodeJson));
                 node.setNodeType(nodeJson.getString("type"));
                 node.setConfigJson(nodeJson.getJSONObject("properties") != null ?
                         nodeJson.getJSONObject("properties").toJSONString() : null);
@@ -366,7 +455,7 @@ public class WorkflowController {
                 FlowNode node = new FlowNode();
                 node.setFlowId(flowId);
                 node.setNodeId(nodeJson.getString("id"));
-                node.setNodeName(nodeJson.getString("text"));
+                node.setNodeName(extractNodeName(nodeJson));
                 node.setNodeType(nodeJson.getString("type"));
 
                 // properties 整体序列化为 configJson
@@ -439,6 +528,24 @@ public class WorkflowController {
         return R.ok();
     }
 
+    /**
+     * 提取节点显示名：LogicFlow 的 text 是对象 {x, y, value}，取 value；
+     * text 为字符串时直接使用；为空则回退 properties.name
+     */
+    private String extractNodeName(com.alibaba.fastjson2.JSONObject nodeJson) {
+        Object text = nodeJson.get("text");
+        if (text instanceof com.alibaba.fastjson2.JSONObject) {
+            String value = ((com.alibaba.fastjson2.JSONObject) text).getString("value");
+            if (value != null && !value.isEmpty()) {
+                return value;
+            }
+        } else if (text instanceof String && !((String) text).isEmpty()) {
+            return (String) text;
+        }
+        com.alibaba.fastjson2.JSONObject props = nodeJson.getJSONObject("properties");
+        return props != null ? props.getString("name") : null;
+    }
+
     // ==================== 流程实例 ====================
 
     @GetMapping("/instance/list")
@@ -468,49 +575,7 @@ public class WorkflowController {
         if (def == null) return R.fail("流程定义不存在");
         if (def.getStatus() != 1) return R.fail("流程未发布，无法启动");
 
-        FlowInstance instance = flowEngine.startInstance(flowId, def.getFlowCode(), def.getVersion(), businessKey, itemCode);
-
-        // 注入流程默认入参
-        if (def.getInputParams() != null && !def.getInputParams().isEmpty()) {
-            try {
-                String existingContext = instance.getContextJson();
-                Map<String, Object> contextMap;
-                if (existingContext != null && !existingContext.isEmpty()) {
-                    contextMap = com.alibaba.fastjson2.JSON.parseObject(existingContext, Map.class);
-                } else {
-                    contextMap = new HashMap<>();
-                }
-                Map<String, Object> defaultVars = com.alibaba.fastjson2.JSON.parseObject(def.getInputParams(), Map.class);
-                if (defaultVars != null) {
-                    contextMap.putAll(defaultVars);
-                    instance.setContextJson(com.alibaba.fastjson2.JSON.toJSONString(contextMap));
-                    flowInstanceService.updateById(instance);
-                }
-            } catch (Exception e) {
-                log.warn("注入流程默认入参失败", e);
-            }
-        }
-
-        // 找到开始节点，创建首个任务
-        List<FlowNode> nodes = flowNodeService.getNodesByFlowId(flowId);
-        FlowNode startNode = nodes.stream()
-                .filter(n -> FlowNodeTypeEnum.START.getCode().equals(n.getNodeType()))
-                .findFirst().orElse(null);
-
-        if (startNode != null) {
-            FlowTask task = new FlowTask();
-            task.setInstanceId(instance.getId());
-            task.setNodeId(startNode.getNodeId());
-            task.setNodeName(startNode.getNodeName());
-            task.setNodeType(startNode.getNodeType());
-            task.setStatus("pending");
-            task.setCreateTime(LocalDateTime.now());
-            flowTaskService.save(task);
-
-            instance.setCurrentNodeId(startNode.getNodeId());
-            flowInstanceService.updateById(instance);
-        }
-
+        FlowInstance instance = flowInstanceStarter.start(def, businessKey, itemCode, "manual");
         return R.ok(String.valueOf(instance.getId()));
     }
 
