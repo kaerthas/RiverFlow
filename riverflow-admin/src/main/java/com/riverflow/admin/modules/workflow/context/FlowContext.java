@@ -145,8 +145,14 @@ public class FlowContext implements Serializable {
      * 2. 当前作用域不存在但全局已存在，更新全局（如 while 循环体中脚本修改 counter）；
      * 3. 都不存在，则在当前作用域顶层创建新变量。
      * 保持向后兼容：旧代码未使用 pushScope 时等价于旧行为。
+     * <p>
+     * ConcurrentHashMap 不允许 null 值，null 写入直接忽略，避免 NPE。
      */
     public void set(String key, Object value) {
+        if (key == null || value == null) {
+            log.debug("忽略空变量写入: key={}, value={}", key, value);
+            return;
+        }
         if (!scopeStack.isEmpty()) {
             Map<String, Object> currentScope = scopeStack.peek();
             if (currentScope.containsKey(key)) {

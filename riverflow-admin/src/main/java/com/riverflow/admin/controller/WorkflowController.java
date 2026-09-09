@@ -575,6 +575,10 @@ public class WorkflowController {
         if (def == null) return R.fail("流程定义不存在");
         if (def.getStatus() != 1) return R.fail("流程未发布，无法启动");
 
+        // businessKey 为可选参数，为空时生成默认值，避免写入上下文时 NPE
+        if (businessKey == null || businessKey.isEmpty()) {
+            businessKey = "MANUAL_" + System.currentTimeMillis();
+        }
         FlowInstance instance = flowInstanceStarter.start(def, businessKey, itemCode, "manual");
         return R.ok(String.valueOf(instance.getId()));
     }
