@@ -2660,6 +2660,8 @@ async function handleSave() {
     status: 0,
     version: version.value,
     executionMode: flowExecutionMode.value,
+    // 新建流程默认手动触发；编辑已有流程时不传，由后端保留原触发方式
+    triggerType: flowId.value ? undefined : 'manual',
     graphJson: JSON.stringify(graphData)
   }
   try {

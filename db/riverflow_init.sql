@@ -439,7 +439,7 @@ CREATE TABLE `wf_flow_definition`  (
   `flow_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '流程名称',
   `version` int(11) NULL DEFAULT 1 COMMENT '版本号',
   `item_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '绑定的事项编码',
-  `trigger_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'cron' COMMENT '触发方式：cron-定时 event-事件 manual-手动',
+  `trigger_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'manual' COMMENT '触发方式：cron-定时 event-事件 manual-手动',
   `trigger_config` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '触发配置（cron表达式或事件类型）',
   `status` tinyint(4) NULL DEFAULT 0 COMMENT '状态：0-草稿 1-已发布 2-下线',
   `graph_json` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '流程图JSON（LogicFlow格式）',

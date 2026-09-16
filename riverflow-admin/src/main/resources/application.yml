@@ -39,6 +39,10 @@ spring:
         test-on-borrow: false
         test-on-return: false
         validation-query: SELECT 1
+        # 空闲连接保活：防止长时间空闲的连接被数据库服务端断开后产生"网络通信异常"
+        time-between-eviction-runs-millis: 60000
+        min-evictable-idle-time-millis: 300000
+        keep-alive: true
         stat-view-servlet:
           enabled: true
           url-pattern: /druid/*

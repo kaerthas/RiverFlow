@@ -675,7 +675,7 @@ CREATE TABLE RIVERFLOW.wf_flow_definition (
   flow_name VARCHAR(100) NOT NULL,
   version INT DEFAULT 1,
   item_code VARCHAR(50) NULL,
-  trigger_type VARCHAR(20) DEFAULT 'cron',
+  trigger_type VARCHAR(20) DEFAULT 'manual',
   trigger_config VARCHAR(200) NULL,
   cron_enabled TINYINT NOT NULL DEFAULT 0,
   status TINYINT DEFAULT 0,

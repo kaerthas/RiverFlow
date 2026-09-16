@@ -178,6 +178,10 @@ public class WorkflowController {
         if (!"ASYNC".equals(definition.getExecutionMode()) && !"SYNC".equals(definition.getExecutionMode())) {
             return R.fail("执行模式只能是 ASYNC 或 SYNC");
         }
+        // 触发方式默认值：新建流程默认手动触发
+        if (definition.getTriggerType() == null || definition.getTriggerType().isEmpty()) {
+            definition.setTriggerType("manual");
+        }
         String cronError = validateCronConfig(definition);
         if (cronError != null) {
             return R.fail(cronError);
