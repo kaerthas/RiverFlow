@@ -54,10 +54,7 @@ public class FlowNodeController {
 
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
-        FlowNode node = new FlowNode();
-        node.setId(id);
-        node.setDelFlag(1);
-        flowNodeService.updateById(node);
+        flowNodeService.removeById(id);
         return R.ok();
     }
 

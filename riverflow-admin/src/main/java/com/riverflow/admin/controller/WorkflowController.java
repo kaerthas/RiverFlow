@@ -362,8 +362,7 @@ public class WorkflowController {
         if (def.getStatus() != null && def.getStatus() == 1) {
             return R.fail("已发布的流程版本不可删除");
         }
-        def.setDelFlag(1);
-        flowDefinitionService.updateById(def);
+        flowDefinitionService.removeById(id);
         return R.ok();
     }
 

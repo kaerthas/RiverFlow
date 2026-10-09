@@ -54,10 +54,7 @@ public class FlowTaskController {
 
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
-        FlowTask task = new FlowTask();
-        task.setId(id);
-        task.setDelFlag(1);
-        flowTaskService.updateById(task);
+        flowTaskService.removeById(id);
         return R.ok();
     }
 

@@ -54,10 +54,7 @@ public class FlowLogController {
 
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
-        FlowLog logEntry = new FlowLog();
-        logEntry.setId(id);
-        logEntry.setDelFlag(1);
-        flowLogService.updateById(logEntry);
+        flowLogService.removeById(id);
         return R.ok();
     }
 

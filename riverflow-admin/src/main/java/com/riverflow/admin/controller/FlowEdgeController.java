@@ -52,10 +52,7 @@ public class FlowEdgeController {
 
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
-        FlowEdge edge = new FlowEdge();
-        edge.setId(id);
-        edge.setDelFlag(1);
-        flowEdgeService.updateById(edge);
+        flowEdgeService.removeById(id);
         return R.ok();
     }
 

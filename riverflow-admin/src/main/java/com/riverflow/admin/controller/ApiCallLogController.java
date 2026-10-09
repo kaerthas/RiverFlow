@@ -54,10 +54,7 @@ public class ApiCallLogController {
 
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
-        ApiCallLog callLog = new ApiCallLog();
-        callLog.setId(id);
-        callLog.setDelFlag(1);
-        apiCallLogService.updateById(callLog);
+        apiCallLogService.removeById(id);
         return R.ok();
     }
 }
