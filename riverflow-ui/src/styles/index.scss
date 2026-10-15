@@ -423,8 +423,6 @@ body {
   .el-table__cell .cell {
     white-space: nowrap !important;
     word-break: keep-all !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
   }
 
   // 允许换行的列（如 URL、长文本）
@@ -446,8 +444,8 @@ body {
     td {
       font-size: 13px;
       color: var(--rf-text-main);
-      padding: 14px 16px;
-      border-bottom: 1px solid #f6f7f9;
+      padding: 11px 16px;
+      border-bottom: 1px solid #edf0f4;
     }
   }
 

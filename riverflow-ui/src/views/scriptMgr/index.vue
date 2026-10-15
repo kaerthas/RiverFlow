@@ -39,7 +39,7 @@
     </div>
 
     <div class="rf-table-card">
-      <el-table :data="scriptList" stripe v-loading="loading" class="rf-data-table" :fit="false" empty-text="暂无数据">
+      <el-table :data="scriptList" stripe v-loading="loading" class="rf-data-table" empty-text="暂无数据">
         <el-table-column type="index" label="#" width="52" align="center" />
         <el-table-column prop="scriptCode" label="脚本编码" width="200">
           <template #default="{ row }">
@@ -61,7 +61,7 @@
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="170" align="center">
           <template #default="{ row }">
-            <span class="rf-time">{{ row.createTime }}</span>
+            <span class="rf-time">{{ formatTime(row.createTime) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="120" fixed="right" align="center">
@@ -177,6 +177,10 @@ const typeMap = {
   format: '格式化',
   header: '请求头',
   condition: '条件判断'
+}
+
+function formatTime(time) {
+  return time ? String(time).replace('T', ' ').slice(0, 19) : '-'
 }
 
 const form = reactive({
