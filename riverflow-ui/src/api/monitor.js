@@ -16,8 +16,8 @@ export function getOverview() {
   return request({ url: '/monitor/overview', method: 'get' })
 }
 
-export function getCallTrend() {
-  return request({ url: '/monitor/call-trend', method: 'get' })
+export function getCallTrend(range = '7d') {
+  return request({ url: '/monitor/call-trend', method: 'get', params: { range } })
 }
 
 export function getRecentCalls(limit = 10) {

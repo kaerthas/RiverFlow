@@ -39,15 +39,15 @@
           <h4 class="card-title">接口调用统计（近24小时）</h4>
           <div class="stat-number">
             <div class="number-item">
-              <div class="num">12,456</div>
+              <div class="num">{{ formatNum(apiStats.total) }}</div>
               <div class="label">总调用次数</div>
             </div>
             <div class="number-item">
-              <div class="num success">98.5%</div>
+              <div class="num success">{{ apiStats.successRate }}%</div>
               <div class="label">成功率</div>
             </div>
             <div class="number-item">
-              <div class="num danger">186</div>
+              <div class="num danger">{{ formatNum(apiStats.failed) }}</div>
               <div class="label">失败次数</div>
             </div>
           </div>
@@ -56,8 +56,9 @@
             <div v-for="(api, idx) in topApis" :key="idx" class="rank-item">
               <span class="rank-index">{{ idx + 1 }}</span>
               <span class="rank-name">{{ api.name }}</span>
-              <span class="rank-count">{{ api.count }}次</span>
+              <span class="rank-count">{{ formatNum(api.count) }}次</span>
             </div>
+            <div v-if="topApis.length === 0" class="rank-empty">近24小时暂无调用</div>
           </div>
         </div>
       </el-col>
@@ -101,6 +102,8 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import request from '@/utils/request'
 
 const stats = ref({ total: 0, running: 0, completed: 0, failed: 0 })
+const apiStats = ref({ total: 0, failed: 0, successRate: 0 })
+const topApis = ref([])
 const recentErrors = ref([])
 const logs = ref([])
 const logConsoleRef = ref(null)
@@ -116,13 +119,9 @@ const pendingTasksPercent = computed(() => {
   return Math.round((stats.value.pendingTasks || 0) / (total + (stats.value.pendingTasks || 0)) * 100)
 })
 
-const topApis = ref([
-  { name: '省里统一认证平台', count: 3456 },
-  { name: '协同调度中心', count: 2890 },
-  { name: '中残申请接口', count: 1567 },
-  { name: '查询办件列表', count: 1234 },
-  { name: '材料上传接口', count: 890 }
-])
+function formatNum(n) {
+  return Number(n || 0).toLocaleString('en-US')
+}
 
 function formatTime(time) {
   if (!time) return '--'
@@ -162,10 +161,21 @@ async function loadPendingTasks() {
   } catch (e) { /* ignore */ }
 }
 
+async function loadApiCallStats() {
+  try {
+    const res = await request({ url: '/monitor/api-call-stats', method: 'get' })
+    if (res) {
+      apiStats.value = res
+      topApis.value = res.topApis || []
+    }
+  } catch (e) { /* ignore */ }
+}
+
 function loadAll() {
   loadStats()
   loadRecentLogs()
   loadPendingTasks()
+  loadApiCallStats()
 }
 
 onMounted(() => {
@@ -250,6 +260,13 @@ onUnmounted(() => {
       font-size: 13px;
       color: #8C8C8C;
     }
+  }
+
+  .rank-empty {
+    padding: 24px 0;
+    text-align: center;
+    font-size: 13px;
+    color: #8C8C8C;
   }
 }
 

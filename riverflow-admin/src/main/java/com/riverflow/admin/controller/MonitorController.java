@@ -175,25 +175,60 @@ public class MonitorController {
     }
 
     /**
-     * 近7天接口调用趋势
+     * 接口调用趋势：range=7d(默认)/1m 按天，3m 按周，6m/12m 按月
      */
     @GetMapping("/call-trend")
-    public R<List<Map<String, Object>>> callTrend() {
+    public R<List<Map<String, Object>>> callTrend(@RequestParam(value = "range", defaultValue = "7d") String range) {
         List<Map<String, Object>> list = new ArrayList<>();
         LocalDate today = LocalDate.now();
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM-dd");
-        for (int i = 6; i >= 0; i--) {
-            LocalDate day = today.minusDays(i);
-            long count = apiCallLogService.count(new QueryWrapper<ApiCallLog>()
-                    .eq("del_flag", 0)
-                    .ge("create_time", day.atStartOfDay())
-                    .lt("create_time", day.plusDays(1).atStartOfDay()));
-            Map<String, Object> item = new HashMap<>();
-            item.put("date", day.format(fmt));
-            item.put("count", count);
-            list.add(item);
+        DateTimeFormatter dayFmt = DateTimeFormatter.ofPattern("MM-dd");
+        DateTimeFormatter monthFmt = DateTimeFormatter.ofPattern("yyyy-MM");
+
+        switch (range) {
+            case "1m":
+                for (int i = 29; i >= 0; i--) {
+                    LocalDate day = today.minusDays(i);
+                    list.add(trendItem(day.format(dayFmt), day.atStartOfDay(), day.plusDays(1).atStartOfDay()));
+                }
+                break;
+            case "3m": {
+                LocalDate monday = today.with(java.time.DayOfWeek.MONDAY);
+                for (int i = 12; i >= 0; i--) {
+                    LocalDate weekStart = monday.minusWeeks(i);
+                    list.add(trendItem(weekStart.format(dayFmt), weekStart.atStartOfDay(), weekStart.plusWeeks(1).atStartOfDay()));
+                }
+                break;
+            }
+            case "6m":
+            case "12m": {
+                int months = "6m".equals(range) ? 6 : 12;
+                LocalDate monthStart = today.withDayOfMonth(1);
+                for (int i = months - 1; i >= 0; i--) {
+                    LocalDate month = monthStart.minusMonths(i);
+                    list.add(trendItem(month.format(monthFmt), month.atStartOfDay(), month.plusMonths(1).atStartOfDay()));
+                }
+                break;
+            }
+            case "7d":
+            default:
+                for (int i = 6; i >= 0; i--) {
+                    LocalDate day = today.minusDays(i);
+                    list.add(trendItem(day.format(dayFmt), day.atStartOfDay(), day.plusDays(1).atStartOfDay()));
+                }
+                break;
         }
         return R.ok(list);
+    }
+
+    private Map<String, Object> trendItem(String label, LocalDateTime start, LocalDateTime end) {
+        long count = apiCallLogService.count(new QueryWrapper<ApiCallLog>()
+                .eq("del_flag", 0)
+                .ge("create_time", start)
+                .lt("create_time", end));
+        Map<String, Object> item = new HashMap<>();
+        item.put("date", label);
+        item.put("count", count);
+        return item;
     }
 
     /**
@@ -210,5 +245,65 @@ public class MonitorController {
                         .orderByDesc("create_time")
                         .last("LIMIT " + limit));
         return R.ok(logs);
+    }
+
+    /**
+     * 近24小时接口调用统计：总次数、成功率、失败次数、调用次数Top5
+     */
+    @GetMapping("/api-call-stats")
+    public R<Map<String, Object>> apiCallStats() {
+        Map<String, Object> result = new HashMap<>();
+        LocalDateTime since = LocalDateTime.now().minusHours(24);
+
+        long total = apiCallLogService.count(new QueryWrapper<ApiCallLog>()
+                .eq("del_flag", 0)
+                .ge("create_time", since));
+        long failed = apiCallLogService.count(new QueryWrapper<ApiCallLog>()
+                .eq("del_flag", 0)
+                .eq("call_status", 0)
+                .ge("create_time", since));
+
+        result.put("total", total);
+        result.put("failed", failed);
+        double rate = total == 0 ? 0 : (total - failed) * 100.0 / total;
+        result.put("successRate", Math.round(rate * 10) / 10.0);
+
+        List<Map<String, Object>> groupList = apiCallLogService.getBaseMapper().selectMaps(
+                new QueryWrapper<ApiCallLog>()
+                        .select("api_id AS apiId", "api_code AS apiCode", "COUNT(*) AS callCount")
+                        .eq("del_flag", 0)
+                        .ge("create_time", since)
+                        .groupBy("api_id", "api_code")
+                        .orderByDesc("callCount")
+                        .last("LIMIT 5"));
+
+        java.util.Set<Long> apiIds = new java.util.HashSet<>();
+        for (Map<String, Object> row : groupList) {
+            Object apiId = row.get("apiId");
+            if (apiId != null) {
+                apiIds.add(((Number) apiId).longValue());
+            }
+        }
+        Map<Long, String> apiNames = new HashMap<>();
+        if (!apiIds.isEmpty()) {
+            for (ApiCatalog api : apiCatalogService.listByIds(apiIds)) {
+                apiNames.put(api.getId(), api.getApiName());
+            }
+        }
+        List<Map<String, Object>> topApis = new ArrayList<>();
+        for (Map<String, Object> row : groupList) {
+            Object apiId = row.get("apiId");
+            String name = apiId != null ? apiNames.get(((Number) apiId).longValue()) : null;
+            if (name == null) {
+                name = String.valueOf(row.get("apiCode"));
+            }
+            Map<String, Object> item = new HashMap<>();
+            item.put("name", name);
+            item.put("count", row.get("callCount") == null ? 0 : ((Number) row.get("callCount")).longValue());
+            topApis.add(item);
+        }
+        result.put("topApis", topApis);
+
+        return R.ok(result);
     }
 }

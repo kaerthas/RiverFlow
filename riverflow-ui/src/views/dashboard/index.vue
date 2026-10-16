@@ -87,9 +87,20 @@
         <div class="chart-header">
           <div>
             <h3 class="chart-title">接口调用趋势</h3>
-            <p class="chart-desc">近7天接口调用量</p>
+            <p class="chart-desc">{{ trendRangeDesc }}</p>
           </div>
           <div class="chart-legend">
+            <el-radio-group v-model="trendRange" size="small" @change="loadTrend">
+              <el-radio-button value="7d">7天</el-radio-button>
+              <el-radio-button value="1m">1个月</el-radio-button>
+              <el-radio-button value="3m">3个月</el-radio-button>
+              <el-radio-button value="6m">6个月</el-radio-button>
+              <el-radio-button value="12m">12个月</el-radio-button>
+            </el-radio-group>
+            <el-radio-group v-model="chartType" size="small" class="chart-type-switch" @change="renderTrendChart(lastTrend)">
+              <el-radio-button value="bar"><el-icon><Histogram /></el-icon></el-radio-button>
+              <el-radio-button value="line"><el-icon><TrendCharts /></el-icon></el-radio-button>
+            </el-radio-group>
             <span class="legend-item"><span class="dot blue"></span>调用量</span>
           </div>
         </div>
@@ -160,7 +171,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import * as echarts from 'echarts'
 import { getOverview, getCallTrend, getRecentCalls } from '@/api/monitor'
 
@@ -176,6 +187,18 @@ const apiStats = reactive({
 })
 const recentCalls = ref([])
 const callLoading = ref(false)
+const trendRange = ref('7d')
+const chartType = ref('bar')
+let lastTrend = []
+
+const TREND_RANGE_DESC = {
+  '7d': '近7天接口调用量',
+  '1m': '近1个月接口调用量（按天）',
+  '3m': '近3个月接口调用量（按周）',
+  '6m': '近6个月接口调用量（按月）',
+  '12m': '近12个月接口调用量（按月）'
+}
+const trendRangeDesc = computed(() => TREND_RANGE_DESC[trendRange.value] || TREND_RANGE_DESC['7d'])
 
 const barChartRef = ref(null)
 const pieChartRef = ref(null)
@@ -184,9 +207,51 @@ let pieChart = null
 
 const formatTime = (time) => time ? String(time).replace('T', ' ').substring(0, 19) : '-'
 
-function initBarChart(trend) {
+function renderTrendChart(trend) {
   if (!barChartRef.value) return
+  if (barChart) {
+    barChart.dispose()
+  }
   barChart = echarts.init(barChartRef.value)
+  const isLine = chartType.value === 'line'
+  const series = isLine
+    ? {
+        name: '调用量',
+        data: trend.map(t => t.count),
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 7,
+        lineStyle: { width: 3, color: '#3b82f6' },
+        itemStyle: { color: '#3b82f6', borderColor: '#fff', borderWidth: 2 },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(59,130,246,0.25)' },
+            { offset: 1, color: 'rgba(59,130,246,0.02)' }
+          ])
+        }
+      }
+    : {
+        name: '调用量',
+        data: trend.map(t => t.count),
+        type: 'bar',
+        barWidth: '36%',
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#3b82f6' },
+            { offset: 1, color: '#60a5fa' }
+          ]),
+          borderRadius: [6, 6, 0, 0]
+        },
+        emphasis: {
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: '#2563eb' },
+              { offset: 1, color: '#3b82f6' }
+            ])
+          }
+        }
+      }
   const option = {
     tooltip: {
       trigger: 'axis',
@@ -201,6 +266,7 @@ function initBarChart(trend) {
     xAxis: {
       type: 'category',
       data: trend.map(t => t.date),
+      boundaryGap: !isLine,
       axisLine: { lineStyle: { color: '#e5e7eb' } },
       axisTick: { show: false },
       axisLabel: { color: '#9ca3af', fontSize: 11 }
@@ -213,27 +279,7 @@ function initBarChart(trend) {
       splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } },
       axisLabel: { color: '#9ca3af', fontSize: 11 }
     },
-    series: [{
-      name: '调用量',
-      data: trend.map(t => t.count),
-      type: 'bar',
-      barWidth: '36%',
-      itemStyle: {
-        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: '#3b82f6' },
-          { offset: 1, color: '#60a5fa' }
-        ]),
-        borderRadius: [6, 6, 0, 0]
-      },
-      emphasis: {
-        itemStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#2563eb' },
-            { offset: 1, color: '#3b82f6' }
-          ])
-        }
-      }
-    }]
+    series: [series]
   }
   barChart.setOption(option)
 }
@@ -305,13 +351,14 @@ async function loadOverview() {
 async function loadTrend() {
   let trend = []
   try {
-    const res = await getCallTrend()
+    const res = await getCallTrend(trendRange.value)
     trend = Array.isArray(res) ? res : []
   } catch (e) {
     // 静默忽略，展示空图表
   }
+  lastTrend = trend
   await nextTick()
-  initBarChart(trend)
+  renderTrendChart(trend)
 }
 
 async function loadRecentCalls() {
@@ -547,7 +594,15 @@ onUnmounted(() => {
 
     .chart-legend {
       display: flex;
+      align-items: center;
       gap: 12px;
+
+      .chart-type-switch {
+        :deep(.el-radio-button__inner) {
+          display: inline-flex;
+          align-items: center;
+        }
+      }
 
       .legend-item {
         display: flex;
