@@ -142,6 +142,12 @@ logging:
     com.riverflow: debug
     org.springframework.security: warn
 riverflow:
+  # 实例监控：CPU/内存指标采集与运行监控页趋势图
+  monitor:
+    # 是否开启实例监控采集上报（false 时实例不再上报心跳，运行监控页实例将约30秒后离线）
+    enabled: true
+    # 是否记录 CPU/内存历史趋势数据（false 时运行监控页无趋势图，实时指标仍上报）
+    history-enabled: true
   # 同步流程下是否保存实例和审计日志，不保存可以提升整个同步流程效率
   sync:
     persist-instance: false

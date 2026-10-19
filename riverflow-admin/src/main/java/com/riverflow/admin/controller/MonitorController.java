@@ -47,6 +47,8 @@ public class MonitorController {
     private ApiCallLogService apiCallLogService;
     @Autowired
     private FlowDefinitionService flowDefinitionService;
+    @Autowired
+    private InstanceMonitorService instanceMonitorService;
 
     /**
      * 实例统计
@@ -130,6 +132,26 @@ public class MonitorController {
                         .eq("status", "pending")
                         .eq("del_flag", 0));
         return R.ok(count);
+    }
+
+    /**
+     * 应用实例监控：在线实例列表及各自 CPU/内存占用
+     */
+    @GetMapping("/instances")
+    public R<Map<String, Object>> instances() {
+        List<Map<String, String>> list = instanceMonitorService.listInstances();
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", list.size());
+        result.put("instances", list);
+        return R.ok(result);
+    }
+
+    /**
+     * 指定实例的 CPU 使用率历史（时间正序，近5分钟滚动窗口）
+     */
+    @GetMapping("/cpu-trend")
+    public R<List<Map<String, Object>>> cpuTrend(@RequestParam("instanceId") String instanceId) {
+        return R.ok(instanceMonitorService.cpuHistory(instanceId));
     }
 
     /**

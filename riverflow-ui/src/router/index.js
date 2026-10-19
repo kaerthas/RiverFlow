@@ -108,7 +108,7 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes,
   scrollBehavior() {
     return { top: 0 }
@@ -118,7 +118,7 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   NProgress.start()
-  document.title = to.meta.title ? `${to.meta.title} - RiverFlow` : 'RiverFlow · 河狸流程编排平台'
+  document.title = to.meta.title ? `${to.meta.title} - RiverFlow` : 'RiverFlow · 浪潮流程编排平台'
 
   const userStore = useUserStore()
   if (to.path === '/login') {
