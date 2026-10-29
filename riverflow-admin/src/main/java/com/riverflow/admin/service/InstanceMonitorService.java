@@ -70,6 +70,8 @@ public class InstanceMonitorService {
     /** oshi 中央处理器与上一次系统 ticks，初始化失败时为 null（自动回退 MXBean） */
     private oshi.hardware.CentralProcessor centralProcessor;
     private volatile long[] prevCpuTicks;
+    /** oshi 物理内存视图，初始化失败时为 null（自动回退 MXBean 口径） */
+    private oshi.hardware.GlobalMemory globalMemory;
 
     @PostConstruct
     public void init() {
@@ -82,10 +84,12 @@ public class InstanceMonitorService {
         this.instanceId = ip + ":" + serverPort;
         this.startTime = LocalDateTime.now().format(TIME_FMT);
         try {
-            centralProcessor = new oshi.SystemInfo().getHardware().getProcessor();
+            oshi.SystemInfo systemInfo = new oshi.SystemInfo();
+            centralProcessor = systemInfo.getHardware().getProcessor();
+            globalMemory = systemInfo.getHardware().getMemory();
             prevCpuTicks = centralProcessor.getSystemCpuLoadTicks();
         } catch (Throwable t) {
-            log.warn("oshi 初始化失败，系统CPU将回退到 MXBean 采集: {}", t.getMessage());
+            log.warn("oshi 初始化失败，系统CPU/物理内存将回退到 MXBean 采集: {}", t.getMessage());
         }
         log.info("实例监控已启动: instanceId={}", instanceId);
         report();
@@ -117,9 +121,17 @@ public class InstanceMonitorService {
                 metrics.put("systemCpu", String.valueOf(systemCpu));
             }
 
-            long sysMemTotal = osBean.getTotalPhysicalMemorySize();
-            long sysMemFree = osBean.getFreePhysicalMemorySize();
-            long sysMemUsed = sysMemTotal - sysMemFree;
+            long sysMemTotal;
+            long sysMemUsed;
+            if (globalMemory != null) {
+                // OSHI 的 available 在 Linux 上取 MemAvailable（含可回收页缓存），
+                // MXBean 的 free 只取 MemFree，会把页缓存算作已用导致常年接近 100%
+                sysMemTotal = globalMemory.getTotal();
+                sysMemUsed = sysMemTotal - globalMemory.getAvailable();
+            } else {
+                sysMemTotal = osBean.getTotalPhysicalMemorySize();
+                sysMemUsed = sysMemTotal - osBean.getFreePhysicalMemorySize();
+            }
             metrics.put("sysMemTotal", String.valueOf(sysMemTotal));
             metrics.put("sysMemUsed", String.valueOf(sysMemUsed));
 
