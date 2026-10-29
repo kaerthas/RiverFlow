@@ -1,5 +1,7 @@
 package com.riverflow.admin.controller;
 
+import cn.hutool.core.text.csv.CsvUtil;
+import cn.hutool.core.text.csv.CsvWriter;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -18,6 +20,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -42,6 +49,7 @@ public class ApiCatalogController {
             @RequestParam(value = "size", defaultValue = "10") Integer size,
             @RequestParam(value = "apiCode", required = false) String apiCode,
             @RequestParam(value = "apiName", required = false) String apiName,
+            @RequestParam(value = "apiType", required = false) String apiType,
             @RequestParam(value = "appId", required = false) Long appId) {
         Page<ApiCatalog> pageParam = new Page<>(page, size);
         QueryWrapper<ApiCatalog> qw = new QueryWrapper<>();
@@ -49,6 +57,7 @@ public class ApiCatalogController {
         if (appId != null) qw.eq("app_id", appId);
         if (apiCode != null && !apiCode.isEmpty()) qw.like("api_code", apiCode);
         if (apiName != null && !apiName.isEmpty()) qw.like("api_name", apiName);
+        if (apiType != null && !apiType.isEmpty()) qw.eq("api_type", apiType);
         qw.orderByDesc("create_time");
         return R.ok(apiCatalogService.page(pageParam, qw));
     }
@@ -174,5 +183,109 @@ public class ApiCatalogController {
         apiCatalogService.removeById(id);
         apiParamService.remove(new QueryWrapper<ApiParam>().eq("api_id", id));
         return R.ok();
+    }
+
+    /**
+     * 导出接口清单 CSV（含原始路径与代理后路径），用于统计
+     * 筛选条件与列表接口一致，额外支持按接口类型过滤
+     */
+    @GetMapping("/export")
+    public void export(@RequestParam(value = "apiCode", required = false) String apiCode,
+                       @RequestParam(value = "apiName", required = false) String apiName,
+                       @RequestParam(value = "appId", required = false) Long appId,
+                       @RequestParam(value = "apiType", required = false) String apiType,
+                       HttpServletResponse response) throws IOException {
+        QueryWrapper<ApiCatalog> qw = new QueryWrapper<>();
+        qw.eq("del_flag", 0);
+        if (appId != null) qw.eq("app_id", appId);
+        if (apiCode != null && !apiCode.isEmpty()) qw.like("api_code", apiCode);
+        if (apiName != null && !apiName.isEmpty()) qw.like("api_name", apiName);
+        if (apiType != null && !apiType.isEmpty()) qw.eq("api_type", apiType);
+        qw.orderByDesc("create_time");
+        List<ApiCatalog> list = apiCatalogService.list(qw);
+
+        String fileName = URLEncoder.encode(
+                "接口清单_" + TIME_FORMATTER_COMPACT.format(LocalDateTime.now()) + ".csv", "UTF-8");
+        response.setContentType("text/csv; charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename*=UTF-8''" + fileName);
+        // UTF-8 BOM，保证 Excel 直接打开不乱码
+        response.getWriter().write('\ufeff');
+
+        CsvWriter writer = CsvUtil.getWriter(response.getWriter());
+        try {
+            writer.write(new String[]{"接口编码", "接口名称", "接口类型", "原始请求方式", "原始路径",
+                    "代理后请求方式", "代理后路径", "认证方式", "状态", "超时(ms)", "创建时间", "更新时间"});
+            for (ApiCatalog api : list) {
+                writer.write(new String[]{
+                        api.getApiCode(),
+                        api.getApiName(),
+                        apiTypeLabel(api.getApiType()),
+                        api.getMethod(),
+                        api.getUrl(),
+                        api.getOpenMethod(),
+                        fullOpenPath(api),
+                        authTypeLabel(api.getAuthType()),
+                        statusLabel(api.getStatus()),
+                        api.getTimeout() == null ? "" : String.valueOf(api.getTimeout()),
+                        formatTime(api.getCreateTime()),
+                        formatTime(api.getUpdateTime())
+                });
+            }
+        } finally {
+            writer.close();
+        }
+        log.info("导出接口清单成功，共 {} 条", list.size());
+    }
+
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter TIME_FORMATTER_COMPACT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+
+    /**
+     * 完整对外代理路径，与前端展示及 OpenApiController 映射规则一致：/open + openPath
+     */
+    private String fullOpenPath(ApiCatalog api) {
+        String openPath = api.getOpenPath();
+        if (openPath == null || openPath.isEmpty()) {
+            openPath = "/" + api.getApiCode();
+        }
+        return "/open" + openPath;
+    }
+
+    private String apiTypeLabel(String apiType) {
+        if (apiType == null) return "";
+        switch (apiType) {
+            case "proxy": return "代理接口";
+            case "sql": return "SQL服务";
+            case "data": return "数据服务";
+            case "script": return "脚本服务";
+            case "plugin": return "插件接口";
+            default: return apiType;
+        }
+    }
+
+    private String authTypeLabel(String authType) {
+        if (authType == null) return "";
+        switch (authType) {
+            case "none": return "无";
+            case "basic": return "Basic";
+            case "token": return "Token";
+            case "sign": return "AK/SK";
+            case "oauth2": return "OAuth2";
+            default: return authType;
+        }
+    }
+
+    private String statusLabel(Integer status) {
+        if (status == null) return "";
+        switch (status) {
+            case 0: return "草稿";
+            case 1: return "已发布";
+            case 2: return "下线";
+            default: return String.valueOf(status);
+        }
+    }
+
+    private String formatTime(LocalDateTime time) {
+        return time == null ? "" : TIME_FORMATTER.format(time);
     }
 }

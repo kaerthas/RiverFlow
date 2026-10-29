@@ -4,6 +4,11 @@ export function getApiCatalogList(params) {
   return request({ url: '/api-catalog/list', method: 'get', params })
 }
 
+// 导出接口清单 CSV（含原始路径与代理后路径），需 responseType: 'blob'
+export function exportApiCatalog(params) {
+  return request({ url: '/api-catalog/export', method: 'get', params, responseType: 'blob' })
+}
+
 export function getApiCatalogDetail(id) {
   return request({ url: `/api-catalog/${id}`, method: 'get' })
 }

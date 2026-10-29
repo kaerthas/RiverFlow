@@ -27,6 +27,15 @@
             <el-form-item label="接口名称">
               <el-input v-model="queryForm.apiName" placeholder="请输入接口名称" clearable />
             </el-form-item>
+            <el-form-item label="接口类型">
+              <el-select v-model="queryForm.apiType" placeholder="全部类型" clearable style="width: 130px">
+                <el-option label="代理接口" value="proxy" />
+                <el-option label="SQL服务" value="sql" />
+                <el-option label="数据服务" value="data" />
+                <el-option label="脚本服务" value="script" />
+                <el-option label="插件接口" value="plugin" />
+              </el-select>
+            </el-form-item>
             <el-form-item v-if="!selectedAppId" label="所属应用">
               <el-select v-model="filterAppId" placeholder="全部应用" clearable style="width: 180px">
                 <el-option v-for="app in appList" :key="app.id" :label="app.appName" :value="app.id" />
@@ -39,6 +48,9 @@
             <el-icon><Search /></el-icon> 查询
           </button>
           <button class="btn-reset" @click="handleReset">重置</button>
+          <button class="btn-reset" :disabled="exportLoading" @click="handleExport">
+            <el-icon><Download /></el-icon> {{ exportLoading ? '导出中...' : '导出' }}
+          </button>
         </div>
       </div>
 
@@ -385,6 +397,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getApiCatalogList,
+  exportApiCatalog,
   saveApiCatalog,
   updateApiCatalog,
   deleteApiCatalog,
@@ -450,7 +463,8 @@ const debugRow = ref(null)
 
 const queryForm = reactive({
   apiCode: '',
-  apiName: ''
+  apiName: '',
+  apiType: ''
 })
 
 const pagination = reactive({
@@ -604,6 +618,7 @@ async function loadList() {
     else if (filterAppId.value) params.appId = filterAppId.value
     if (queryForm.apiCode) params.apiCode = queryForm.apiCode
     if (queryForm.apiName) params.apiName = queryForm.apiName
+    if (queryForm.apiType) params.apiType = queryForm.apiType
     const res = await getApiCatalogList(params)
     apiList.value = res.list || res.records || res || []
     pagination.total = Number(res.total) || 0
@@ -628,9 +643,41 @@ function handlePageChange() {
 function handleReset() {
   queryForm.apiCode = ''
   queryForm.apiName = ''
+  queryForm.apiType = ''
   filterAppId.value = null
   pagination.page = 1
   loadList()
+}
+
+/* ========== 导出接口清单 CSV ========== */
+const exportLoading = ref(false)
+
+async function handleExport() {
+  exportLoading.value = true
+  try {
+    const params = {}
+    if (selectedAppId.value) params.appId = selectedAppId.value
+    else if (filterAppId.value) params.appId = filterAppId.value
+    if (queryForm.apiCode) params.apiCode = queryForm.apiCode
+    if (queryForm.apiName) params.apiName = queryForm.apiName
+    if (queryForm.apiType) params.apiType = queryForm.apiType
+    const res = await exportApiCatalog(params)
+    const blob = new Blob([res.data], { type: 'text/csv;charset=UTF-8' })
+    // 优先取后端 Content-Disposition 中的文件名
+    const disposition = res.headers['content-disposition'] || ''
+    const match = disposition.match(/filename\*=UTF-8''([^;]+)/i)
+    const fileName = match ? decodeURIComponent(match[1]) : '接口清单.csv'
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = fileName
+    link.click()
+    URL.revokeObjectURL(link.href)
+    ElMessage.success('导出成功')
+  } catch (e) {
+    ElMessage.error('导出失败，请稍后重试')
+  } finally {
+    exportLoading.value = false
+  }
 }
 
 async function loadDatasourceOptions() {
