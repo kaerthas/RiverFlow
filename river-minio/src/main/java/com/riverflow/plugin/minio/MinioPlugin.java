@@ -59,10 +59,10 @@ public class MinioPlugin implements NodePlugin {
     @Override
     public String getConfigTemplate() {
         JSONObject template = new JSONObject();
-        template.put("endpoint", "http://localhost:9000");
-        template.put("accessKey", "minioadmin");
-        template.put("secretKey", "minioadmin");
-        template.put("bucket", "materials");
+        template.put("endpoint", "http://127.0.0.1:9001");
+        template.put("accessKey", "adminuser");
+        template.put("secretKey", "adminpassword");
+        template.put("bucket", "localminio");
         template.put("operation", "upload");
         template.put("filePath", "${context.filePath}");
         template.put("objectName", "${context.fileName}");
@@ -134,8 +134,8 @@ public class MinioPlugin implements NodePlugin {
         fields[0].put("label", "服务地址");
         fields[0].put("type", "text");
         fields[0].put("required", true);
-        fields[0].put("placeholder", "http://localhost:9000");
-        fields[0].put("defaultValue", "http://localhost:9000");
+        fields[0].put("placeholder", "http://127.0.0.1:9001");
+        fields[0].put("defaultValue", "http://127.0.0.1:9001");
         fields[0].put("tip", "MinIO服务的访问地址");
         
         fields[1] = new JSONObject();
@@ -143,24 +143,24 @@ public class MinioPlugin implements NodePlugin {
         fields[1].put("label", "访问密钥");
         fields[1].put("type", "text");
         fields[1].put("required", true);
-        fields[1].put("placeholder", "minioadmin");
-        fields[1].put("defaultValue", "minioadmin");
+        fields[1].put("placeholder", "adminuser");
+        fields[1].put("defaultValue", "adminuser");
         
         fields[2] = new JSONObject();
         fields[2].put("name", "secretKey");
         fields[2].put("label", "密钥");
         fields[2].put("type", "password");
         fields[2].put("required", true);
-        fields[2].put("placeholder", "minioadmin");
-        fields[2].put("defaultValue", "minioadmin");
+        fields[2].put("placeholder", "adminpassword");
+        fields[2].put("defaultValue", "adminpassword");
         
         fields[3] = new JSONObject();
         fields[3].put("name", "bucket");
         fields[3].put("label", "存储桶");
         fields[3].put("type", "text");
         fields[3].put("required", true);
-        fields[3].put("placeholder", "materials");
-        fields[3].put("defaultValue", "materials");
+        fields[3].put("placeholder", "localminio");
+        fields[3].put("defaultValue", "localminio");
         fields[3].put("tip", "存储桶名称，需要先在MinIO中创建");
         
         fields[4] = new JSONObject();

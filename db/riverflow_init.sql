@@ -223,20 +223,20 @@ CREATE TABLE `wf_api_catalog`  (
 -- ----------------------------
 -- Records of wf_api_catalog
 -- ----------------------------
-INSERT INTO `wf_api_catalog` VALUES (10, 'TRANSFER_INSERT', 'A接口-上游数据传入', 'sql', 'POST', 'INSERT INTO wf_transfer_queue (biz_key, source_data, status, create_time) VALUES (#{bizKey}, #{sourceData}, \'pending\', NOW())', 'application/json', 'none', 0, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-13 17:54:16', '2026-05-14 17:24:36', '', NULL, 1, 0, NULL, NULL, NULL);
-INSERT INTO `wf_api_catalog` VALUES (11, 'TRANSFER_UPDATE', 'C接口-下游状态回传', 'sql', 'POST', 'UPDATE wf_transfer_queue SET status = #{status}, callback_data = #{callbackData}, update_time = NOW() WHERE biz_key = #{bizKey}', 'application/json', 'none', 0, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-13 17:54:16', '2026-05-14 17:24:38', '', NULL, 1, 0, NULL, NULL, NULL);
-INSERT INTO `wf_api_catalog` VALUES (12, 'TRANSFER_SELECT', 'C接口-状态查询', 'sql', 'GET', 'SELECT * FROM wf_transfer_queue WHERE biz_key = #{bizKey}', 'application/json', 'none', 0, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-13 17:54:17', '2026-05-14 17:24:26', '', NULL, 1, 0, NULL, NULL, NULL);
-INSERT INTO `wf_api_catalog` VALUES (20, 'DOWNSTREAM_B', 'B接口-下游业务办理', 'proxy', 'POST', 'http://downstream-system/api/business/handle', 'application/json', 'none', NULL, NULL, 30000, 3, 0, NULL, NULL, 1, '2026-05-13 17:54:17', '2026-05-14 17:24:30', '', NULL, 1, 0, NULL, NULL, NULL);
-INSERT INTO `wf_api_catalog` VALUES (21, 'UPSTREAM_D', 'D接口-上游结果回传', 'proxy', 'POST', 'http://upstream-system/api/transfer/result', 'application/json', 'none', NULL, NULL, 30000, 3, 0, NULL, NULL, 1, '2026-05-13 17:54:17', '2026-05-14 17:24:33', '', NULL, 1, 0, NULL, NULL, NULL);
-INSERT INTO `wf_api_catalog` VALUES (1000001, 'b-sys-example-submit', 'B系统-示例提交接口', 'proxy', 'POST', 'http://localhost:8080/example/b-sys/submit', 'application/json', 'none', NULL, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-15 15:14:50', '2026-05-15 15:14:50', '', '', 0, 0, NULL, NULL, NULL);
-INSERT INTO `wf_api_catalog` VALUES (1000002, 'b-sys-xayjs-getclfcjhsxx', 'B系统-存量房交易核税信息获取', 'proxy', 'POST', 'http://localhost:8080/example/b-sys/getClfcjhsxx', 'application/json', 'none', NULL, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-16 10:21:08', '2026-05-16 22:08:03', '', '', 0, 0, NULL, NULL, NULL);
-INSERT INTO `wf_api_catalog` VALUES (1000003, 'b-sys-query-wsqkxx', 'B系统-完税状态信息查询', 'proxy', 'POST', 'http://localhost:8080/example/b-sys/getWsqkxx', 'application/json', 'none', NULL, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-16 22:08:14', '2026-05-16 22:08:14', '', '', 0, 0, NULL, NULL, NULL);
-INSERT INTO `wf_api_catalog` VALUES (1000000000000000001, 'COM_BUSINESS_NOTIFY_INSERT', '业务推送-新增', 'sql', 'POST', 'INSERT INTO com_business_notify (business_id,receive_num,item_id, item_code, item_name, org_name, org_code, source, region_code, apply_subject, type, business_type, base_info, form_info, material_info, ems_info, create_time) VALUES (#{businessId}, #{receiveNum},#{itemId}, #{itemCode}, #{itemName}, #{orgName}, #{orgCode}, #{source}, #{regionCode}, #{applySubject}, #{type}, #{businessType}, #{baseInfo}, #{form}, #{material}, #{emsInfo}, NOW())', 'application/x-www-form-urlencoded', 'none', 2054828849055723522, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-14 14:10:06', '2026-05-18 10:26:33', '', '', 0, 1, 1003, 'FLOW_1779068031191', 'receiveNum');
-INSERT INTO `wf_api_catalog` VALUES (1000000000000000002, 'COM_BUSINESS_NOTIFY_SELECT', '业务推送-查询', 'sql', 'GET', 'SELECT * FROM com_business_notify WHERE business_id = #{businessId}', 'application/json', 'none', 0, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-14 14:10:06', '2026-05-14 14:10:06', '', '', 0, 0, NULL, NULL, NULL);
-INSERT INTO `wf_api_catalog` VALUES (2055135972549554177, 't_business_info_INSERT', '业务申报表-新增', 'sql', 'POST', 'INSERT INTO t_business_info () VALUES ()', 'application/json', 'none', 2054828849055723500, NULL, 30000, 0, 0, NULL, NULL, 0, '2026-05-15 11:59:33', '2026-05-15 12:01:17', NULL, NULL, 1, 0, NULL, NULL, NULL);
-INSERT INTO `wf_api_catalog` VALUES (2055135977469472770, 't_business_info_SELECT', '业务申报表-查询', 'sql', 'GET', 'SELECT * FROM t_business_info WHERE business_id = #{business_id}', 'application/json', 'none', 2054828849055723500, NULL, 30000, 0, 0, NULL, NULL, 0, '2026-05-15 11:59:34', '2026-05-15 12:01:15', NULL, NULL, 1, 0, NULL, NULL, NULL);
-INSERT INTO `wf_api_catalog` VALUES (2055135978576769026, 't_business_info_DELETE', '业务申报表-删除', 'sql', 'POST', 'DELETE FROM t_business_info WHERE business_id = #{business_id}', 'application/json', 'none', 2054828849055723500, NULL, 30000, 0, 0, NULL, NULL, 0, '2026-05-15 11:59:35', '2026-05-15 12:01:10', NULL, NULL, 1, 0, NULL, NULL, NULL);
-INSERT INTO `wf_api_catalog` VALUES (2055135978899730434, 't_business_info_LIST', '业务申报表-列表', 'sql', 'GET', 'SELECT * FROM t_business_info ORDER BY business_id DESC LIMIT #{limit} OFFSET #{offset}', 'application/json', 'none', 2054828849055723500, NULL, 30000, 0, 0, NULL, NULL, 0, '2026-05-15 11:59:35', '2026-05-15 12:01:13', NULL, NULL, 1, 0, NULL, NULL, NULL);
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (10, 'TRANSFER_INSERT', 'A接口-上游数据传入', 'sql', 'POST', 'INSERT INTO wf_transfer_queue (biz_key, source_data, status, create_time) VALUES (#{bizKey}, #{sourceData}, \'pending\', NOW())', 'application/json', 'none', 0, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-13 17:54:16', '2026-05-14 17:24:36', '', NULL, 1, 0, NULL, NULL, NULL);
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (11, 'TRANSFER_UPDATE', 'C接口-下游状态回传', 'sql', 'POST', 'UPDATE wf_transfer_queue SET status = #{status}, callback_data = #{callbackData}, update_time = NOW() WHERE biz_key = #{bizKey}', 'application/json', 'none', 0, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-13 17:54:16', '2026-05-14 17:24:38', '', NULL, 1, 0, NULL, NULL, NULL);
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (12, 'TRANSFER_SELECT', 'C接口-状态查询', 'sql', 'GET', 'SELECT * FROM wf_transfer_queue WHERE biz_key = #{bizKey}', 'application/json', 'none', 0, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-13 17:54:17', '2026-05-14 17:24:26', '', NULL, 1, 0, NULL, NULL, NULL);
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (20, 'DOWNSTREAM_B', 'B接口-下游业务办理', 'proxy', 'POST', 'http://downstream-system/api/business/handle', 'application/json', 'none', NULL, NULL, 30000, 3, 0, NULL, NULL, 1, '2026-05-13 17:54:17', '2026-05-14 17:24:30', '', NULL, 1, 0, NULL, NULL, NULL);
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (21, 'UPSTREAM_D', 'D接口-上游结果回传', 'proxy', 'POST', 'http://upstream-system/api/transfer/result', 'application/json', 'none', NULL, NULL, 30000, 3, 0, NULL, NULL, 1, '2026-05-13 17:54:17', '2026-05-14 17:24:33', '', NULL, 1, 0, NULL, NULL, NULL);
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (1000001, 'b-sys-example-submit', 'B系统-示例提交接口', 'proxy', 'POST', 'http://localhost:8080/example/b-sys/submit', 'application/json', 'none', NULL, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-15 15:14:50', '2026-05-15 15:14:50', '', '', 0, 0, NULL, NULL, NULL);
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (1000002, 'b-sys-xayjs-getclfcjhsxx', 'B系统-存量房交易核税信息获取', 'proxy', 'POST', 'http://localhost:8080/example/b-sys/getClfcjhsxx', 'application/json', 'none', NULL, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-16 10:21:08', '2026-05-16 22:08:03', '', '', 0, 0, NULL, NULL, NULL);
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (1000003, 'b-sys-query-wsqkxx', 'B系统-完税状态信息查询', 'proxy', 'POST', 'http://localhost:8080/example/b-sys/getWsqkxx', 'application/json', 'none', NULL, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-16 22:08:14', '2026-05-16 22:08:14', '', '', 0, 0, NULL, NULL, NULL);
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (1000000000000000001, 'COM_BUSINESS_NOTIFY_INSERT', '业务推送-新增', 'sql', 'POST', 'INSERT INTO com_business_notify (business_id,receive_num,item_id, item_code, item_name, org_name, org_code, source, region_code, apply_subject, type, business_type, base_info, form_info, material_info, ems_info, create_time) VALUES (#{businessId}, #{receiveNum},#{itemId}, #{itemCode}, #{itemName}, #{orgName}, #{orgCode}, #{source}, #{regionCode}, #{applySubject}, #{type}, #{businessType}, #{baseInfo}, #{form}, #{material}, #{emsInfo}, NOW())', 'application/x-www-form-urlencoded', 'none', 2054828849055723522, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-14 14:10:06', '2026-05-18 10:26:33', '', '', 0, 1, 1003, 'FLOW_1779068031191', 'receiveNum');
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (1000000000000000002, 'COM_BUSINESS_NOTIFY_SELECT', '业务推送-查询', 'sql', 'GET', 'SELECT * FROM com_business_notify WHERE business_id = #{businessId}', 'application/json', 'none', 0, NULL, 30000, 0, 0, NULL, NULL, 1, '2026-05-14 14:10:06', '2026-05-14 14:10:06', '', '', 0, 0, NULL, NULL, NULL);
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (2055135972549554177, 't_business_info_INSERT', '业务申报表-新增', 'sql', 'POST', 'INSERT INTO t_business_info () VALUES ()', 'application/json', 'none', 2054828849055723500, NULL, 30000, 0, 0, NULL, NULL, 0, '2026-05-15 11:59:33', '2026-05-15 12:01:17', NULL, NULL, 1, 0, NULL, NULL, NULL);
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (2055135977469472770, 't_business_info_SELECT', '业务申报表-查询', 'sql', 'GET', 'SELECT * FROM t_business_info WHERE business_id = #{business_id}', 'application/json', 'none', 2054828849055723500, NULL, 30000, 0, 0, NULL, NULL, 0, '2026-05-15 11:59:34', '2026-05-15 12:01:15', NULL, NULL, 1, 0, NULL, NULL, NULL);
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (2055135978576769026, 't_business_info_DELETE', '业务申报表-删除', 'sql', 'POST', 'DELETE FROM t_business_info WHERE business_id = #{business_id}', 'application/json', 'none', 2054828849055723500, NULL, 30000, 0, 0, NULL, NULL, 0, '2026-05-15 11:59:35', '2026-05-15 12:01:10', NULL, NULL, 1, 0, NULL, NULL, NULL);
+INSERT INTO `wf_api_catalog` (`id`, `api_code`, `api_name`, `api_type`, `method`, `url`, `content_type`, `auth_type`, `ds_id`, `script_id`, `timeout`, `retry_times`, `proxy_enabled`, `proxy_host`, `proxy_port`, `status`, `create_time`, `update_time`, `create_by`, `update_by`, `del_flag`, `trigger_enabled`, `trigger_flow_id`, `trigger_flow_code`, `trigger_biz_key_field`) VALUES (2055135978899730434, 't_business_info_LIST', '业务申报表-列表', 'sql', 'GET', 'SELECT * FROM t_business_info ORDER BY business_id DESC LIMIT #{limit} OFFSET #{offset}', 'application/json', 'none', 2054828849055723500, NULL, 30000, 0, 0, NULL, NULL, 0, '2026-05-15 11:59:35', '2026-05-15 12:01:13', NULL, NULL, 1, 0, NULL, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for wf_api_param
@@ -1159,8 +1159,13 @@ ALTER TABLE wf_api_catalog
 
 -- 为 wf_api_catalog 表增加业务成功状态码字段
 -- 支持按接口配置成功业务码，多个用逗号分隔，默认 200
-ALTER TABLE wf_api_catalog
-    ADD COLUMN success_code VARCHAR(100) DEFAULT '200' COMMENT '业务成功状态码，多个用逗号分隔，如 200,0,1' AFTER trigger_biz_key_field;
+-- 注：base CREATE 已含 success_code；MySQL 不支持 ALTER ADD COLUMN IF NOT EXISTS，
+--     故用 information_schema 判存在的幂等写法，列已存在则跳过。
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_api_catalog' AND column_name = 'success_code'),
+    'SELECT 1',
+    'ALTER TABLE `wf_api_catalog` ADD COLUMN `success_code` VARCHAR(100) DEFAULT ''200'' COMMENT ''业务成功状态码，多个用逗号分隔，如 200,0,1'' AFTER `trigger_biz_key_field`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 
 -- ----------------------------
@@ -1211,24 +1216,237 @@ ALTER TABLE `wf_api_catalog` ADD COLUMN `app_id` bigint(20) DEFAULT NULL COMMENT
 ALTER TABLE `wf_api_catalog` ADD INDEX `idx_app_id` (`app_id`);
 
 -- 为 wf_api_app 增加应用级认证密钥（AppKey + AppSecret）
-ALTER TABLE `wf_api_app` ADD COLUMN IF NOT EXISTS `app_key` varchar(64) DEFAULT NULL COMMENT '应用标识（AK），开放接口调用方标识' AFTER `app_name`;
-ALTER TABLE `wf_api_app` ADD COLUMN IF NOT EXISTS `app_secret` varchar(128) DEFAULT NULL COMMENT '应用密钥（SK），仅服务端与调用方持有' AFTER `app_key`;
-ALTER TABLE `wf_api_app` ADD UNIQUE KEY IF NOT EXISTS `uk_app_key` (`app_key`);
+-- 注：MySQL 不支持 ALTER ADD COLUMN/KEY IF NOT EXISTS，统一改为 information_schema 判存在的幂等写法
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_api_app' AND column_name = 'app_key'),
+    'SELECT 1',
+    'ALTER TABLE `wf_api_app` ADD COLUMN `app_key` varchar(64) DEFAULT NULL COMMENT ''应用标识（AK），开放接口调用方标识'' AFTER `app_name`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_api_app' AND column_name = 'app_secret'),
+    'SELECT 1',
+    'ALTER TABLE `wf_api_app` ADD COLUMN `app_secret` varchar(128) DEFAULT NULL COMMENT ''应用密钥（SK），仅服务端与调用方持有'' AFTER `app_key`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.statistics
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_api_app' AND index_name = 'uk_app_key'),
+    'SELECT 1',
+    'ALTER TABLE `wf_api_app` ADD UNIQUE KEY `uk_app_key` (`app_key`)');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- 为 wf_api_catalog 增加 IP 白名单字段
-ALTER TABLE `wf_api_catalog` ADD COLUMN IF NOT EXISTS `allowed_ips` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '调用方 IP 白名单，多个用逗号分隔，支持 CIDR，如 10.0.0.0/24,192.168.1.10' AFTER `auth_type`;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_api_catalog' AND column_name = 'allowed_ips'),
+    'SELECT 1',
+    'ALTER TABLE `wf_api_catalog` ADD COLUMN `allowed_ips` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT ''调用方 IP 白名单，多个用逗号分隔，支持 CIDR，如 10.0.0.0/24,192.168.1.10'' AFTER `auth_type`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- 动态数据源新增驱动 JAR 包路径字段
-ALTER TABLE `wf_datasource`
-    ADD COLUMN IF NOT EXISTS `driver_jar_path` VARCHAR(500) NULL COMMENT '驱动JAR包路径（自定义驱动时使用）' AFTER `driver_class`;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_datasource' AND column_name = 'driver_jar_path'),
+    'SELECT 1',
+    'ALTER TABLE `wf_datasource` ADD COLUMN `driver_jar_path` VARCHAR(500) NULL COMMENT ''驱动JAR包路径（自定义驱动时使用）'' AFTER `driver_class`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- 循环节点相关字段
-ALTER TABLE `wf_flow_task`
-    ADD COLUMN IF NOT EXISTS `loop_node_id` varchar(50) NULL DEFAULT NULL COMMENT '所属循环节点ID' AFTER `node_name`,
-    ADD COLUMN IF NOT EXISTS `iteration_index` int(11) NULL DEFAULT NULL COMMENT '循环迭代下标' AFTER `loop_node_id`,
-    ADD COLUMN IF NOT EXISTS `is_loop_internal` tinyint(4) NULL DEFAULT 0 COMMENT '是否循环体内部任务：0-否 1-是' AFTER `iteration_index`,
-    ADD COLUMN IF NOT EXISTS `task_type` varchar(30) NULL DEFAULT 'NODE' COMMENT '任务类型：NODE/LOOP_ITERATION/LOOP_AGGREGATE' AFTER `is_loop_internal`,
-    ADD COLUMN IF NOT EXISTS `batch_no` varchar(64) NULL DEFAULT NULL COMMENT '并行循环批次号' AFTER `task_type`;
+-- 循环节点相关字段（wf_flow_task）
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_flow_task' AND column_name = 'loop_node_id'),
+    'SELECT 1',
+    'ALTER TABLE `wf_flow_task` ADD COLUMN `loop_node_id` varchar(50) NULL DEFAULT NULL COMMENT ''所属循环节点ID'' AFTER `node_name`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
-ALTER TABLE `wf_flow_edge`
-    ADD COLUMN IF NOT EXISTS `is_hidden` tinyint(4) NULL DEFAULT 0 COMMENT '画布上是否隐藏（如循环回跳边）：0-显示 1-隐藏' AFTER `priority`;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_flow_task' AND column_name = 'iteration_index'),
+    'SELECT 1',
+    'ALTER TABLE `wf_flow_task` ADD COLUMN `iteration_index` int(11) NULL DEFAULT NULL COMMENT ''循环迭代下标'' AFTER `loop_node_id`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_flow_task' AND column_name = 'is_loop_internal'),
+    'SELECT 1',
+    'ALTER TABLE `wf_flow_task` ADD COLUMN `is_loop_internal` tinyint(4) NULL DEFAULT 0 COMMENT ''是否循环体内部任务：0-否 1-是'' AFTER `iteration_index`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_flow_task' AND column_name = 'task_type'),
+    'SELECT 1',
+    'ALTER TABLE `wf_flow_task` ADD COLUMN `task_type` varchar(30) NULL DEFAULT ''NODE'' COMMENT ''任务类型：NODE/LOOP_ITERATION/LOOP_AGGREGATE'' AFTER `is_loop_internal`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_flow_task' AND column_name = 'batch_no'),
+    'SELECT 1',
+    'ALTER TABLE `wf_flow_task` ADD COLUMN `batch_no` varchar(64) NULL DEFAULT NULL COMMENT ''并行循环批次号'' AFTER `task_type`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- wf_flow_edge.is_hidden
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_flow_edge' AND column_name = 'is_hidden'),
+    'SELECT 1',
+    'ALTER TABLE `wf_flow_edge` ADD COLUMN `is_hidden` tinyint(4) NULL DEFAULT 0 COMMENT ''画布上是否隐藏（如循环回跳边）：0-显示 1-隐藏'' AFTER `priority`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ============================================================
+-- 补齐缺表：以下 5 张表此前仅存在于达梦 schema（db/dm/river_online_schema_dm.sql），
+-- MySQL 版 riverflow_init.sql 缺失，现按达梦定义翻译补齐，采用增量写法 CREATE TABLE IF NOT EXISTS，
+-- 可重复执行、不会删除已有数据。达梦 CLOB 列按用途映射为 MySQL 的 json 或 text。
+-- ============================================================
+
+-- ----------------------------
+-- Table structure for gateway_route（网关动态路由表）
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `gateway_route` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `route_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '路由 ID，对应 Spring Cloud Gateway route id',
+  `uri` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '目标服务地址，支持 ${ENV:default} 占位符',
+  `predicates` json NOT NULL COMMENT '断言配置数组，如 Path、Header 等',
+  `filters` json NULL COMMENT '过滤器配置数组，如 StripPrefix、RequestRateLimiter 等',
+  `route_order` int(11) NULL DEFAULT 0 COMMENT '优先级，数字越小越优先',
+  `enabled` tinyint(4) NULL DEFAULT 1 COMMENT '是否启用：1 启用，0 禁用',
+  `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '路由说明',
+  `create_time` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP(0) COMMENT '创建时间',
+  `update_time` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP(0) ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_route_id`(`route_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '网关动态路由表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for t_collect_social（社保/医保/公积金月度归集数据表）
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `t_collect_social` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `batch_no` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '归集批次号，如 202608-SOCIAL',
+  `enterprise_uscc` varchar(18) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '统一社会信用代码',
+  `enterprise_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '单位名称（冗余，便于核对）',
+  `stat_month` char(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '数据所属月份 yyyyMM（归集当期）',
+  `data_kind` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '数据类别：SOCIAL社保/MEDICAL医保/HOUSING公积金',
+  `insure_count` int(11) NULL DEFAULT NULL COMMENT '最后缴存/参保人数',
+  `paid_until` char(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '缴至年月 yyyyMM，如 202604',
+  `collect_time` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP(0) COMMENT '归集时间',
+  `deleted` tinyint(4) NULL DEFAULT 0 COMMENT '逻辑删除：0 正常，1 删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_data`(`data_kind`, `stat_month`, `enterprise_uscc`) USING BTREE,
+  INDEX `idx_uscc`(`enterprise_uscc`) USING BTREE,
+  INDEX `idx_batch`(`batch_no`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '社保/医保/公积金月度归集数据表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for t_mid_housing_fund（公积金中心中间库-单位月度缴存表）
+-- 注：列名沿用达梦的中文列名，MySQL 下用反引号包裹
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `t_mid_housing_fund` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `统计月份` varchar(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '数据所属月份yyyyMM',
+  `统一社会信用代码` varchar(18) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '统一社会信用代码',
+  `单位名称` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '单位名称',
+  `最后缴存人数` int(11) NULL DEFAULT NULL COMMENT '缴存人数',
+  `缴至年月` varchar(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '费用缴至年月yyyyMM，早于统计月份即欠缴',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_uscc_month`(`统一社会信用代码`, `统计月份`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '公积金中心中间库-单位月度缴存表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for third_project_data（审批推送申报信息表）
+-- 注：v_id_card/v_nian_fen/v_level/v_type 在达梦已降级为普通列（原为 MySQL JSON 生成列），
+--     此处保持普通列，取值请在应用层解析 form_info；如需可再改造为 GENERATED 列。
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `third_project_data` (
+  `id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键',
+  `project_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '办件编号',
+  `item_name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '事项名称',
+  `item_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '事项编码',
+  `org_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '组织机构名称',
+  `org_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '组织机构代码',
+  `reg_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '区划名称',
+  `reg_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '区划编码',
+  `applyer_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '申请人姓名',
+  `applyer_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '申请人类型',
+  `project_name` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '项目名称',
+  `source` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '来源',
+  `apply_time` datetime(0) NULL DEFAULT NULL COMMENT '申请时间',
+  `form_info` json NULL COMMENT '动态表单信息',
+  `form_schema_id` bigint(20) NOT NULL COMMENT '动态表单映射主键',
+  `create_time` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP(0) COMMENT '创建时间',
+  `update_time` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP(0) ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '修改时间',
+  `v_id_card` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `v_nian_fen` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `v_level` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `v_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `del_flag` char(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT '是否作废0正常，1作废',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_v_id_card`(`v_id_card`) USING BTREE,
+  INDEX `idx_v_level`(`v_level`) USING BTREE,
+  INDEX `idx_v_nian_fen`(`v_nian_fen`) USING BTREE,
+  INDEX `idx_v_type`(`v_type`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '审批推送申报信息表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for wf_qr_auth_record（二维码认证全量记录，对应 river-qrcode-plugin）
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `wf_qr_auth_record` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `namespace` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '命名空间',
+  `qr_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '二维码ID',
+  `biz_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '业务ID',
+  `operation` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '操作类型',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '二维码内容',
+  `status` int(11) NULL DEFAULT NULL COMMENT '状态码',
+  `status_name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '状态名称',
+  `auth_status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '认证状态',
+  `user_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '用户姓名',
+  `id_card` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '证件号（加密）',
+  `phone` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '手机号（加密）',
+  `expire_time` datetime(0) NULL DEFAULT NULL COMMENT '过期时间',
+  `request_params` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '请求参数',
+  `response_summary` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '响应摘要',
+  `create_time` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP(0) COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_qr_id`(`qr_id`) USING BTREE,
+  INDEX `idx_biz_id`(`biz_id`) USING BTREE,
+  INDEX `idx_create_time`(`create_time`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '二维码认证全量记录' ROW_FORMAT = Dynamic;
+
+-- ============================================================
+-- 补齐缺列：以下列在达梦 schema 与 Java 实体中已存在，但 MySQL 基础建表语句
+-- (CREATE TABLE wf_flow_definition / wf_api_call_log) 未包含，且此前无 ALTER 补充，
+-- 运行期会因 MyBatis-Plus 自动映射而报 Unknown column。
+-- 注：MySQL 不支持 ALTER TABLE ... ADD COLUMN IF NOT EXISTS（那是 MariaDB 语法），
+--     故改用 information_schema 判存在 + 动态 SQL 的幂等写法，可在 MySQL 重复执行。
+-- 达梦 CLOB 列按 graph_json 既有约定映射为 mediumtext。
+-- ============================================================
+
+-- wf_flow_definition.cron_enabled（被 FlowCronScheduler .eq("cron_enabled",1) 使用）
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_flow_definition' AND column_name = 'cron_enabled'),
+    'SELECT 1',
+    'ALTER TABLE `wf_flow_definition` ADD COLUMN `cron_enabled` tinyint(4) NOT NULL DEFAULT 0 COMMENT ''定时触发开关：0-停用(默认) 1-启用'' AFTER `trigger_config`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- wf_flow_definition.execution_mode（被 MonitorController/WorkflowController 使用）
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_flow_definition' AND column_name = 'execution_mode'),
+    'SELECT 1',
+    'ALTER TABLE `wf_flow_definition` ADD COLUMN `execution_mode` varchar(20) NOT NULL DEFAULT ''ASYNC'' COMMENT ''执行模式：ASYNC-异步(默认) SYNC-同步'' AFTER `status`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- wf_flow_definition.input_params（被 OpenApiController 同步流程入参注入使用）
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_flow_definition' AND column_name = 'input_params'),
+    'SELECT 1',
+    'ALTER TABLE `wf_flow_definition` ADD COLUMN `input_params` mediumtext NULL COMMENT ''同步流程默认入参(JSON)，启动时自动注入上下文'' AFTER `execution_mode`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- wf_flow_definition.output_params（同步流程输出参数声明）
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_flow_definition' AND column_name = 'output_params'),
+    'SELECT 1',
+    'ALTER TABLE `wf_flow_definition` ADD COLUMN `output_params` mediumtext NULL COMMENT ''同步流程输出参数(JSON)，用于声明流程返回结果结构'' AFTER `input_params`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- wf_api_call_log.source（ApiCallLog 实体字段，日志来源：openapi/flow）
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = DATABASE() AND table_name = 'wf_api_call_log' AND column_name = 'source'),
+    'SELECT 1',
+    'ALTER TABLE `wf_api_call_log` ADD COLUMN `source` varchar(20) DEFAULT ''openapi'' COMMENT ''日志来源：openapi-开放接口调用，flow-流程API节点调用'' AFTER `api_code`');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

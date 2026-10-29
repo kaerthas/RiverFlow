@@ -70,6 +70,18 @@
             <span class="metric-detail">{{ formatGB(row.sysMemUsed) }} / {{ formatGB(row.sysMemTotal) }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="磁盘使用" min-width="170">
+          <template #default="{ row }">
+            <el-progress
+              v-if="Number(row.diskTotal) > 0"
+              :percentage="ratioPercent(row.diskUsed, row.diskTotal)"
+              :color="progressColor(ratioPercent(row.diskUsed, row.diskTotal))"
+              :stroke-width="8"
+            />
+            <span v-else class="metric-empty">--</span>
+            <span v-if="Number(row.diskTotal) > 0" class="metric-detail">{{ formatGB(row.diskUsed) }} / {{ formatGB(row.diskTotal) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="启动时间" min-width="150">
           <template #default="{ row }">{{ formatTime(row.startTime) }}</template>
         </el-table-column>
@@ -86,6 +98,33 @@
         <el-col :xs="24" :lg="12">
           <div class="chart-title">内存使用率（%）</div>
           <div ref="memChartRef" class="metric-chart"></div>
+        </el-col>
+      </el-row>
+    </div>
+
+    <div class="rf-card" style="margin-bottom: 16px;">
+      <div class="instance-header">
+        <h4 class="card-title" style="margin: 0;">磁盘监控</h4>
+        <span class="instance-count">{{ selectedInstance || '未选择实例' }}</span>
+      </div>
+      <el-row :gutter="16" style="margin-top: 12px;">
+        <el-col v-for="(disk, idx) in selectedDisks" :key="idx" :xs="24" :sm="12" :lg="8">
+          <div class="disk-item">
+            <div class="disk-head">
+              <span class="disk-mount" :title="disk.mount">{{ disk.mount }}</span>
+              <span class="disk-pct">{{ ratioPercent(disk.used, disk.total) }}%</span>
+            </div>
+            <el-progress
+              :percentage="ratioPercent(disk.used, disk.total)"
+              :color="progressColor(ratioPercent(disk.used, disk.total))"
+              :stroke-width="10"
+              :show-text="false"
+            />
+            <div class="disk-detail">已用 {{ formatGB(disk.used) }} / 共 {{ formatGB(disk.total) }}（可用 {{ formatGB(disk.free) }}）</div>
+          </div>
+        </el-col>
+        <el-col v-if="selectedDisks.length === 0" :span="24">
+          <span class="metric-empty">暂无磁盘数据</span>
         </el-col>
       </el-row>
     </div>
@@ -213,6 +252,18 @@ const runningPercent = computed(() => {
 const pendingTasksPercent = computed(() => {
   const total = stats.value.total || 1
   return Math.round((stats.value.pendingTasks || 0) / (total + (stats.value.pendingTasks || 0)) * 100)
+})
+
+// 当前选中实例的磁盘分区明细（后端以 JSON 字符串存在 disks 字段）
+const selectedDisks = computed(() => {
+  const inst = instances.value.find(i => i.instanceId === selectedInstance.value) || instances.value[0]
+  if (!inst || !inst.disks) return []
+  try {
+    const arr = JSON.parse(inst.disks)
+    return Array.isArray(arr) ? arr : []
+  } catch (e) {
+    return []
+  }
 })
 
 function formatNum(n) {
@@ -501,6 +552,43 @@ onUnmounted(() => {
 .metric-empty {
   font-size: 13px;
   color: #8C8C8C;
+}
+
+.disk-item {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid #F0F0F0;
+  border-radius: 8px;
+  background: #FAFAFA;
+
+  .disk-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+
+    .disk-mount {
+      font-size: 14px;
+      font-weight: 600;
+      color: #262626;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 70%;
+    }
+
+    .disk-pct {
+      font-size: 13px;
+      font-weight: 600;
+      color: #595959;
+    }
+  }
+
+  .disk-detail {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #8C8C8C;
+  }
 }
 
 .monitor-item {

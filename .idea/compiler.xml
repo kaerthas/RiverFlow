@@ -9,8 +9,17 @@
         <outputRelativeToContentRoot value="true" />
         <module name="riverflow-common" />
         <module name="riverflow-admin" />
+        <module name="river-minio" />
         <module name="riverflow-api" />
       </profile>
     </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="river-minio" options="-parameters" />
+      <module name="riverflow-admin" options="-parameters" />
+      <module name="riverflow-api" options="-parameters" />
+      <module name="riverflow-common" options="-parameters" />
+    </option>
   </component>
 </project>

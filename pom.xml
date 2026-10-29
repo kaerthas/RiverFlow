@@ -16,9 +16,9 @@
         <module>riverflow-api</module>
         <module>riverflow-admin</module>
         <module>river-minio</module>
-        <module>river-apisix-auth</module>
-        <module>river-ixa-gateway</module>
-        <module>river-qrcode-plugin</module>
+<!--        <module>river-apisix-auth</module>-->
+<!--        <module>river-ixa-gateway</module>-->
+<!--        <module>river-qrcode-plugin</module>-->
     </modules>
 
     <properties>
