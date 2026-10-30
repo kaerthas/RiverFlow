@@ -15,3 +15,9 @@ river-ixa-gateway
 river-hw-auth
 logs/
 river-apisix-auth
+
+# 运行期配置文件不入库（避免本地密码/部署配置被同步），参考对应 -template 模板
+riverflow-admin/src/main/resources/application.yml
+riverflow-admin/src/main/resources/application-dm.yml
+docker-compose.yml
+.env
