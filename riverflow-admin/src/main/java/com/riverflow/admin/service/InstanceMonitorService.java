@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.nio.file.Files;
@@ -16,9 +17,12 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,6 +47,13 @@ public class InstanceMonitorService {
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final boolean IS_LINUX = System.getProperty("os.name", "").toLowerCase().contains("linux");
+
+    /** /proc/mounts 中需要过滤的虚拟文件系统类型（非真实磁盘分区） */
+    private static final Set<String> VIRTUAL_FS = new HashSet<>(Arrays.asList(
+            "proc", "sysfs", "devtmpfs", "devpts", "tmpfs", "cgroup", "cgroup2", "securityfs",
+            "pstore", "binfmt_misc", "autofs", "mqueue", "hugetlbfs", "debugfs", "tracefs",
+            "configfs", "fusectl", "selinuxfs", "bpf", "ramfs", "squashfs", "nsfs",
+            "rpc_pipefs", "fuse.gvfsd-fuse", "fuse.portal", "overlay", "shm"));
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
@@ -128,6 +139,16 @@ public class InstanceMonitorService {
             long jvmMax = runtime.maxMemory();
             metrics.put("jvmUsed", String.valueOf(jvmUsed));
             metrics.put("jvmMax", String.valueOf(jvmMax));
+
+            // 磁盘：全部分区明细 JSON + 主分区（应用所在分区）汇总，供监控页磁盘列与磁盘监控卡片展示
+            List<Map<String, Object>> disks = collectDisks();
+            metrics.put("disks", OBJECT_MAPPER.writeValueAsString(disks));
+            File appDir = new File(System.getProperty("user.dir", ".")).getAbsoluteFile();
+            long diskTotal = appDir.getTotalSpace();
+            if (diskTotal > 0) {
+                metrics.put("diskTotal", String.valueOf(diskTotal));
+                metrics.put("diskUsed", String.valueOf(diskTotal - appDir.getUsableSpace()));
+            }
 
             String key = KEY_PREFIX + instanceId;
             stringRedisTemplate.opsForHash().putAll(key, metrics);
@@ -247,6 +268,66 @@ public class InstanceMonitorService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * 采集磁盘分区列表：Linux 优先解析 /proc/mounts 取真实块设备挂载点，
+     * 失败或非 Linux 回退 File.listRoots()（Windows 盘符）。按挂载点去重，
+     * 应用所在分区排在最前。
+     */
+    private List<Map<String, Object>> collectDisks() {
+        List<Map<String, Object>> disks = new ArrayList<>();
+        try {
+            if (IS_LINUX) {
+                Set<String> seen = new LinkedHashSet<>();
+                for (String line : Files.readAllLines(Paths.get("/proc/mounts"))) {
+                    String[] parts = line.trim().split("\\s+");
+                    if (parts.length < 3) {
+                        continue;
+                    }
+                    String device = parts[0];
+                    String mount = parts[1].replace("\\040", " ");
+                    String fstype = parts[2];
+                    if (!device.startsWith("/") || VIRTUAL_FS.contains(fstype) || !seen.add(mount)) {
+                        continue;
+                    }
+                    File f = new File(mount);
+                    if (f.getTotalSpace() <= 0) {
+                        continue;
+                    }
+                    disks.add(buildDisk(mount, f));
+                }
+            }
+            if (disks.isEmpty()) {
+                File[] roots = File.listRoots();
+                if (roots != null) {
+                    for (File root : roots) {
+                        if (root.getTotalSpace() <= 0) {
+                            continue;
+                        }
+                        disks.add(buildDisk(root.getAbsolutePath(), root));
+                    }
+                }
+            }
+            // 应用所在分区（挂载点为 user.dir 前缀）优先展示
+            String userDir = new File(System.getProperty("user.dir", ".")).getAbsolutePath().replace('\\', '/');
+            disks.sort(Comparator.comparingInt((Map<String, Object> d) ->
+                    userDir.startsWith(((String) d.get("mount")).replace('\\', '/')) ? 0 : 1));
+        } catch (Exception e) {
+            log.warn("采集磁盘信息失败: {}", e.getMessage());
+        }
+        return disks;
+    }
+
+    private Map<String, Object> buildDisk(String mount, File file) {
+        long total = file.getTotalSpace();
+        long free = file.getUsableSpace();
+        Map<String, Object> d = new HashMap<>();
+        d.put("mount", mount);
+        d.put("total", total);
+        d.put("free", free);
+        d.put("used", total - free);
+        return d;
     }
 
     /**
